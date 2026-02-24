@@ -556,7 +556,12 @@
                                                             <div className="border border-gray-200 rounded-lg overflow-hidden">
                                                                 {refsArray.map((ref, index) => (
                                                                     <div key={ref} className={`py-2 px-3 ${index % 2 === 0 ? 'bg-green-50' : 'bg-white'}`}>
-                                                                        <span className="font-mono text-green-900 text-base">{ref}</span>
+                                                                        <button
+                                                                            onClick={() => { setShowTerminesModal(false); openOrderRecap(ref); }}
+                                                                            className="font-mono text-green-900 text-base hover:text-blue-600 hover:underline cursor-pointer text-left w-full flex items-center gap-2"
+                                                                        >
+                                                                            {ref} <span className="text-xs text-gray-400">↗</span>
+                                                                        </button>
                                                                     </div>
                                                                 ))}
                                                             </div>
