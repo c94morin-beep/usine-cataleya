@@ -838,6 +838,28 @@
                         </div>
                     </div>
 
+                    {/* TRI MOBILE */}
+                    <div className="md:hidden bg-white rounded-lg shadow p-3 flex gap-2 items-center">
+                        <span className="text-sm font-semibold text-gray-600 whitespace-nowrap">Trier par :</span>
+                        <select
+                            value={sortColumn}
+                            onChange={(e) => setSortColumn(e.target.value)}
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                        >
+                            <option value="reference">N° Commande</option>
+                            <option value="name">Produit</option>
+                            <option value="client">Client</option>
+                            <option value="transporteur">Transporteur</option>
+                            <option value="status">Statut</option>
+                        </select>
+                        <button
+                            onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                            className="px-3 py-1 bg-gray-100 rounded border text-sm font-semibold"
+                        >
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                        </button>
+                    </div>
+
                     {/* VUE MOBILE : cartes */}
                     <div className="md:hidden space-y-3">
                         {sortedOrders.map(order => (
