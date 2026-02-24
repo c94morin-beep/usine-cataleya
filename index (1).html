@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Production Multi-Listes - Sousou Fashion</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getDatabase, ref, get, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVpN0cbCqDYI2klKrWqZJAcYDX2ayx8F0",
+            authDomain: "usine-cataleya.firebaseapp.com",
+            databaseURL: "https://usine-cataleya-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "usine-cataleya",
+            storageBucket: "usine-cataleya.firebasestorage.app",
+            messagingSenderId: "218489156781",
+            appId: "1:218489156781:web:92f657e50e63222a130224"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        window.firebaseSignIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
+        window.firebaseSignOut = () => signOut(auth);
+        window.firebaseOnAuthStateChanged = (cb) => onAuthStateChanged(auth, cb);
+        window.firebaseGetUserRole = async (uid) => {
+            const snapshot = await get(ref(db, 'users/' + uid + '/role'));
+            return snapshot.exists() ? snapshot.val() : null;
+        };
+        window.firebaseSaveLists = async (lists) => {
+            await set(ref(db, 'lists'), lists);
+        };
+        window.firebaseOnLists = (cb) => {
+            return onValue(ref(db, 'lists'), (snapshot) => {
+                cb(snapshot.exists() ? snapshot.val() : []);
+            });
+        };
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Statuts
+        const STATUTS = {
+            EN_ATTENTE: 'En attente',
+            TERMINE: 'Terminé',
+            AVEC_COMMENTAIRE: 'Avec commentaire'
+        };
+
+        // Composant principal
+        function App() {
+            const [lists, setLists] = useState([]);
+            const [activeListId, setActiveListId] = useState('global');
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterStatus, setFilterStatus] = useState('all');
+            const [showImportModal, setShowImportModal] = useState(false);
+
+            // Auth
+            const [user, setUser] = useState(null);
+            const [userRole, setUserRole] = useState(null);
+            const [authLoading, setAuthLoading] = useState(true);
+
+            useEffect(() => {
+                const init = () => {
+                    window.firebaseOnAuthStateChanged(async (firebaseUser) => {
+                        if (firebaseUser) {
+                            const role = await window.firebaseGetUserRole(firebaseUser.uid);
+                            setUser(firebaseUser); setUserRole(role);
+                        } else { setUser(null); setUserRole(null); }
+                        setAuthLoading(false);
+                    });
+                };
+                if (window.firebaseOnAuthStateChanged) { init(); }
+                else { window.addEventListener('firebase-ready', init); return () => window.removeEventListener('firebase-ready', init); }
+            }, []);
+
+            // Charger les données depuis Firebase en temps réel
+            useEffect(() => {
+                if (!user) return;
+                const init = () => {
+                    const unsub = window.firebaseOnLists((data) => {
+                        setLists(Array.isArray(data) ? data : Object.values(data || {}));
+                    });
+                    return unsub;
+                };
+                if (window.firebaseOnLists) {
+                    const unsub = init();
+                    return () => unsub && unsub();
+                } else {
+                    window.addEventListener('firebase-ready', () => { init(); }, { once: true });
+                }
+            }, [user]);
+
+            // Sauvegarder sur Firebase
+            const saveLists = (newLists) => {
+                setLists(newLists);
+                const doSave = () => {
+                    if (window.firebaseSaveLists) {
+                        console.log('Sauvegarde Firebase...', newLists.length, 'listes');
+                        window.firebaseSaveLists(newLists)
+                            .then(() => console.log('Firebase OK'))
+                            .catch(e => console.error('Firebase ERREUR:', e));
+                    } else {
+                        console.warn('firebaseSaveLists pas encore dispo, retry...');
+                        setTimeout(doSave, 500);
+                    }
+                };
+                doSave();
+            };
+
+            // Obtenir toutes les commandes (pour la vue globale)
+            const getAllOrders = () => {
+                return lists.flatMap(list => list.orders);
+            };
+
+            // Obtenir les commandes de la liste active
+            const getActiveOrders = () => {
+                if (activeListId === 'global') {
+                    return getAllOrders();
+                }
+                const activeList = lists.find(l => l.id === activeListId);
+                return activeList ? activeList.orders : [];
+            };
+
+            // Calculer les stats
+            const calculateStats = (orders) => {
+                return {
+                    total: orders.length,
+                    enAttente: orders.filter(o => o.status === STATUTS.EN_ATTENTE).length,
+                    termines: orders.filter(o => o.status === STATUTS.TERMINE).length,
+                    avecCommentaire: orders.filter(o => o.status === STATUTS.AVEC_COMMENTAIRE).length
+                };
+            };
+
+            // Import nouvelle liste
+            const handleImportNewList = (listName, file) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const text = event.target.result;
+                        const lines = text.split('\n');
+                        
+                        if (lines.length < 2) {
+                            alert('Fichier CSV vide ou invalide');
+                            return;
+                        }
+                        
+                        // Parser le CSV manuellement (format avec point-virgule)
+                        const headers = lines[0].split(';').map(h => h.trim());
+                        console.log('En-têtes CSV:', headers); // Debug
+                        const data = [];
+                        
+                        for (let i = 1; i < lines.length; i++) {
+                            if (!lines[i].trim()) continue;
+                            
+                            const values = lines[i].split(';');
+                            console.log('Ligne', i, ':', values); // Debug
+                            
+                            if (values.length >= 9) {
+                                const row = {
+                                    reference: values[0]?.replace(/"/g, '').trim() || '',
+                                    name: values[1]?.replace(/"/g, '').trim() || '',
+                                    url_image: values[2]?.replace(/"/g, '').trim() || '',
+                                    total: values[3]?.replace(/"/g, '').trim() || '1',
+                                    client: values[4]?.replace(/"/g, '').trim() || '',
+                                    adresse_livraison: values[5]?.replace(/"/g, '').trim() || '',
+                                    telephone: values[6]?.replace(/"/g, '').trim() || '',
+                                    email: values[7]?.replace(/"/g, '').trim() || '',
+                                    transporteur: values[8]?.replace(/"/g, '').trim() || ''
+                                };
+                                data.push(row);
+                            }
+                        }
+
+                        const transformedData = data.map((row, index) => ({
+                            id: `${Date.now()}-${index}`,
+                            reference: row.reference,
+                            name: row.name,
+                            url_image: row.url_image,
+                            commentaires: '',
+                            quantity: parseInt(row.total) || 1,
+                            status: STATUTS.EN_ATTENTE,
+                            client: row.client,
+                            adresse_livraison: row.adresse_livraison,
+                            telephone: row.telephone,
+                            email: row.email,
+                            transporteur: row.transporteur
+                        }));
+
+                        const newList = {
+                            id: `list-${Date.now()}`,
+                            name: listName,
+                            createdAt: new Date().toISOString(),
+                            orders: transformedData
+                        };
+
+                        const updatedLists = [...lists, newList];
+                        saveLists(updatedLists);
+                        setActiveListId(newList.id);
+                        setShowImportModal(false);
+                        alert(`✅ ${transformedData.length} articles importés dans "${listName}" !`);
+                    } catch (error) {
+                        console.error('Erreur import:', error);
+                        alert('❌ Erreur lors de l\'importation : ' + error.message);
+                    }
+                };
+                reader.readAsText(file, 'UTF-8');
+            };
+
+            // Supprimer une liste
+            const deleteList = (listId) => {
+                if (confirm('Voulez-vous vraiment supprimer cette liste ?')) {
+                    const updatedLists = lists.filter(l => l.id !== listId);
+                    saveLists(updatedLists);
+                    if (activeListId === listId) {
+                        setActiveListId('global');
+                    }
+                }
+            };
+
+            // Mettre à jour un statut
+            const updateStatus = (orderId, newStatus, newCommentaires) => {
+                const updatedLists = lists.map(list => ({
+                    ...list,
+                    orders: list.orders.map(order =>
+                        order.id === orderId 
+                            ? { ...order, status: newStatus, commentaires: newCommentaires !== undefined ? newCommentaires : order.commentaires } 
+                            : order
+                    )
+                }));
+                saveLists(updatedLists);
+            };
+
+            // Mettre à jour un commentaire
+            const updateComment = (orderId, newComment) => {
+                const updatedLists = lists.map(list => ({
+                    ...list,
+                    orders: list.orders.map(order =>
+                        order.id === orderId ? { ...order, commentaires: newComment } : order
+                    )
+                }));
+                saveLists(updatedLists);
+            };
+
+            const activeOrders = getActiveOrders();
+            const stats = calculateStats(activeOrders);
+
+            // Filtrer les commandes
+            const filteredOrders = activeOrders.filter(order => {
+                const matchSearch = order.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  order.reference.toString().includes(searchTerm);
+                const matchStatus = filterStatus === 'all' || order.status === filterStatus;
+                return matchSearch && matchStatus;
+            });
+
+            if (authLoading) return (
+                <div className="min-h-screen flex items-center justify-center">
+                    <p className="text-gray-500 text-lg">Chargement...</p>
+                </div>
+            );
+            if (!user) return <LoginPage />;
+            const isAdmin = userRole === 'admin';
+
+            return (
+                <div className="min-h-screen">
+                    {/* Header */}
+                    <header className="bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg">
+                        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <h1 className="text-3xl font-bold">📦 Gestion Production</h1>
+                                <p className="text-green-100 text-sm">Sousou Fashion - Suivi multi-listes</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                    <p className="text-sm font-semibold">{user.email}</p>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-yellow-300 text-yellow-900' : 'bg-white bg-opacity-30 text-white'}`}>
+                                        {isAdmin ? '🔑 Admin' : '👁 Lecture'}
+                                    </span>
+                                </div>
+                                <button onClick={() => window.firebaseSignOut()} className="px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-semibold transition">
+                                    Déconnexion
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Navigation Listes */}
+                    <nav className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+                        <div className="container mx-auto px-6">
+                            <div className="flex items-center gap-2 overflow-x-auto py-2">
+                                {/* Onglet Global */}
+                                <button
+                                    onClick={() => setActiveListId('global')}
+                                    className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition ${
+                                        activeListId === 'global'
+                                            ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    📂 GLOBAL ({getAllOrders().length})
+                                </button>
+
+                                {/* Onglets des listes */}
+                                {lists.map(list => (
+                                    <div key={list.id} className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => setActiveListId(list.id)}
+                                            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition ${
+                                                activeListId === list.id
+                                                    ? 'bg-green-100 text-green-700 border-2 border-green-300'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            📋 {list.name} ({list.orders.length})
+                                        </button>
+                                        {isAdmin && <button onClick={() => deleteList(list.id)} className="px-2 py-2 text-red-600 hover:bg-red-50 rounded" title="Supprimer cette liste">✕</button>}
+                                    </div>
+                                ))}
+
+                                {isAdmin && <button onClick={() => setShowImportModal(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition whitespace-nowrap">➕ Nouvelle liste</button>}
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Modal Import */}
+                    {showImportModal && (
+                        <ImportModal
+                            onImport={handleImportNewList}
+                            onClose={() => setShowImportModal(false)}
+                        />
+                    )}
+
+                    {/* Tabs */}
+                    <nav className="bg-white border-b border-gray-200">
+                        <div className="container mx-auto px-6">
+                            <div className="flex gap-1">
+                                <TabButton
+                                    active={activeTab === 'dashboard'}
+                                    onClick={() => setActiveTab('dashboard')}
+                                    icon="📊"
+                                    label="Dashboard"
+                                />
+                                <TabButton
+                                    active={activeTab === 'production'}
+                                    onClick={() => setActiveTab('production')}
+                                    icon="✂️"
+                                    label="Suivi Production"
+                                />
+                                <TabButton
+                                    active={activeTab === 'orders'}
+                                    onClick={() => setActiveTab('orders')}
+                                    icon="🔍"
+                                    label="Par Commande"
+                                />
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Contenu */}
+                    <main className="container mx-auto px-6 py-8">
+                        {lists.length === 0 && activeListId === 'global' ? (
+                            <EmptyState onImport={() => setShowImportModal(true)} />
+                        ) : (
+                            <>
+                                {activeTab === 'dashboard' && (
+                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} />
+                                )}
+                                {activeTab === 'production' && (
+                                    <ProductionTab
+                                        orders={filteredOrders}
+                                        searchTerm={searchTerm}
+                                        setSearchTerm={setSearchTerm}
+                                        filterStatus={filterStatus}
+                                        setFilterStatus={setFilterStatus}
+                                        updateStatus={updateStatus}
+                                        updateComment={updateComment}
+                                        isAdmin={isAdmin}
+                                    />
+                                )}
+                                {activeTab === 'orders' && (
+                                    <OrdersTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} />
+                                )}
+                            </>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        // Composant TabButton
+        function TabButton({ active, onClick, icon, label }) {
+            return (
+                <button
+                    onClick={onClick}
+                    className={`px-6 py-3 font-semibold transition border-b-4 ${
+                        active
+                            ? 'text-green-600 border-green-600 bg-green-50'
+                            : 'text-gray-600 border-transparent hover:text-green-600 hover:bg-gray-50'
+                    }`}
+                >
+                    {icon} {label}
+                </button>
+            );
+        }
+
+        // Modal Import
+        function ImportModal({ onImport, onClose }) {
+            const [listName, setListName] = useState('');
+            const [file, setFile] = useState(null);
+
+            const handleSubmit = () => {
+                if (!listName.trim()) {
+                    alert('Veuillez donner un nom à la liste');
+                    return;
+                }
+                if (!file) {
+                    alert('Veuillez sélectionner un fichier');
+                    return;
+                }
+                onImport(listName, file);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                        <h3 className="text-xl font-bold mb-4">➕ Importer une nouvelle liste</h3>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold mb-2">Nom de la liste</label>
+                                <input
+                                    type="text"
+                                    placeholder="Ex: Février Semaine 1"
+                                    value={listName}
+                                    onChange={(e) => setListName(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-semibold mb-2">Fichier CSV</label>
+                                <input
+                                    type="file"
+                                    accept=".csv"
+                                    onChange={(e) => setFile(e.target.files[0])}
+                                    className="w-full"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Format attendu : CSV avec point-virgule (export PrestaShop)</p>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={handleSubmit}
+                                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700"
+                            >
+                                Importer
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300"
+                            >
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Empty State
+        function EmptyState({ onImport }) {
+            return (
+                <div className="text-center py-16">
+                    <div className="text-6xl mb-4">📦</div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Aucune liste importée</h2>
+                    <p className="text-gray-600 mb-6">Commencez par importer votre première liste de commandes</p>
+                    <button
+                        onClick={onImport}
+                        className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700"
+                    >
+                        ➕ Importer ma première liste
+                    </button>
+                </div>
+            );
+        }
+
+        // Dashboard
+        function Dashboard({ stats, orders, listName }) {
+            const [showTerminesModal, setShowTerminesModal] = useState(false);
+            const terminesOrders = orders.filter(o => o.status === STATUTS.TERMINE);
+            const terminesRefs = [...new Set(terminesOrders.map(o => o.reference))].sort((a, b) => b - a);
+
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-2xl font-bold">Dashboard - {listName}</h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <StatCard title="Total Articles" value={stats.total} color="blue" icon="📦" />
+                        <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />
+                        <StatCard title="Terminés" value={stats.termines} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
+                        <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" />
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <h3 className="text-lg font-semibold mb-3">Avancement global</h3>
+                        <div className="w-full bg-gray-200 rounded-full h-6">
+                            <div
+                                className="bg-gradient-to-r from-green-500 to-emerald-500 h-6 rounded-full flex items-center justify-center text-white text-sm font-semibold transition-all"
+                                style={{ width: `${stats.total > 0 ? Math.round((stats.termines / stats.total) * 100) : 0}%` }}
+                            >
+                                {stats.total > 0 ? Math.round((stats.termines / stats.total) * 100) : 0}%
+                            </div>
+                        </div>
+                    </div>
+
+                    {showTerminesModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+                                <div className="flex justify-between items-center p-6 border-b">
+                                    <h3 className="text-xl font-bold text-green-700">✅ Commandes terminées ({terminesRefs.length})</h3>
+                                    <button onClick={() => setShowTerminesModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+                                </div>
+                                <div className="overflow-y-auto p-6">
+                                    {terminesRefs.length === 0 ? (
+                                        <p className="text-gray-500 text-center py-8">Aucune commande terminée pour l'instant</p>
+                                    ) : (
+                                        <div className="space-y-6">
+                                            {(() => {
+                                                const byTransporteur = {};
+                                                terminesOrders.forEach(o => {
+                                                    const t = o.transporteur || 'Non défini';
+                                                    if (!byTransporteur[t]) byTransporteur[t] = new Set();
+                                                    byTransporteur[t].add(o.reference);
+                                                });
+                                                return Object.entries(byTransporteur).sort((a,b) => a[0].localeCompare(b[0])).map(([transporteur, refs]) => {
+                                                    const refsArray = [...refs].sort((a,b) => b - a);
+                                                    return (
+                                                        <div key={transporteur}>
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <h4 className="font-bold text-gray-700">🚚 {transporteur}</h4>
+                                                                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{refsArray.length} commande(s)</span>
+                                                            </div>
+                                                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                                                {refsArray.map((ref, index) => (
+                                                                    <div key={ref} className={`py-2 px-3 ${index % 2 === 0 ? 'bg-green-50' : 'bg-white'}`}>
+                                                                        <span className="font-mono text-green-900 text-base">{ref}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                            })()}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-4 border-t bg-gray-50 rounded-b-xl">
+                                    <p className="text-sm text-gray-500 text-center">{terminesOrders.length} article(s) terminé(s) au total</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // StatCard
+        function StatCard({ title, value, color, icon, onClick, clickable }) {
+            const colors = {
+                blue: 'bg-blue-50 border-blue-200 text-blue-700',
+                yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+                green: 'bg-green-50 border-green-200 text-green-700',
+                purple: 'bg-purple-50 border-purple-200 text-purple-700'
+            };
+            return (
+                <div className={`rounded-lg border-2 p-6 ${colors[color]} ${clickable ? 'cursor-pointer hover:shadow-md hover:scale-105 transition-transform' : ''}`}
+                    onClick={clickable ? onClick : undefined}>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <p className="text-sm font-medium opacity-75">{title}</p>
+                            <p className="text-3xl font-bold mt-1">{value}</p>
+                            {clickable && <p className="text-xs opacity-60 mt-1">Cliquer pour voir ›</p>}
+                        </div>
+                        <div className="text-4xl opacity-50">{icon}</div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ProductionTab
+        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, isAdmin }) {
+            const [selectedImage, setSelectedImage] = React.useState(null);
+            const [selectedOrder, setSelectedOrder] = React.useState(null); // Pour le récap commande
+            const [sortColumn, setSortColumn] = React.useState('reference'); // Colonne de tri par défaut
+            const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
+            
+            // Fonction de tri
+            const handleSort = (column) => {
+                if (sortColumn === column) {
+                    // Inverse la direction si on clique sur la même colonne
+                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                } else {
+                    // Nouvelle colonne, tri ascendant par défaut
+                    setSortColumn(column);
+                    setSortDirection('asc');
+                }
+            };
+            
+            // Trier les commandes
+            const sortedOrders = [...orders].sort((a, b) => {
+                let aVal = a[sortColumn] || '';
+                let bVal = b[sortColumn] || '';
+                
+                // Tri numérique pour reference
+                if (sortColumn === 'reference') {
+                    aVal = parseInt(aVal) || 0;
+                    bVal = parseInt(bVal) || 0;
+                } else {
+                    // Tri alphabétique pour les autres
+                    aVal = String(aVal).toLowerCase();
+                    bVal = String(bVal).toLowerCase();
+                }
+                
+                if (sortDirection === 'asc') {
+                    return aVal > bVal ? 1 : -1;
+                } else {
+                    return aVal < bVal ? 1 : -1;
+                }
+            });
+            
+            // Fonction pour ouvrir le récap d'une commande
+            const openOrderRecap = (reference) => {
+                // Récupérer tous les articles de cette commande
+                const orderItems = orders.filter(o => o.reference === reference);
+                if (orderItems.length > 0) {
+                    setSelectedOrder({
+                        reference: reference,
+                        client: orderItems[0].client,
+                        adresse_livraison: orderItems[0].adresse_livraison,
+                        telephone: orderItems[0].telephone,
+                        email: orderItems[0].email,
+                        transporteur: orderItems[0].transporteur,
+                        items: orderItems
+                    });
+                }
+            };
+            
+            return (
+                <div className="space-y-6">
+                    {/* Modal Image en grand */}
+                    {selectedImage && (
+                        <div 
+                            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+                            onClick={() => setSelectedImage(null)}
+                        >
+                            <div className="max-w-4xl max-h-[90vh] relative">
+                                <button
+                                    onClick={() => setSelectedImage(null)}
+                                    className="absolute -top-10 right-0 text-white text-2xl hover:text-gray-300"
+                                >
+                                    ✕ Fermer
+                                </button>
+                                <img 
+                                    src={selectedImage.url}
+                                    alt={selectedImage.name}
+                                    className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                                <p className="text-white text-center mt-4 text-lg">{selectedImage.name}</p>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Modal Récapitulatif Commande */}
+                    {selectedOrder && (
+                        <div 
+                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                            onClick={() => setSelectedOrder(null)}
+                        >
+                            <div 
+                                className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {/* Header */}
+                                <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <h3 className="text-2xl font-bold mb-3">📦 Commande #{selectedOrder.reference}</h3>
+                                            
+                                            {/* Infos client */}
+                                            <div className="space-y-2 text-blue-100">
+                                                {selectedOrder.client && (
+                                                    <p className="flex items-start gap-2">
+                                                        <span className="text-lg">👤</span>
+                                                        <span className="font-semibold">{selectedOrder.client}</span>
+                                                    </p>
+                                                )}
+                                                {selectedOrder.adresse_livraison && (
+                                                    <p className="flex items-start gap-2">
+                                                        <span className="text-lg">📍</span>
+                                                        <span>{selectedOrder.adresse_livraison}</span>
+                                                    </p>
+                                                )}
+                                                {selectedOrder.telephone && (
+                                                    <p className="flex items-start gap-2">
+                                                        <span className="text-lg">📞</span>
+                                                        <a href={`tel:${selectedOrder.telephone}`} className="hover:underline">
+                                                            {selectedOrder.telephone}
+                                                        </a>
+                                                    </p>
+                                                )}
+                                                {selectedOrder.email && (
+                                                    <p className="flex items-start gap-2">
+                                                        <span className="text-lg">✉️</span>
+                                                        <a href={`mailto:${selectedOrder.email}`} className="hover:underline">
+                                                            {selectedOrder.email}
+                                                        </a>
+                                                    </p>
+                                                )}
+                                                {selectedOrder.transporteur && (
+                                                    <p className="flex items-start gap-2">
+                                                        <span className="text-lg">🚚</span>
+                                                        <span>{selectedOrder.transporteur}</span>
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setSelectedOrder(null)}
+                                            className="text-white hover:text-gray-200 text-2xl font-bold"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {/* Corps */}
+                                <div className="p-6">
+                                    <h4 className="font-semibold text-gray-700 mb-4 text-lg">
+                                        Articles ({selectedOrder.items.length})
+                                    </h4>
+                                    
+                                    <div className="space-y-3">
+                                        {selectedOrder.items.map((item) => (
+                                            <div key={item.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                                {/* Photo */}
+                                                {item.url_image && (
+                                                    <img 
+                                                        src={item.url_image} 
+                                                        alt={item.name}
+                                                        className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80"
+                                                        onClick={() => setSelectedImage({ url: item.url_image, name: item.name })}
+                                                        onError={(e) => e.target.style.display = 'none'}
+                                                    />
+                                                )}
+                                                
+                                                {/* Infos */}
+                                                <div className="flex-1">
+                                                    <h5 className="font-semibold text-gray-900">{item.name}</h5>
+                                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                                                            Qté: {item.quantity || 1}
+                                                        </span>
+                                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                                            item.status === 'Terminé' ? 'bg-green-100 text-green-700' :
+                                                            item.status === 'En attente' ? 'bg-yellow-100 text-yellow-700' :
+                                                            'bg-purple-100 text-purple-700'
+                                                        }`}>
+                                                            {item.status}
+                                                        </span>
+                                                    </div>
+                                                    {item.commentaires && (
+                                                        <p className="mt-2 text-sm text-gray-600 bg-white p-2 rounded border border-gray-200">
+                                                            💬 {item.commentaires}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    
+                                    {/* Footer */}
+                                    <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
+                                        <span className="font-semibold text-gray-700">Total articles:</span>
+                                        <span className="text-2xl font-bold text-blue-600">{selectedOrder.items.length}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-semibold mb-2">🔍 Rechercher</label>
+                                <input
+                                    type="text"
+                                    placeholder="Produit ou n° commande..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold mb-2">📊 Statut</label>
+                                <select
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                >
+                                    <option value="all">Tous</option>
+                                    {Object.values(STATUTS).map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex items-end">
+                                <button
+                                    onClick={() => { setSearchTerm(''); setFilterStatus('all'); }}
+                                    className="w-full px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                                >
+                                    🔄 Effacer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-gray-50 border-b">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Photo</th>
+                                    <th 
+                                        className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('reference')}
+                                    >
+                                        N° Commande {sortColumn === 'reference' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </th>
+                                    <th 
+                                        className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('name')}
+                                    >
+                                        Produit {sortColumn === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </th>
+                                    <th 
+                                        className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('client')}
+                                    >
+                                        Client {sortColumn === 'client' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </th>
+                                    <th 
+                                        className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('transporteur')}
+                                    >
+                                        Transporteur {sortColumn === 'transporteur' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Commentaires</th>
+                                    <th 
+                                        className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('status')}
+                                    >
+                                        Statut {sortColumn === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedOrders.map(order => (
+                                    <tr key={order.id} className={`border-b transition-colors ${
+                                        order.status === STATUTS.TERMINE ? 'bg-green-50 hover:bg-green-100' :
+                                        order.status === STATUTS.AVEC_COMMENTAIRE ? 'bg-orange-50 hover:bg-orange-100' :
+                                        'bg-white hover:bg-gray-50'
+                                    }`}>
+                                        <td className="px-4 py-3">
+                                            {order.url_image ? (
+                                                <img 
+                                                    src={order.url_image} 
+                                                    alt={order.name}
+                                                    className="w-16 h-16 object-cover rounded border cursor-pointer hover:opacity-80 transition"
+                                                    onClick={() => setSelectedImage({ url: order.url_image, name: order.name })}
+                                                    onError={(e) => e.target.style.display = 'none'}
+                                                />
+                                            ) : (
+                                                <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
+                                                    Pas d'image
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span 
+                                                className="font-semibold text-blue-600 cursor-pointer hover:text-blue-800 hover:underline"
+                                                onClick={() => openOrderRecap(order.reference)}
+                                            >
+                                                #{order.reference}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">{order.name}</td>
+                                        <td className="px-4 py-3 text-sm">{order.client || '-'}</td>
+                                        <td className="px-4 py-3 text-sm">{order.transporteur || '-'}</td>
+                                        <td className="px-4 py-3">
+                                            <input
+                                                type="text"
+                                                value={order.commentaires || ''}
+                                                onChange={(e) => isAdmin && updateStatus(order.id, order.status, e.target.value)}
+                                                readOnly={!isAdmin}
+                                                placeholder={isAdmin ? "Ajouter une note..." : "Lecture seule"}
+                                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <select
+                                                value={order.status}
+                                                onChange={(e) => isAdmin && updateStatus(order.id, e.target.value, order.commentaires)}
+                                                disabled={!isAdmin}
+                                                className={`px-3 py-1 border rounded text-sm ${!isAdmin ? 'bg-gray-100 cursor-not-allowed text-gray-400' : ''}`}
+                                            >
+                                                {Object.values(STATUTS).map(s => (
+                                                    <option key={s} value={s}>{s}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        // OrdersTab
+        function OrdersTab({ orders, updateStatus, isAdmin }) {
+            const [selectedOrder, setSelectedOrder] = useState('');
+            const [searchOrder, setSearchOrder] = useState('');
+            const [selectedImage, setSelectedImage] = React.useState(null);
+            
+            const orderGroups = {};
+            orders.forEach(order => {
+                if (!orderGroups[order.reference]) {
+                    orderGroups[order.reference] = [];
+                }
+                orderGroups[order.reference].push(order);
+            });
+
+            const orderNumbers = Object.keys(orderGroups).sort((a, b) => b - a);
+            const filteredOrderNumbers = searchOrder 
+                ? orderNumbers.filter(num => num.includes(searchOrder))
+                : orderNumbers;
+
+            return (
+                <div className="space-y-6">
+                    {/* Modal Image en grand */}
+                    {selectedImage && (
+                        <div 
+                            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+                            onClick={() => setSelectedImage(null)}
+                        >
+                            <div className="max-w-4xl max-h-[90vh] relative">
+                                <button
+                                    onClick={() => setSelectedImage(null)}
+                                    className="absolute -top-10 right-0 text-white text-2xl hover:text-gray-300"
+                                >
+                                    ✕ Fermer
+                                </button>
+                                <img 
+                                    src={selectedImage.url}
+                                    alt={selectedImage.name}
+                                    className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                                <p className="text-white text-center mt-4 text-lg">{selectedImage.name}</p>
+                            </div>
+                        </div>
+                    )}
+                    
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <label className="block text-sm font-semibold mb-2">🔍 Rechercher une commande</label>
+                        <input
+                            type="text"
+                            placeholder="Tapez un numéro..."
+                            value={searchOrder}
+                            onChange={(e) => {
+                                setSearchOrder(e.target.value);
+                                const matches = orderNumbers.filter(num => num.includes(e.target.value));
+                                if (matches.length === 1) setSelectedOrder(matches[0]);
+                            }}
+                            className="w-full px-4 py-2 border rounded-lg mb-4"
+                        />
+                        
+                        <label className="block text-sm font-semibold mb-2">📋 Ou sélectionner</label>
+                        <select
+                            value={selectedOrder}
+                            onChange={(e) => setSelectedOrder(e.target.value)}
+                            className="w-full px-4 py-2 border rounded-lg"
+                        >
+                            <option value="">-- Choisir --</option>
+                            {filteredOrderNumbers.map(num => (
+                                <option key={num} value={num}>
+                                    Commande #{num} ({orderGroups[num].length} articles)
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {selectedOrder && (
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h3 className="text-xl font-bold mb-4">
+                                Commande #{selectedOrder} - {orderGroups[selectedOrder].length} article(s)
+                            </h3>
+                            <div className="space-y-3">
+                                {orderGroups[selectedOrder].map(order => (
+                                    <div key={order.id} className="border rounded-lg p-4">
+                                        <div className="flex justify-between items-start gap-4">
+                                            {/* Photo */}
+                                            {order.url_image && (
+                                                <div className="flex-shrink-0">
+                                                    <img 
+                                                        src={order.url_image} 
+                                                        alt={order.name}
+                                                        className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition"
+                                                        onClick={() => setSelectedImage({ url: order.url_image, name: order.name })}
+                                                        onError={(e) => e.target.style.display = 'none'}
+                                                    />
+                                                </div>
+                                            )}
+                                            
+                                            <div className="flex-1">
+                                                <h4 className="font-semibold text-lg">{order.name}</h4>
+                                                
+                                                {/* Infos client et transporteur */}
+                                                <div className="mt-2 flex gap-4 text-sm text-gray-600">
+                                                    {order.client && <span>👤 {order.client}</span>}
+                                                    {order.transporteur && <span>🚚 {order.transporteur}</span>}
+                                                    {order.quantity && <span>📦 Qté: {order.quantity}</span>}
+                                                </div>
+                                                
+                                                {/* Commentaire */}
+                                                <div className="mt-3">
+                                                    <label className="text-xs font-semibold text-gray-600">💬 Commentaire :</label>
+                                                    <input
+                                                        type="text"
+                                                        value={order.commentaires || ''}
+                                                        onChange={(e) => updateStatus(order.id, order.status, e.target.value)}
+                                                        placeholder="Ajouter une note..."
+                                                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Statut */}
+                                            <select
+                                                value={order.status}
+                                                onChange={(e) => updateStatus(order.id, e.target.value, order.commentaires)}
+                                                className="px-3 py-2 border rounded text-sm flex-shrink-0"
+                                            >
+                                                {Object.values(STATUTS).map(s => (
+                                                    <option key={s} value={s}>{s}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Page de connexion
+        function LoginPage() {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleLogin = async () => {
+                if (!email || !password) { setError('Veuillez remplir tous les champs'); return; }
+                setLoading(true); setError('');
+                try {
+                    await window.firebaseSignIn(email, password);
+                } catch (e) {
+                    setError('Email ou mot de passe incorrect');
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+                        <div className="text-center mb-8">
+                            <div className="text-6xl mb-4">📦</div>
+                            <h1 className="text-2xl font-bold text-gray-800">Gestion Production</h1>
+                            <p className="text-gray-500 text-sm mt-1">Sousou Fashion</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                                    placeholder="votre@email.com"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Mot de passe</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                                    placeholder="••••••••"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                />
+                            </div>
+                            {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+                            <button
+                                onClick={handleLogin}
+                                disabled={loading}
+                                className="w-full py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                                {loading ? 'Connexion...' : 'Se connecter'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
