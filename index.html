@@ -622,6 +622,7 @@
         // Dashboard
         function Dashboard({ stats, orders, listName }) {
             const [showTerminesModal, setShowTerminesModal] = useState(false);
+            const [showCommentairesModal, setShowCommentairesModal] = useState(false);
             const [selectedOrder, setSelectedOrder] = useState(null);
             const terminesOrders = orders.filter(o => o.status === STATUTS.TERMINE);
             const terminesRefs = [...new Set(terminesOrders.map(o => o.reference))].sort((a, b) => b - a);
@@ -649,7 +650,7 @@
                         <StatCard title="Total Articles" value={stats.total} color="blue" icon="📦" />
                         <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />
                         <StatCard title="Terminés" value={stats.termines} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
-                        <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" />
+                        <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />
                     </div>
 
                     <div className="bg-white rounded-lg shadow p-6">
@@ -716,6 +717,58 @@
                             </div>
                         </div>
                     )}
+
+                    {/* Modal Avec Commentaires */}
+                    {showCommentairesModal && (() => {
+                        const commandesAvecCommentaire = {};
+                        orders.forEach(o => {
+                            if (o.commentaires && o.commentaires.trim()) {
+                                if (!commandesAvecCommentaire[o.reference]) commandesAvecCommentaire[o.reference] = [];
+                                commandesAvecCommentaire[o.reference].push(o);
+                            }
+                        });
+                        const refs = Object.keys(commandesAvecCommentaire).sort((a,b) => b - a);
+                        return (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+                                    <div className="flex justify-between items-center p-6 border-b">
+                                        <h3 className="text-xl font-bold text-purple-700">💬 Commandes avec commentaire ({refs.length})</h3>
+                                        <button onClick={() => setShowCommentairesModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+                                    </div>
+                                    <div className="overflow-y-auto p-6">
+                                        {refs.length === 0 ? (
+                                            <p className="text-gray-500 text-center py-8">Aucun commentaire pour l'instant</p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {refs.map(ref => (
+                                                    <div key={ref} className="border border-purple-100 rounded-lg overflow-hidden">
+                                                        <div className="bg-purple-50 px-4 py-2 flex items-center justify-between">
+                                                            <button
+                                                                onClick={() => { setShowCommentairesModal(false); openOrderRecap(ref); }}
+                                                                className="font-mono font-bold text-purple-800 hover:text-blue-600 hover:underline"
+                                                            >
+                                                                #{ref}
+                                                            </button>
+                                                            <span className="text-xs text-purple-500">{commandesAvecCommentaire[ref][0].client}</span>
+                                                        </div>
+                                                        {commandesAvecCommentaire[ref].map((o, i) => (
+                                                            <div key={i} className="px-4 py-2 border-t border-purple-50">
+                                                                <p className="text-sm text-gray-700 truncate">{o.name}</p>
+                                                                <p className="text-sm italic text-purple-600 mt-0.5">💬 {o.commentaires}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-4 border-t bg-gray-50 rounded-b-xl">
+                                        <p className="text-sm text-gray-500 text-center">{refs.length} commande(s) avec commentaire</p>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* Modal Récapitulatif Commande */}
                     {selectedOrder && (
@@ -1102,16 +1155,20 @@
                                         <p className="text-xs text-gray-500">🚚 {order.transporteur || '-'}</p>
                                     </div>
                                 </div>
-                                {isAdmin ? (
+                                {order.commentaires ? (
+                                    <div className="mt-3 flex items-center gap-2">
+                                        <p className="flex-1 text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">💬 {order.commentaires}</p>
+                                        {isAdmin && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-red-400 hover:text-red-600">✕</button>}
+                                    </div>
+                                ) : isAdmin ? (
                                     <input
                                         type="text"
-                                        value={order.commentaires || ''}
-                                        onChange={(e) => updateStatus(order.id, order.status, e.target.value)}
+                                        defaultValue=""
+                                        onBlur={(e) => e.target.value && updateStatus(order.id, order.status, e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && e.target.value && updateStatus(order.id, order.status, e.target.value)}
                                         placeholder="💬 Ajouter une note..."
                                         className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
                                     />
-                                ) : order.commentaires ? (
-                                    <p className="mt-3 text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">💬 {order.commentaires}</p>
                                 ) : null}
                             </div>
                         ))}
@@ -1165,13 +1222,17 @@
                                         <td className="px-4 py-3 text-sm">{order.client || '-'}</td>
                                         <td className="px-4 py-3 text-sm">{order.transporteur || '-'}</td>
                                         <td className="px-4 py-3">
-                                            {isAdmin ? (
-                                                <input type="text" value={order.commentaires || ''}
-                                                    onChange={(e) => updateStatus(order.id, order.status, e.target.value)}
+                                            {order.commentaires ? (
+                                                <div className="flex items-center gap-1">
+                                                    <p className="text-sm italic text-purple-700">💬 {order.commentaires}</p>
+                                                    {isAdmin && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-red-400 hover:text-red-600 ml-1">✕</button>}
+                                                </div>
+                                            ) : isAdmin ? (
+                                                <input type="text" defaultValue=""
+                                                    onBlur={(e) => e.target.value && updateStatus(order.id, order.status, e.target.value)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && e.target.value && updateStatus(order.id, order.status, e.target.value)}
                                                     placeholder="Ajouter une note..."
                                                     className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                                            ) : order.commentaires ? (
-                                                <p className="text-sm italic text-purple-700">💬 {order.commentaires}</p>
                                             ) : (
                                                 <span className="text-gray-300 text-xs">—</span>
                                             )}
