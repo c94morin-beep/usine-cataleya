@@ -243,7 +243,7 @@
                 }));
                 saveLists(updatedLists);
 
-                // Vérifier si c'est le dernier article d'une commande
+                // Afficher la popup à chaque fois qu'un article est terminé
                 if (newStatus === STATUTS.TERMINE) {
                     const allOrders = updatedLists.flatMap(l => l.orders);
                     const thisOrder = allOrders.find(o => o.id === orderId);
@@ -252,21 +252,19 @@
                         const client = thisOrder.client;
                         const email = thisOrder.email;
                         const articlesCommande = allOrders.filter(o => o.reference === ref);
-                        const tousTermines = articlesCommande.every(o => o.status === STATUTS.TERMINE);
-                        // Ne déclencher que si la commande est complète
-                        if (tousTermines) {
-                            // Chercher autres commandes en cours pour cette cliente
-                            const autresCommandes = [...new Set(
-                                allOrders
-                                    .filter(o => 
-                                        o.reference !== ref &&
-                                        o.status !== STATUTS.TERMINE &&
-                                        (o.client === client || (email && o.email === email))
-                                    )
-                                    .map(o => o.reference)
-                            )];
-                            setCompletionAlert({ reference: ref, client, autresCommandes });
-                        }
+                        const total = articlesCommande.length;
+                        const termines = articlesCommande.filter(o => o.status === STATUTS.TERMINE).length;
+                        const tousTermines = termines === total;
+                        const autresCommandes = [...new Set(
+                            allOrders
+                                .filter(o => 
+                                    o.reference !== ref &&
+                                    o.status !== STATUTS.TERMINE &&
+                                    (o.client === client || (email && o.email === email))
+                                )
+                                .map(o => o.reference)
+                        )];
+                        setCompletionAlert({ reference: ref, client, autresCommandes, termines, total, tousTermines });
                     }
                 }
             };
