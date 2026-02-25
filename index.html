@@ -264,7 +264,33 @@
                                 )
                                 .map(o => o.reference)
                         )];
-                        setCompletionAlert({ reference: ref, client, autresCommandes, termines, total, tousTermines });
+
+                        // Vérifier si toutes les commandes de cette cliente sont terminées
+                        let toutesCommandesTerminees = false;
+                        let toutesCommandes = [];
+                        if (tousTermines && autresCommandes.length === 0) {
+                            // Récupérer toutes les commandes de cette cliente (terminées)
+                            const tousRefs = [...new Set(
+                                allOrders
+                                    .filter(o => o.client === client || (email && o.email === email))
+                                    .map(o => o.reference)
+                            )];
+                            if (tousRefs.length >= 2) {
+                                // Vérifier que toutes sont bien terminées
+                                const toutesOk = tousRefs.every(r =>
+                                    allOrders.filter(o => o.reference === r).every(o => o.status === STATUTS.TERMINE)
+                                );
+                                if (toutesOk) {
+                                    toutesCommandesTerminees = true;
+                                    toutesCommandes = tousRefs.sort((a,b) => b - a).map(r => ({
+                                        reference: r,
+                                        nbArticles: allOrders.filter(o => o.reference === r).length
+                                    }));
+                                }
+                            }
+                        }
+
+                        setCompletionAlert({ reference: ref, client, autresCommandes, termines, total, tousTermines, toutesCommandesTerminees, toutesCommandes });
                     }
                 }
             };
@@ -326,7 +352,21 @@
                                         </>
                                     )}
                                 </div>
-                                {completionAlert.autresCommandes.length > 0 && (
+                                {completionAlert.toutesCommandesTerminees ? (
+                                    <div className="bg-green-50 border-2 border-green-400 rounded-xl p-4 mt-2">
+                                        <p className="text-green-800 font-bold text-sm mb-3">🚀 Toutes les commandes de {completionAlert.client} sont prêtes !</p>
+                                        <div className="space-y-2">
+                                            {completionAlert.toutesCommandes.map(c => (
+                                                <div key={c.reference} className="flex items-center justify-between bg-white border border-green-200 rounded-lg px-3 py-2">
+                                                    <span className="font-mono font-bold text-green-800">#{c.reference}</span>
+                                                    <span className="text-xs text-gray-500">{c.nbArticles} article(s)</span>
+                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✅ Prêt</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-green-700 font-semibold text-sm mt-3 text-center">📦 Vous pouvez tout envoyer ensemble !</p>
+                                    </div>
+                                ) : completionAlert.autresCommandes.length > 0 ? (
                                     <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mt-4">
                                         <p className="text-orange-700 font-semibold text-sm">
                                             ⚠️ {completionAlert.client} a aussi {completionAlert.autresCommandes.length} autre(s) commande(s) en cours :
@@ -338,7 +378,7 @@
                                         </div>
                                         <p className="text-orange-600 text-xs mt-2">💡 Pensez à regrouper l'envoi !</p>
                                     </div>
-                                )}
+                                ) : null}
                                 <button
                                     onClick={() => setCompletionAlert(null)}
                                     className="mt-5 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition"
