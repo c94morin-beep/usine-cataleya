@@ -141,7 +141,7 @@
                     total: orders.length,
                     enAttente: orders.filter(o => o.status === STATUTS.EN_ATTENTE).length,
                     termines: orders.filter(o => o.status === STATUTS.TERMINE).length,
-                    avecCommentaire: orders.filter(o => o.status === STATUTS.AVEC_COMMENTAIRE).length
+                    avecCommentaire: [...new Set(orders.filter(o => o.commentaires && o.commentaires.trim() !== '').map(o => o.reference))].length
                 };
             };
 
@@ -1102,14 +1102,17 @@
                                         <p className="text-xs text-gray-500">🚚 {order.transporteur || '-'}</p>
                                     </div>
                                 </div>
-                                <input
-                                    type="text"
-                                    value={order.commentaires || ''}
-                                    onChange={(e) => isAdmin && updateStatus(order.id, order.status, e.target.value)}
-                                    readOnly={!isAdmin}
-                                    placeholder={isAdmin ? "💬 Ajouter une note..." : "Lecture seule"}
-                                    className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
-                                />
+                                {isAdmin ? (
+                                    <input
+                                        type="text"
+                                        value={order.commentaires || ''}
+                                        onChange={(e) => updateStatus(order.id, order.status, e.target.value)}
+                                        placeholder="💬 Ajouter une note..."
+                                        className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                                    />
+                                ) : order.commentaires ? (
+                                    <p className="mt-3 text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">💬 {order.commentaires}</p>
+                                ) : null}
                             </div>
                         ))}
                     </div>
@@ -1162,11 +1165,16 @@
                                         <td className="px-4 py-3 text-sm">{order.client || '-'}</td>
                                         <td className="px-4 py-3 text-sm">{order.transporteur || '-'}</td>
                                         <td className="px-4 py-3">
-                                            <input type="text" value={order.commentaires || ''}
-                                                onChange={(e) => isAdmin && updateStatus(order.id, order.status, e.target.value)}
-                                                readOnly={!isAdmin}
-                                                placeholder={isAdmin ? "Ajouter une note..." : "Lecture seule"}
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                                            {isAdmin ? (
+                                                <input type="text" value={order.commentaires || ''}
+                                                    onChange={(e) => updateStatus(order.id, order.status, e.target.value)}
+                                                    placeholder="Ajouter une note..."
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                                            ) : order.commentaires ? (
+                                                <p className="text-sm italic text-purple-700">💬 {order.commentaires}</p>
+                                            ) : (
+                                                <span className="text-gray-300 text-xs">—</span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <select value={order.status}
@@ -1293,14 +1301,17 @@
                                                 
                                                 {/* Commentaire */}
                                                 <div className="mt-3">
-                                                    <label className="text-xs font-semibold text-gray-600">💬 Commentaire :</label>
-                                                    <input
-                                                        type="text"
-                                                        value={order.commentaires || ''}
-                                                        onChange={(e) => updateStatus(order.id, order.status, e.target.value)}
-                                                        placeholder="Ajouter une note..."
-                                                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 text-sm"
-                                                    />
+                                                    {order.commentaires ? (
+                                                        <p className="text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded px-3 py-2">💬 {order.commentaires}</p>
+                                                    ) : (
+                                                        <input
+                                                            type="text"
+                                                            value=""
+                                                            onChange={(e) => updateStatus(order.id, order.status, e.target.value)}
+                                                            placeholder="💬 Ajouter une note..."
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 text-sm"
+                                                        />
+                                                    )}
                                                 </div>
                                             </div>
                                             
