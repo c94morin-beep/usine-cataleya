@@ -683,10 +683,12 @@
                                         <div className="space-y-6">
                                             {(() => {
                                                 const byTransporteur = {};
-                                                terminesOrders.forEach(o => {
-                                                    const t = o.transporteur || 'Non défini';
+                                                // Utiliser uniquement les commandes 100% terminées
+                                                terminesRefs.forEach(ref => {
+                                                    const firstItem = orders.find(o => o.reference === ref);
+                                                    const t = (firstItem && firstItem.transporteur) || 'Non défini';
                                                     if (!byTransporteur[t]) byTransporteur[t] = new Set();
-                                                    byTransporteur[t].add(o.reference);
+                                                    byTransporteur[t].add(ref);
                                                 });
                                                 return Object.entries(byTransporteur).sort((a,b) => a[0].localeCompare(b[0])).map(([transporteur, refs]) => {
                                                     const refsArray = [...refs].sort((a,b) => b - a);
