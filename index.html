@@ -731,42 +731,7 @@
                 return articlesCommande.every(o => o.status === STATUTS.TERMINE);
             }).sort((a, b) => b - a);
 
-            const openOrderRecap = async (reference) => {
-                const orderItems = orders.filter(o => o.reference === reference);
-                if (orderItems.length > 0) {
-                    const orderData = {
-                        reference: reference,
-                        client: orderItems[0].client,
-                        adresse_livraison: orderItems[0].adresse_livraison,
-                        telephone: orderItems[0].telephone,
-                        email: orderItems[0].email,
-                        transporteur: orderItems[0].transporteur,
-                        items: orderItems,
-                        labelUrl: null,
-                        trackingUrl: null,
-                        expeditionNum: null,
-                        loadingShipping: true
-                    };
-                    setSelectedOrder(orderData);
-                    try {
-                        const res = await fetch(`https://cataleyaparis.com/get_relay_token.php?id_order=${reference}`);
-                        const data = await res.json();
-                        if (data.success) {
-                            setSelectedOrder(prev => prev ? {
-                                ...prev,
-                                labelUrl: data.label_url,
-                                trackingUrl: data.tracking_url,
-                                expeditionNum: data.expedition_num,
-                                loadingShipping: false
-                            } : null);
-                        } else {
-                            setSelectedOrder(prev => prev ? { ...prev, loadingShipping: false } : null);
-                        }
-                    } catch(e) {
-                        setSelectedOrder(prev => prev ? { ...prev, loadingShipping: false } : null);
-                    }
-                }
-            };
+
 
             return (
                 <div className="space-y-6">
