@@ -909,7 +909,7 @@
         function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, isAdmin }) {
             const [selectedImage, setSelectedImage] = React.useState(null);
             const [selectedOrder, setSelectedOrder] = React.useState(null); // Pour le récap commande
-            const [sortColumn, setSortColumn] = React.useState('reference'); // Colonne de tri par défaut
+            const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
             const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
             
             // Fonction de tri
