@@ -519,7 +519,7 @@
                                     />
                                 )}
                                 {activeTab === 'orders' && (
-                                    <OrdersTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} />
+                                    <OrdersTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} openOrderRecap={openOrderRecap} />
                                 )}
                                 {activeTab === 'multiorders' && (
                                     <MultiOrdersTab orders={activeOrders} />
@@ -1343,7 +1343,7 @@
         }
 
         // OrdersTab
-        function OrdersTab({ orders, updateStatus, isAdmin }) {
+        function OrdersTab({ orders, updateStatus, isAdmin, openOrderRecap }) {
             const [selectedOrder, setSelectedOrder] = useState('');
             const [searchOrder, setSearchOrder] = useState('');
             const [selectedImage, setSelectedImage] = React.useState(null);
