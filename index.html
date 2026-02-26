@@ -42,6 +42,10 @@
                 cb(snapshot.exists() ? snapshot.val() : []);
             });
         };
+        window.firebaseGetCasiers = async () => {
+            const snapshot = await get(ref(db, 'casiers'));
+            return snapshot.val() || {};
+        };
         window.firebaseOnCasiers = (cb) => {
             return onValue(ref(db, 'casiers'), (snapshot) => {
                 cb(snapshot.val() || {});
@@ -1762,8 +1766,11 @@
             const initialiserCollection = async () => {
                 const refs = [...new Set(orders.map(o => o.reference))].sort((a, b) => a - b);
                 
+                // Relire Firebase pour avoir les données les plus récentes
+                const currentCasiers = await window.firebaseGetCasiers();
+                
                 // Commandes déjà assignées
-                const commandesDejaAssignees = new Set(Object.values(casiersData).map(v => String(v.commande)));
+                const commandesDejaAssignees = new Set(Object.values(currentCasiers).map(v => String(v.commande)));
                 const nouvellesCommandes = refs.filter(r => !commandesDejaAssignees.has(String(r)));
 
                 if (nouvellesCommandes.length === 0) {
@@ -1775,7 +1782,7 @@
                 
                 const casiers = genererCasiers(config);
                 // Casiers déjà utilisés
-                const casiersUtilises = new Set(Object.values(casiersData).map(v => v.casierNum));
+                const casiersUtilises = new Set(Object.values(currentCasiers).map(v => v.casierNum));
                 const casiersLibres = casiers.filter(c => !casiersUtilises.has(c.num));
                 
                 const nouvellesAssignations = {};
@@ -1791,7 +1798,7 @@
                 });
 
                 // Fusionner avec les assignations existantes
-                await window.firebaseSaveCasiers({ ...casiersData, ...nouvellesAssignations });
+                await window.firebaseSaveCasiers({ ...currentCasiers, ...nouvellesAssignations });
                 alert(`✅ ${nouvellesCommandes.length} nouvelle(s) commande(s) assignée(s) aux casiers !`);
             };
 
