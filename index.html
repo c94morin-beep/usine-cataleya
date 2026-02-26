@@ -317,7 +317,7 @@
                                   order.reference.toString().includes(searchTerm);
                 const matchStatus = filterStatus === 'all' || order.status === filterStatus;
                 return matchSearch && matchStatus;
-            });
+            }).sort((a, b) => a.name.localeCompare(b.name));
 
             if (authLoading) return (
                 <div className="min-h-screen flex items-center justify-center">
