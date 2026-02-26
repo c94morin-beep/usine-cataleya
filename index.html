@@ -1418,8 +1418,14 @@
 
                     {selectedOrder && (
                         <div className="bg-white rounded-lg shadow p-6">
-                            <h3 className="text-xl font-bold mb-4">
-                                Commande #{selectedOrder} - {orderGroups[selectedOrder].length} article(s)
+                            <h3 className="text-xl font-bold mb-4 flex items-center gap-3">
+                                <span>Commande #{selectedOrder} - {orderGroups[selectedOrder].length} article(s)</span>
+                                <button
+                                    onClick={() => openOrderRecap(selectedOrder)}
+                                    className="text-sm font-semibold px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                                >
+                                    📋 Voir la fiche
+                                </button>
                             </h3>
                             <div className="space-y-3">
                                 {orderGroups[selectedOrder].map(order => (
