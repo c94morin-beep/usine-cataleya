@@ -625,7 +625,11 @@
             const [showCommentairesModal, setShowCommentairesModal] = useState(false);
             const [selectedOrder, setSelectedOrder] = useState(null);
             const terminesOrders = orders.filter(o => o.status === STATUTS.TERMINE);
-            const terminesRefs = [...new Set(terminesOrders.map(o => o.reference))].sort((a, b) => b - a);
+            // Une commande est "terminée" uniquement si TOUS ses articles sont terminés
+            const terminesRefs = [...new Set(orders.map(o => o.reference))].filter(ref => {
+                const articlesCommande = orders.filter(o => o.reference === ref);
+                return articlesCommande.every(o => o.status === STATUTS.TERMINE);
+            }).sort((a, b) => b - a);
 
             const openOrderRecap = (reference) => {
                 const orderItems = orders.filter(o => o.reference === reference);
