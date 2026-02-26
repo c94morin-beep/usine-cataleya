@@ -63,6 +63,7 @@
             const [lists, setLists] = useState([]);
             const [activeListId, setActiveListId] = useState('global');
             const [activeTab, setActiveTab] = useState('dashboard');
+            const [globalSelectedOrder, setGlobalSelectedOrder] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
             const [filterStatus, setFilterStatus] = useState('all');
             const [showImportModal, setShowImportModal] = useState(false);
@@ -311,6 +312,35 @@
             const activeOrders = getActiveOrders();
             const stats = calculateStats(activeOrders);
 
+            // Fonction globale pour ouvrir la fiche commande avec bordereau Mondial Relay
+            const openGlobalOrderRecap = async (reference) => {
+                const orderItems = activeOrders.filter(o => o.reference === reference);
+                if (orderItems.length === 0) return;
+                setGlobalSelectedOrder({
+                    reference,
+                    client: orderItems[0].client,
+                    adresse_livraison: orderItems[0].adresse_livraison,
+                    telephone: orderItems[0].telephone,
+                    email: orderItems[0].email,
+                    transporteur: orderItems[0].transporteur,
+                    items: orderItems,
+                    labelUrl: null, trackingUrl: null, expeditionNum: null, loadingShipping: true
+                });
+                try {
+                    const res = await fetch(`https://cataleyaparis.com/get_relay_token.php?id_order=${reference}`);
+                    const data = await res.json();
+                    setGlobalSelectedOrder(prev => prev ? {
+                        ...prev,
+                        labelUrl: data.success ? data.label_url : null,
+                        trackingUrl: data.success ? data.tracking_url : null,
+                        expeditionNum: data.success ? data.expedition_num : null,
+                        loadingShipping: false
+                    } : null);
+                } catch(e) {
+                    setGlobalSelectedOrder(prev => prev ? { ...prev, loadingShipping: false } : null);
+                }
+            };
+
             // Filtrer les commandes
             const filteredOrders = activeOrders.filter(order => {
                 const matchSearch = order.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -329,6 +359,61 @@
 
             return (
                 <div className="min-h-screen">
+                    {/* Modal Fiche Commande Globale */}
+                    {globalSelectedOrder && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[75] p-4" onClick={() => setGlobalSelectedOrder(null)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                                <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <h3 className="text-2xl font-bold mb-3">📦 Commande #{globalSelectedOrder.reference}</h3>
+                                            <div className="space-y-2 text-blue-100">
+                                                {globalSelectedOrder.client && <p className="flex items-start gap-2"><span className="text-lg">👤</span><span className="font-semibold">{globalSelectedOrder.client}</span></p>}
+                                                {globalSelectedOrder.adresse_livraison && <p className="flex items-start gap-2"><span className="text-lg">📍</span><span>{globalSelectedOrder.adresse_livraison}</span></p>}
+                                                {globalSelectedOrder.telephone && <p className="flex items-start gap-2"><span className="text-lg">📞</span><a href={`tel:${globalSelectedOrder.telephone}`} className="hover:underline">{globalSelectedOrder.telephone}</a></p>}
+                                                {globalSelectedOrder.email && <p className="flex items-start gap-2"><span className="text-lg">✉️</span><a href={`mailto:${globalSelectedOrder.email}`} className="hover:underline">{globalSelectedOrder.email}</a></p>}
+                                                {globalSelectedOrder.transporteur && <p className="flex items-start gap-2"><span className="text-lg">🚚</span><span>{globalSelectedOrder.transporteur}</span></p>}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setGlobalSelectedOrder(null)} className="text-white hover:text-gray-200 text-2xl font-bold">✕</button>
+                                    </div>
+                                </div>
+                                <div className="p-6">
+                                    <h4 className="font-semibold text-gray-700 mb-4 text-lg">Articles ({globalSelectedOrder.items.length})</h4>
+                                    <div className="space-y-3">
+                                        {globalSelectedOrder.items.map((item) => (
+                                            <div key={item.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                                                {item.url_image && <img src={item.url_image} alt={item.name} className="w-20 h-20 object-cover rounded border" onError={e => e.target.style.display='none'} />}
+                                                <div className="flex-1">
+                                                    <h5 className="font-semibold text-gray-900">{item.name}</h5>
+                                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">Qté: {item.quantity || 1}</span>
+                                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.status === 'Terminé' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
+                                                    </div>
+                                                    {item.commentaires && <p className="mt-2 text-sm text-purple-600 italic">💬 {item.commentaires}</p>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
+                                        <span className="font-semibold text-gray-700">Total articles:</span>
+                                        <span className="text-2xl font-bold text-blue-600">{globalSelectedOrder.items.length}</span>
+                                    </div>
+                                    {globalSelectedOrder.loadingShipping ? (
+                                        <div className="mt-4 text-center text-sm text-gray-400">⏳ Recherche du bordereau...</div>
+                                    ) : (globalSelectedOrder.labelUrl || globalSelectedOrder.trackingUrl) ? (
+                                        <div className="mt-4 pt-4 border-t border-gray-200">
+                                            <p className="text-sm font-semibold text-gray-600 mb-3">🚚 Mondial Relay {globalSelectedOrder.expeditionNum ? `— Expédition #${globalSelectedOrder.expeditionNum}` : ''}</p>
+                                            <div className="flex gap-3 flex-wrap">
+                                                {globalSelectedOrder.labelUrl && <a href={globalSelectedOrder.labelUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition">📄 Imprimer l'étiquette</a>}
+                                                {globalSelectedOrder.trackingUrl && <a href={globalSelectedOrder.trackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition">🔍 Suivre le colis</a>}
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {/* Popup Commande Complète */}
                     {completionAlert && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4" onClick={() => setCompletionAlert(null)}>
@@ -519,13 +604,13 @@
                                     />
                                 )}
                                 {activeTab === 'orders' && (
-                                    <OrdersTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} openOrderRecap={openOrderRecap} />
+                                    <OrdersTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'multiorders' && (
-                                    <MultiOrdersTab orders={activeOrders} />
+                                    <MultiOrdersTab orders={activeOrders} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'ready' && (
-                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} />
+                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} />
                                 )}
 
 
