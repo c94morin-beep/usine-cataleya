@@ -1464,6 +1464,122 @@
 
 
 
+
+        // MultiOrdersTab - Clientes avec plusieurs commandes
+        function MultiOrdersTab({ orders }) {
+            const [selectedClient, setSelectedClient] = React.useState(null);
+
+            const clientMap = {};
+            orders.forEach(o => {
+                const key = (o.client || 'Inconnu') + '||' + (o.email || '');
+                if (!clientMap[key]) {
+                    clientMap[key] = { nom: o.client || 'Inconnu', email: o.email || '', commandes: new Set(), articles: [] };
+                }
+                clientMap[key].commandes.add(o.reference);
+                clientMap[key].articles.push(o);
+            });
+
+            const multiClients = Object.values(clientMap)
+                .filter(c => c.commandes.size >= 2)
+                .map(c => ({ ...c, commandes: [...c.commandes].sort((a,b) => b - a) }))
+                .sort((a, b) => b.commandes.length - a.commandes.length);
+
+            if (multiClients.length === 0) {
+                return (
+                    <div className="text-center py-16 text-gray-400">
+                        <div className="text-5xl mb-4">🎉</div>
+                        <p className="text-lg font-semibold">Aucune cliente avec plusieurs commandes</p>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="space-y-4">
+                    {selectedClient && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4" onClick={() => setSelectedClient(null)}>
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                                <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 rounded-t-xl">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="text-xl font-bold">👤 {selectedClient.nom}</h3>
+                                            {selectedClient.email && <p className="text-purple-200 text-sm mt-1">✉️ {selectedClient.email}</p>}
+                                            <p className="text-purple-200 text-sm mt-1">📦 {selectedClient.commandes.length} commandes — {selectedClient.articles.length} articles</p>
+                                        </div>
+                                        <button onClick={() => setSelectedClient(null)} className="text-white text-2xl">✕</button>
+                                    </div>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    {selectedClient.commandes.map(ref => {
+                                        const items = selectedClient.articles.filter(a => a.reference === ref);
+                                        const allDone = items.every(i => i.status === 'Terminé');
+                                        return (
+                                            <div key={ref} className={`border rounded-lg overflow-hidden ${allDone ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}>
+                                                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
+                                                    <span className="font-bold text-gray-800">Commande #{ref}</span>
+                                                    {allDone ? <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">✅ Terminée</span> : <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">⏳ En cours</span>}
+                                                </div>
+                                                {items.map((item, i) => (
+                                                    <div key={i} className="flex items-center gap-3 px-4 py-3 border-b last:border-0">
+                                                        {item.image && <img src={item.image} className="w-12 h-12 object-cover rounded" />}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
+                                                            {item.transporteur && <p className="text-xs text-gray-500">🚚 {item.transporteur}</p>}
+                                                        </div>
+                                                        <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'Terminé' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-gray-800">👯 Clientes multi-commandes</h2>
+                        <span className="bg-purple-100 text-purple-700 text-sm font-semibold px-3 py-1 rounded-full">{multiClients.length} cliente(s)</span>
+                    </div>
+                    <p className="text-sm text-gray-500">Ces clientes ont passé plusieurs commandes — pensez à regrouper l'envoi !</p>
+
+                    <div className="space-y-3">
+                        {multiClients.map((client, i) => {
+                            const totalArticles = client.articles.length;
+                            const termines = client.articles.filter(a => a.status === 'Terminé').length;
+                            const allDone = termines === totalArticles;
+                            const transporteurs = [...new Set(client.articles.map(a => a.transporteur).filter(Boolean))];
+                            return (
+                                <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md hover:border-purple-300 transition-all" onClick={() => setSelectedClient(client)}>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold text-gray-800">{client.nom}</span>
+                                                {allDone && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Tout terminé</span>}
+                                            </div>
+                                            {client.email && <p className="text-xs text-gray-400 mt-0.5 truncate">✉️ {client.email}</p>}
+                                            {transporteurs.length > 0 && <p className="text-xs text-gray-400 mt-0.5">🚚 {transporteurs.join(', ')}</p>}
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                            <span className="bg-purple-100 text-purple-700 text-sm font-bold px-3 py-1 rounded-full">{client.commandes.length} commandes</span>
+                                            <span className="text-xs text-gray-400">{termines}/{totalArticles} articles terminés</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {client.commandes.map(ref => (
+                                            <span key={ref} className="font-mono text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">#{ref}</span>
+                                        ))}
+                                    </div>
+                                    <div className="mt-2 w-full bg-gray-100 rounded-full h-1.5">
+                                        <div className="bg-green-500 h-1.5 rounded-full transition-all" style={{width: `${totalArticles > 0 ? (termines/totalArticles)*100 : 0}%`}}></div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        }
+
         // ReadyToShipTab - Commandes prêtes à expédier dès réception d'un article
         function ReadyToShipTab({ orders, updateStatus, isAdmin }) {
             const [search, setSearch] = React.useState('');
