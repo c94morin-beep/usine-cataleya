@@ -42,6 +42,17 @@
                 cb(snapshot.exists() ? snapshot.val() : []);
             });
         };
+        window.firebaseOnCasiers = (cb) => {
+            return onValue(ref(db, 'casiers'), (snapshot) => {
+                cb(snapshot.val() || {});
+            });
+        };
+        window.firebaseSaveCasiers = async (data) => {
+            await set(ref(db, 'casiers'), data);
+        };
+        window.firebaseUpdateCasier = async (key, data) => {
+            await update(ref(db, 'casiers/' + key), data);
+        };
         window.dispatchEvent(new Event('firebase-ready'));
     </script>
 </head>
