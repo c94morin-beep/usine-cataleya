@@ -342,6 +342,7 @@
                         packlinkUrl: packlinkRes?.success ? packlinkRes.label_url : null,
                         packlinkTrackingUrl: packlinkRes?.success ? packlinkRes.tracking_url : null,
                         packlinkRef: packlinkRes?.success ? packlinkRes.shipment_ref : null,
+                        packlinkTrackingNumber: packlinkRes?.success ? packlinkRes.tracking_number : null,
                         packlinkCarrier: packlinkRes?.success ? packlinkRes.carrier : null,
                         loadingShipping: false
                     } : null);
@@ -388,7 +389,7 @@
                                                         {globalSelectedOrder.labelUrl && <a href={globalSelectedOrder.labelUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette MR</a>}
                                                         {globalSelectedOrder.trackingUrl && <a href={globalSelectedOrder.trackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🔍 Suivi MR</a>}
                                                         {globalSelectedOrder.packlinkUrl && <a href={globalSelectedOrder.packlinkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-orange-400 hover:bg-orange-500 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette {globalSelectedOrder.packlinkCarrier || 'Packlink'}</a>}
-                                                        {globalSelectedOrder.packlinkTrackingUrl && <a href={globalSelectedOrder.packlinkTrackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🔍 Suivi colis</a>}
+                                                        {globalSelectedOrder.packlinkTrackingUrl && <a href={globalSelectedOrder.packlinkTrackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🔍 Suivi {globalSelectedOrder.packlinkTrackingNumber || 'colis'}</a>}
                                                         {globalSelectedOrder.loadingShipping === false && !globalSelectedOrder.labelUrl && !globalSelectedOrder.packlinkUrl && null}
                                                     </div>
                                                 )}
