@@ -380,6 +380,16 @@
                                                 {globalSelectedOrder.telephone && <p className="flex items-start gap-2"><span className="text-lg">📞</span><a href={`tel:${globalSelectedOrder.telephone}`} className="hover:underline">{globalSelectedOrder.telephone}</a></p>}
                                                 {globalSelectedOrder.email && <p className="flex items-start gap-2"><span className="text-lg">✉️</span><a href={`mailto:${globalSelectedOrder.email}`} className="hover:underline">{globalSelectedOrder.email}</a></p>}
                                                 {globalSelectedOrder.transporteur && <p className="flex items-start gap-2"><span className="text-lg">🚚</span><span>{globalSelectedOrder.transporteur}</span></p>}
+                                                {/* Boutons bordereau dans le header */}
+                                                {!globalSelectedOrder.loadingShipping && (
+                                                    <div className="flex gap-2 flex-wrap mt-2">
+                                                        {globalSelectedOrder.labelUrl && <a href={globalSelectedOrder.labelUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette MR</a>}
+                                                        {globalSelectedOrder.trackingUrl && <a href={globalSelectedOrder.trackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🔍 Suivi MR</a>}
+                                                        {globalSelectedOrder.packlinkUrl && <a href={globalSelectedOrder.packlinkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-orange-400 hover:bg-orange-500 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette Packlink</a>}
+                                                        {globalSelectedOrder.loadingShipping === false && !globalSelectedOrder.labelUrl && !globalSelectedOrder.packlinkUrl && null}
+                                                    </div>
+                                                )}
+                                                {globalSelectedOrder.loadingShipping && <p className="text-blue-200 text-xs mt-2">⏳ Recherche bordereau...</p>}
                                             </div>
                                         </div>
                                         <button onClick={() => setGlobalSelectedOrder(null)} className="text-white hover:text-gray-200 text-2xl font-bold">✕</button>
@@ -406,29 +416,7 @@
                                         <span className="font-semibold text-gray-700">Total articles:</span>
                                         <span className="text-2xl font-bold text-blue-600">{globalSelectedOrder.items.length}</span>
                                     </div>
-                                    {globalSelectedOrder.loadingShipping ? (
-                                        <div className="mt-4 text-center text-sm text-gray-400">⏳ Recherche du bordereau...</div>
-                                    ) : (
-                                        <>
-                                            {(globalSelectedOrder.labelUrl || globalSelectedOrder.trackingUrl) && (
-                                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                                    <p className="text-sm font-semibold text-gray-600 mb-3">🚚 Mondial Relay {globalSelectedOrder.expeditionNum ? `— Expédition #${globalSelectedOrder.expeditionNum}` : ''}</p>
-                                                    <div className="flex gap-3 flex-wrap">
-                                                        {globalSelectedOrder.labelUrl && <a href={globalSelectedOrder.labelUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition">📄 Imprimer l'étiquette</a>}
-                                                        {globalSelectedOrder.trackingUrl && <a href={globalSelectedOrder.trackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition">🔍 Suivre le colis</a>}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {globalSelectedOrder.packlinkUrl && (
-                                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                                    <p className="text-sm font-semibold text-gray-600 mb-3">📦 Packlink {globalSelectedOrder.packlinkRef ? `— ${globalSelectedOrder.packlinkRef}` : ''}</p>
-                                                    <div className="flex gap-3 flex-wrap">
-                                                        <a href={globalSelectedOrder.packlinkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition">📄 Imprimer l'étiquette</a>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
+
                                 </div>
                             </div>
                         </div>
