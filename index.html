@@ -769,6 +769,7 @@
                     
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <StatCard title="Total Articles" value={stats.total} color="blue" icon="📦" />
+                        <StatCard title="Commandes" value={[...new Set(orders.map(o => o.reference))].length} color="indigo" icon="🛒" />
                         <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />
                         <StatCard title="Terminés" value={stats.termines} subtitle={`${orders.filter(o => o.status === STATUTS.TERMINE).length} articles terminés`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
                         <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />
