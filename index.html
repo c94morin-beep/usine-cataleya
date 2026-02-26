@@ -601,6 +601,7 @@
                                         updateStatus={updateStatus}
                                         updateComment={updateComment}
                                         isAdmin={isAdmin}
+                                        openOrderRecap={openGlobalOrderRecap}
                                     />
                                 )}
                                 {activeTab === 'orders' && (
@@ -723,7 +724,6 @@
         function Dashboard({ stats, orders, listName, openOrderRecap }) {
             const [showTerminesModal, setShowTerminesModal] = useState(false);
             const [showCommentairesModal, setShowCommentairesModal] = useState(false);
-            const [selectedOrder, setSelectedOrder] = useState(null);
             const terminesOrders = orders.filter(o => o.status === STATUTS.TERMINE);
             // Une commande est "terminée" uniquement si TOUS ses articles sont terminés
             const terminesRefs = [...new Set(orders.map(o => o.reference))].filter(ref => {
@@ -864,91 +864,7 @@
                     })()}
 
                     {/* Modal Récapitulatif Commande */}
-                    {selectedOrder && (
-                        <div 
-                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4"
-                            onClick={() => setSelectedOrder(null)}
-                        >
-                            <div 
-                                className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <h3 className="text-2xl font-bold mb-3">📦 Commande #{selectedOrder.reference}</h3>
-                                            <div className="space-y-2 text-blue-100">
-                                                {selectedOrder.client && (
-                                                    <p className="flex items-start gap-2"><span className="text-lg">👤</span><span className="font-semibold">{selectedOrder.client}</span></p>
-                                                )}
-                                                {selectedOrder.adresse_livraison && (
-                                                    <p className="flex items-start gap-2"><span className="text-lg">📍</span><span>{selectedOrder.adresse_livraison}</span></p>
-                                                )}
-                                                {selectedOrder.telephone && (
-                                                    <p className="flex items-start gap-2"><span className="text-lg">📞</span><a href={`tel:${selectedOrder.telephone}`} className="hover:underline">{selectedOrder.telephone}</a></p>
-                                                )}
-                                                {selectedOrder.email && (
-                                                    <p className="flex items-start gap-2"><span className="text-lg">✉️</span><a href={`mailto:${selectedOrder.email}`} className="hover:underline">{selectedOrder.email}</a></p>
-                                                )}
-                                                {selectedOrder.transporteur && (
-                                                    <p className="flex items-start gap-2"><span className="text-lg">🚚</span><span>{selectedOrder.transporteur}</span></p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <button onClick={() => setSelectedOrder(null)} className="text-white hover:text-gray-200 text-2xl font-bold">✕</button>
-                                    </div>
-                                </div>
-                                <div className="p-6">
-                                    <h4 className="font-semibold text-gray-700 mb-4 text-lg">Articles ({selectedOrder.items.length})</h4>
-                                    <div className="space-y-3">
-                                        {selectedOrder.items.map((item) => (
-                                            <div key={item.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                                {item.url_image && (
-                                                    <img src={item.url_image} alt={item.name} className="w-20 h-20 object-cover rounded border" onError={(e) => e.target.style.display = 'none'} />
-                                                )}
-                                                <div className="flex-1">
-                                                    <h5 className="font-semibold text-gray-900">{item.name}</h5>
-                                                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                                                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">Qté: {item.quantity || 1}</span>
-                                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.status === 'Terminé' ? 'bg-green-100 text-green-700' : item.status === 'En attente' ? 'bg-yellow-100 text-yellow-700' : 'bg-purple-100 text-purple-700'}`}>{item.status}</span>
-                                                    </div>
-                                                    {item.commentaires && (
-                                                        <p className="mt-2 text-sm text-gray-600 bg-white p-2 rounded border border-gray-200">💬 {item.commentaires}</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
-                                        <span className="font-semibold text-gray-700">Total articles:</span>
-                                        <span className="text-2xl font-bold text-blue-600">{selectedOrder.items.length}</span>
-                                    </div>
-                                    {/* Bordereau Mondial Relay */}
-                                    {selectedOrder.loadingShipping ? (
-                                        <div className="mt-4 text-center text-sm text-gray-400">⏳ Recherche du bordereau...</div>
-                                    ) : (selectedOrder.labelUrl || selectedOrder.trackingUrl) ? (
-                                        <div className="mt-4 pt-4 border-t border-gray-200">
-                                            <p className="text-sm font-semibold text-gray-600 mb-3">🚚 Mondial Relay {selectedOrder.expeditionNum ? `— Expédition #${selectedOrder.expeditionNum}` : ''}</p>
-                                            <div className="flex gap-3 flex-wrap">
-                                                {selectedOrder.labelUrl && (
-                                                    <a href={selectedOrder.labelUrl} target="_blank" rel="noopener noreferrer"
-                                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition">
-                                                        📄 Imprimer l'étiquette
-                                                    </a>
-                                                )}
-                                                {selectedOrder.trackingUrl && (
-                                                    <a href={selectedOrder.trackingUrl} target="_blank" rel="noopener noreferrer"
-                                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition">
-                                                        🔍 Suivre le colis
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ) : null}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+
                 </div>
             );
         }
@@ -978,9 +894,8 @@
         }
 
         // ProductionTab
-        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, isAdmin }) {
+        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, isAdmin, openOrderRecap }) {
             const [selectedImage, setSelectedImage] = React.useState(null);
-            const [selectedOrder, setSelectedOrder] = React.useState(null); // Pour le récap commande
             const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
             const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
             
@@ -1019,43 +934,7 @@
             });
             
             // Fonction pour ouvrir le récap d'une commande
-            const openOrderRecap = async (reference) => {
-                const orderItems = orders.filter(o => o.reference === reference);
-                if (orderItems.length > 0) {
-                    const orderData = {
-                        reference: reference,
-                        client: orderItems[0].client,
-                        adresse_livraison: orderItems[0].adresse_livraison,
-                        telephone: orderItems[0].telephone,
-                        email: orderItems[0].email,
-                        transporteur: orderItems[0].transporteur,
-                        items: orderItems,
-                        labelUrl: null,
-                        trackingUrl: null,
-                        expeditionNum: null,
-                        loadingShipping: true
-                    };
-                    setSelectedOrder(orderData);
-                    // Récupérer les infos bordereau Mondial Relay
-                    try {
-                        const res = await fetch(`https://cataleyaparis.com/get_relay_token.php?id_order=${reference}`);
-                        const data = await res.json();
-                        if (data.success) {
-                            setSelectedOrder(prev => prev ? {
-                                ...prev,
-                                labelUrl: data.label_url,
-                                trackingUrl: data.tracking_url,
-                                expeditionNum: data.expedition_num,
-                                loadingShipping: false
-                            } : null);
-                        } else {
-                            setSelectedOrder(prev => prev ? { ...prev, loadingShipping: false } : null);
-                        }
-                    } catch(e) {
-                        setSelectedOrder(prev => prev ? { ...prev, loadingShipping: false } : null);
-                    }
-                }
-            };
+
             
             return (
                 <div className="space-y-6">
@@ -1084,122 +963,7 @@
                     )}
                     
                     {/* Modal Récapitulatif Commande */}
-                    {selectedOrder && (
-                        <div 
-                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                            onClick={() => setSelectedOrder(null)}
-                        >
-                            <div 
-                                className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {/* Header */}
-                                <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <h3 className="text-2xl font-bold mb-3">📦 Commande #{selectedOrder.reference}</h3>
-                                            
-                                            {/* Infos client */}
-                                            <div className="space-y-2 text-blue-100">
-                                                {selectedOrder.client && (
-                                                    <p className="flex items-start gap-2">
-                                                        <span className="text-lg">👤</span>
-                                                        <span className="font-semibold">{selectedOrder.client}</span>
-                                                    </p>
-                                                )}
-                                                {selectedOrder.adresse_livraison && (
-                                                    <p className="flex items-start gap-2">
-                                                        <span className="text-lg">📍</span>
-                                                        <span>{selectedOrder.adresse_livraison}</span>
-                                                    </p>
-                                                )}
-                                                {selectedOrder.telephone && (
-                                                    <p className="flex items-start gap-2">
-                                                        <span className="text-lg">📞</span>
-                                                        <a href={`tel:${selectedOrder.telephone}`} className="hover:underline">
-                                                            {selectedOrder.telephone}
-                                                        </a>
-                                                    </p>
-                                                )}
-                                                {selectedOrder.email && (
-                                                    <p className="flex items-start gap-2">
-                                                        <span className="text-lg">✉️</span>
-                                                        <a href={`mailto:${selectedOrder.email}`} className="hover:underline">
-                                                            {selectedOrder.email}
-                                                        </a>
-                                                    </p>
-                                                )}
-                                                {selectedOrder.transporteur && (
-                                                    <p className="flex items-start gap-2">
-                                                        <span className="text-lg">🚚</span>
-                                                        <span>{selectedOrder.transporteur}</span>
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => setSelectedOrder(null)}
-                                            className="text-white hover:text-gray-200 text-2xl font-bold"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                {/* Corps */}
-                                <div className="p-6">
-                                    <h4 className="font-semibold text-gray-700 mb-4 text-lg">
-                                        Articles ({selectedOrder.items.length})
-                                    </h4>
-                                    
-                                    <div className="space-y-3">
-                                        {selectedOrder.items.map((item) => (
-                                            <div key={item.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                                {/* Photo */}
-                                                {item.url_image && (
-                                                    <img 
-                                                        src={item.url_image} 
-                                                        alt={item.name}
-                                                        className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80"
-                                                        onClick={() => setSelectedImage({ url: item.url_image, name: item.name })}
-                                                        onError={(e) => e.target.style.display = 'none'}
-                                                    />
-                                                )}
-                                                
-                                                {/* Infos */}
-                                                <div className="flex-1">
-                                                    <h5 className="font-semibold text-gray-900">{item.name}</h5>
-                                                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                                                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                                                            Qté: {item.quantity || 1}
-                                                        </span>
-                                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                                            item.status === 'Terminé' ? 'bg-green-100 text-green-700' :
-                                                            item.status === 'En attente' ? 'bg-yellow-100 text-yellow-700' :
-                                                            'bg-purple-100 text-purple-700'
-                                                        }`}>
-                                                            {item.status}
-                                                        </span>
-                                                    </div>
-                                                    {item.commentaires && (
-                                                        <p className="mt-2 text-sm text-gray-600 bg-white p-2 rounded border border-gray-200">
-                                                            💬 {item.commentaires}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    
-                                    {/* Footer */}
-                                    <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
-                                        <span className="font-semibold text-gray-700">Total articles:</span>
-                                        <span className="text-2xl font-bold text-blue-600">{selectedOrder.items.length}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+
                     
                     <div className="bg-white rounded-lg shadow p-6">
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
