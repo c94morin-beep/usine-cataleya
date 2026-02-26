@@ -1760,25 +1760,39 @@
 
             // Initialiser la collection — assigner les commandes aux casiers
             const initialiserCollection = async () => {
-                if (!window.confirm('Assigner toutes les commandes aux casiers ? Les assignations précédentes seront effacées.')) return;
-                
                 const refs = [...new Set(orders.map(o => o.reference))].sort((a, b) => a - b);
-                const casiers = genererCasiers(config);
-                const assignations = {};
+                
+                // Commandes déjà assignées
+                const commandesDejaAssignees = new Set(Object.values(casiersData).map(v => String(v.commande)));
+                const nouvellesCommandes = refs.filter(r => !commandesDejaAssignees.has(String(r)));
 
-                refs.forEach((ref, i) => {
-                    if (casiers[i]) {
-                        assignations[`casier_${casiers[i].num}`] = {
+                if (nouvellesCommandes.length === 0) {
+                    alert('✅ Toutes les commandes sont déjà assignées !');
+                    return;
+                }
+
+                if (!window.confirm(`Assigner ${nouvellesCommandes.length} nouvelle(s) commande(s) aux casiers ? Les casiers existants ne seront pas modifiés.`)) return;
+                
+                const casiers = genererCasiers(config);
+                // Casiers déjà utilisés
+                const casiersUtilises = new Set(Object.values(casiersData).map(v => v.casierNum));
+                const casiersLibres = casiers.filter(c => !casiersUtilises.has(c.num));
+                
+                const nouvellesAssignations = {};
+                nouvellesCommandes.forEach((ref, i) => {
+                    if (casiersLibres[i]) {
+                        nouvellesAssignations[`casier_${casiersLibres[i].num}`] = {
                             commande: ref,
-                            casierNum: casiers[i].num,
+                            casierNum: casiersLibres[i].num,
                             allume: false,
-                            zone: casiers[i].zone
+                            zone: casiersLibres[i].zone
                         };
                     }
                 });
 
-                await window.firebaseSaveCasiers(assignations);
-                alert(`✅ ${refs.length} commandes assignées aux casiers !`);
+                // Fusionner avec les assignations existantes
+                await window.firebaseSaveCasiers({ ...casiersData, ...nouvellesAssignations });
+                alert(`✅ ${nouvellesCommandes.length} nouvelle(s) commande(s) assignée(s) aux casiers !`);
             };
 
             // Réinitialiser
