@@ -830,6 +830,28 @@
                                         <span className="font-semibold text-gray-700">Total articles:</span>
                                         <span className="text-2xl font-bold text-blue-600">{selectedOrder.items.length}</span>
                                     </div>
+                                    {/* Bordereau Mondial Relay */}
+                                    {selectedOrder.loadingShipping ? (
+                                        <div className="mt-4 text-center text-sm text-gray-400">⏳ Recherche du bordereau...</div>
+                                    ) : (selectedOrder.labelUrl || selectedOrder.trackingUrl) ? (
+                                        <div className="mt-4 pt-4 border-t border-gray-200">
+                                            <p className="text-sm font-semibold text-gray-600 mb-3">🚚 Mondial Relay {selectedOrder.expeditionNum ? `— Expédition #${selectedOrder.expeditionNum}` : ''}</p>
+                                            <div className="flex gap-3 flex-wrap">
+                                                {selectedOrder.labelUrl && (
+                                                    <a href={selectedOrder.labelUrl} target="_blank" rel="noopener noreferrer"
+                                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition">
+                                                        📄 Imprimer l'étiquette
+                                                    </a>
+                                                )}
+                                                {selectedOrder.trackingUrl && (
+                                                    <a href={selectedOrder.trackingUrl} target="_blank" rel="noopener noreferrer"
+                                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition">
+                                                        🔍 Suivre le colis
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -903,19 +925,41 @@
             });
             
             // Fonction pour ouvrir le récap d'une commande
-            const openOrderRecap = (reference) => {
-                // Récupérer tous les articles de cette commande
+            const openOrderRecap = async (reference) => {
                 const orderItems = orders.filter(o => o.reference === reference);
                 if (orderItems.length > 0) {
-                    setSelectedOrder({
+                    const orderData = {
                         reference: reference,
                         client: orderItems[0].client,
                         adresse_livraison: orderItems[0].adresse_livraison,
                         telephone: orderItems[0].telephone,
                         email: orderItems[0].email,
                         transporteur: orderItems[0].transporteur,
-                        items: orderItems
-                    });
+                        items: orderItems,
+                        labelUrl: null,
+                        trackingUrl: null,
+                        expeditionNum: null,
+                        loadingShipping: true
+                    };
+                    setSelectedOrder(orderData);
+                    // Récupérer les infos bordereau Mondial Relay
+                    try {
+                        const res = await fetch(`https://cataleyaparis.com/get_relay_token.php?id_order=${reference}`);
+                        const data = await res.json();
+                        if (data.success) {
+                            setSelectedOrder(prev => prev ? {
+                                ...prev,
+                                labelUrl: data.label_url,
+                                trackingUrl: data.tracking_url,
+                                expeditionNum: data.expedition_num,
+                                loadingShipping: false
+                            } : null);
+                        } else {
+                            setSelectedOrder(prev => prev ? { ...prev, loadingShipping: false } : null);
+                        }
+                    } catch(e) {
+                        setSelectedOrder(prev => prev ? { ...prev, loadingShipping: false } : null);
+                    }
                 }
             };
             
