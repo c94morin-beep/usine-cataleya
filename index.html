@@ -14,7 +14,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getDatabase, ref, get, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getDatabase, ref, get, set, update, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
         const firebaseConfig = {
             apiKey: "AIzaSyDVpN0cbCqDYI2klKrWqZJAcYDX2ayx8F0",
             authDomain: "usine-cataleya.firebaseapp.com",
@@ -1739,9 +1739,8 @@
 
             // Charger les assignations depuis Firebase
             React.useEffect(() => {
-                const ref = window.firebaseDatabase.ref(window.firebaseDb, 'casiers');
-                const unsubscribe = window.firebaseDatabase.onValue(ref, (snapshot) => {
-                    setCasiersData(snapshot.val() || {});
+                const unsubscribe = window.firebaseOnCasiers((data) => {
+                    setCasiersData(data);
                     setLoading(false);
                 });
                 return () => unsubscribe();
@@ -1766,20 +1765,20 @@
                     }
                 });
 
-                await window.firebaseDatabase.set(window.firebaseDatabase.ref(window.firebaseDb, 'casiers'), assignations);
+                await window.firebaseSaveCasiers(assignations);
                 alert(`✅ ${refs.length} commandes assignées aux casiers !`);
             };
 
             // Réinitialiser
             const reinitialiser = async () => {
                 if (!window.confirm('⚠️ Réinitialiser TOUS les casiers ? Cette action efface toutes les assignations.')) return;
-                await window.firebaseDatabase.set(window.firebaseDatabase.ref(window.firebaseDb, 'casiers'), {});
+                await window.firebaseSaveCasiers({});
                 alert('✅ Casiers réinitialisés !');
             };
 
             // Allumer/éteindre un casier manuellement
             const toggleCasier = async (casierKey, allume) => {
-                await window.firebaseDatabase.update(window.firebaseDatabase.ref(window.firebaseDb, `casiers/${casierKey}`), { allume: !allume });
+                await window.firebaseUpdateCasier(casierKey, { allume: !allume });
             };
 
             if (loading) return <div className="text-center py-20 text-gray-400">⏳ Chargement...</div>;
