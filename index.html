@@ -140,7 +140,9 @@
                 return {
                     total: orders.length,
                     enAttente: orders.filter(o => o.status === STATUTS.EN_ATTENTE).length,
-                    termines: orders.filter(o => o.status === STATUTS.TERMINE).length,
+                    termines: [...new Set(orders.map(o => o.reference))].filter(ref => 
+                        orders.filter(o => o.reference === ref).every(o => o.status === STATUTS.TERMINE)
+                    ).length,
                     avecCommentaire: [...new Set(orders.filter(o => o.commentaires && o.commentaires.trim() !== '').map(o => o.reference))].length
                 };
             };
@@ -483,6 +485,24 @@
                                     icon="👯"
                                     label="Multi-Commandes"
                                 />
+                                <TabButton
+                                    active={activeTab === 'ready'}
+                                    onClick={() => setActiveTab('ready')}
+                                    icon="🎯"
+                                    label="Prêt à expédier"
+                                />
+                                <TabButton
+                                    active={activeTab === 'ready'}
+                                    onClick={() => setActiveTab('ready')}
+                                    icon="🎯"
+                                    label="Prêt à expédier"
+                                />
+                                <TabButton
+                                    active={activeTab === 'ready'}
+                                    onClick={() => setActiveTab('ready')}
+                                    icon="🎯"
+                                    label="Prêt à expédier"
+                                />
                             </div>
                         </div>
                     </nav>
@@ -513,6 +533,15 @@
                                 )}
                                 {activeTab === 'multiorders' && (
                                     <MultiOrdersTab orders={activeOrders} />
+                                )}
+                                {activeTab === 'ready' && (
+                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} />
+                                )}
+                                {activeTab === 'ready' && (
+                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} />
+                                )}
+                                {activeTab === 'ready' && (
+                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} />
                                 )}
                             </>
                         )}
@@ -653,7 +682,7 @@
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <StatCard title="Total Articles" value={stats.total} color="blue" icon="📦" />
                         <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />
-                        <StatCard title="Terminés" value={stats.termines} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
+                        <StatCard title="Terminés" value={stats.termines} subtitle={`${orders.filter(o => o.status === STATUTS.TERMINE).length} articles terminés`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
                         <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />
                     </div>
 
@@ -867,7 +896,7 @@
         }
 
         // StatCard
-        function StatCard({ title, value, color, icon, onClick, clickable }) {
+        function StatCard({ title, value, subtitle, color, icon, onClick, clickable }) {
             const colors = {
                 blue: 'bg-blue-50 border-blue-200 text-blue-700',
                 yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
@@ -881,6 +910,7 @@
                         <div>
                             <p className="text-sm font-medium opacity-75">{title}</p>
                             <p className="text-3xl font-bold mt-1">{value}</p>
+                            {subtitle && <p className="text-xs opacity-60 mt-0.5">{subtitle}</p>}
                             {clickable && <p className="text-xs opacity-60 mt-1">Cliquer pour voir ›</p>}
                         </div>
                         <div className="text-4xl opacity-50">{icon}</div>
@@ -1447,6 +1477,314 @@
         }
 
 
+
+        // ReadyToShipTab - Commandes prêtes à expédier dès réception d'un article
+        function ReadyToShipTab({ orders, updateStatus, isAdmin }) {
+            const [search, setSearch] = React.useState('');
+            const [selectedOrder, setSelectedOrder] = React.useState(null);
+
+            // Trouver les commandes où l'article recherché est le SEUL en attente
+            const results = React.useMemo(() => {
+                if (!search.trim()) return [];
+                const query = search.toLowerCase().trim();
+                
+                // Grouper par référence
+                const byRef = {};
+                orders.forEach(o => {
+                    if (!byRef[o.reference]) byRef[o.reference] = [];
+                    byRef[o.reference].push(o);
+                });
+
+                const matches = [];
+                Object.entries(byRef).forEach(([ref, items]) => {
+                    // Articles en attente qui correspondent à la recherche
+                    const enAttente = items.filter(o => o.status !== 'Terminé');
+                    const matchingEnAttente = enAttente.filter(o => o.name.toLowerCase().includes(query));
+                    
+                    // La commande est "prête" si :
+                    // - il y a exactement 1 article en attente ET il correspond à la recherche
+                    if (enAttente.length === 1 && matchingEnAttente.length === 1) {
+                        const termines = items.filter(o => o.status === 'Terminé');
+                        matches.push({
+                            reference: ref,
+                            client: items[0].client,
+                            email: items[0].email,
+                            transporteur: items[0].transporteur,
+                            adresse_livraison: items[0].adresse_livraison,
+                            telephone: items[0].telephone,
+                            articleManquant: matchingEnAttente[0],
+                            articlesTermines: termines,
+                            totalArticles: items.length
+                        });
+                    }
+                });
+
+                return matches.sort((a, b) => b.reference - a.reference);
+            }, [search, orders]);
+
+            const terminerArticle = (article) => {
+                updateStatus(article.id, 'Terminé', article.commentaires);
+            };
+
+            return (
+                <div className="space-y-4">
+                    {/* Modal détail commande */}
+                    {selectedOrder && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4" onClick={() => setSelectedOrder(null)}>
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                                <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-xl">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="text-xl font-bold">📦 Commande #{selectedOrder.reference}</h3>
+                                            <p className="text-blue-200 text-sm mt-1">👤 {selectedOrder.client}</p>
+                                            {selectedOrder.transporteur && <p className="text-blue-200 text-sm">🚚 {selectedOrder.transporteur}</p>}
+                                        </div>
+                                        <button onClick={() => setSelectedOrder(null)} className="text-white text-2xl">✕</button>
+                                    </div>
+                                </div>
+                                <div className="p-6 space-y-3">
+                                    {/* Article manquant en premier */}
+                                    <div className="border-2 border-orange-300 bg-orange-50 rounded-lg p-4">
+                                        <p className="text-xs font-bold text-orange-600 mb-2">⏳ ARTICLE EN ATTENTE</p>
+                                        <div className="flex items-center gap-3">
+                                            {selectedOrder.articleManquant.url_image && <img src={selectedOrder.articleManquant.url_image} className="w-16 h-16 object-cover rounded" onError={e => e.target.style.display='none'} />}
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-gray-800">{selectedOrder.articleManquant.name}</p>
+                                            </div>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={() => { terminerArticle(selectedOrder.articleManquant); setSelectedOrder(null); }}
+                                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg transition"
+                                                >
+                                                    ✅ Terminer
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Articles déjà terminés */}
+                                    {selectedOrder.articlesTermines.map((item, i) => (
+                                        <div key={i} className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-lg p-3">
+                                            {item.url_image && <img src={item.url_image} className="w-12 h-12 object-cover rounded" onError={e => e.target.style.display='none'} />}
+                                            <p className="flex-1 text-sm text-gray-700">{item.name}</p>
+                                            <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">✅ Terminé</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 mb-1">🎯 Prêt à expédier</h2>
+                        <p className="text-sm text-gray-500 mb-4">Tapez le nom d'un article reçu pour voir les commandes qu'il permet de clôturer</p>
+                    </div>
+
+                    {/* Barre de recherche */}
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="🔍 Ex: Abaya Sineme, Robe Ella..."
+                            className="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-sm"
+                            autoFocus
+                        />
+                        {search && <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl">✕</button>}
+                    </div>
+
+                    {/* Résultats */}
+                    {search.trim() && (
+                        <div>
+                            {results.length === 0 ? (
+                                <div className="text-center py-12 text-gray-400">
+                                    <div className="text-4xl mb-3">🔍</div>
+                                    <p className="font-semibold">Aucune commande prête à clôturer</p>
+                                    <p className="text-sm mt-1">Soit l'article n'existe pas, soit d'autres articles sont encore en attente</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <p className="text-sm font-semibold text-green-700">🎉 {results.length} commande(s) peuvent être clôturées !</p>
+                                    {results.map(order => (
+                                        <div key={order.reference}
+                                            className="bg-white rounded-xl border-2 border-orange-200 shadow-sm p-4 cursor-pointer hover:shadow-md hover:border-orange-400 transition-all"
+                                            onClick={() => setSelectedOrder(order)}
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono font-bold text-gray-800">#{order.reference}</span>
+                                                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">1 article manquant</span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-600 mt-0.5">👤 {order.client}</p>
+                                                    {order.transporteur && <p className="text-xs text-gray-400">🚚 {order.transporteur}</p>}
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className="text-xs text-gray-400">{order.totalArticles} article(s) au total</span>
+                                                    <span className="text-xs text-green-600 font-semibold">{order.articlesTermines.length} terminé(s)</span>
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 pt-3 border-t border-orange-100">
+                                                <p className="text-xs text-orange-600 font-semibold mb-1">⏳ Il manque :</p>
+                                                <p className="text-sm text-gray-700">{order.articleManquant.name}</p>
+                                            </div>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); terminerArticle(order.articleManquant); }}
+                                                    className="mt-3 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg transition"
+                                                >
+                                                    ✅ Terminer cet article et clôturer la commande
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {!search.trim() && (
+                        <div className="text-center py-16 text-gray-300">
+                            <div className="text-6xl mb-4">🎯</div>
+                            <p className="text-lg font-semibold text-gray-400">Tapez un nom d'article</p>
+                            <p className="text-sm text-gray-300 mt-1">pour trouver les commandes prêtes à partir</p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+
+        // ReadyToShipTab - Commandes prêtes à expédier dès réception d'un article
+        function ReadyToShipTab({ orders, updateStatus, isAdmin }) {
+            const [search, setSearch] = React.useState('');
+
+            // Trouver les commandes où l'article recherché est le SEUL en attente
+            const results = React.useMemo(() => {
+                if (!search.trim()) return [];
+                const q = search.toLowerCase().trim();
+
+                // Grouper par commande
+                const commandeMap = {};
+                orders.forEach(o => {
+                    if (!commandeMap[o.reference]) commandeMap[o.reference] = [];
+                    commandeMap[o.reference].push(o);
+                });
+
+                const matching = [];
+                Object.entries(commandeMap).forEach(([ref, articles]) => {
+                    // Articles en attente qui correspondent à la recherche
+                    const enAttente = articles.filter(a => a.status !== 'Terminé');
+                    const matchingEnAttente = enAttente.filter(a => a.name.toLowerCase().includes(q));
+                    const autresEnAttente = enAttente.filter(a => !a.name.toLowerCase().includes(q));
+
+                    // La commande est "prête" si tous les autres articles sont terminés
+                    // et qu'il y a au moins un article correspondant en attente
+                    if (matchingEnAttente.length > 0 && autresEnAttente.length === 0) {
+                        matching.push({
+                            reference: ref,
+                            client: articles[0].client,
+                            email: articles[0].email,
+                            transporteur: articles[0].transporteur,
+                            articlesTermines: articles.filter(a => a.status === 'Terminé'),
+                            articlesATerminer: matchingEnAttente,
+                            total: articles.length
+                        });
+                    }
+                });
+
+                return matching.sort((a, b) => b.reference - a.reference);
+            }, [search, orders]);
+
+            return (
+                <div className="space-y-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 mb-1">🎯 Prêt à expédier</h2>
+                        <p className="text-sm text-gray-500">Tapez le nom d'un article reçu pour voir les commandes à clôturer immédiatement</p>
+                    </div>
+
+                    {/* Barre de recherche */}
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="🔍 Ex: Abaya Sineme, Robe Ella..."
+                            className="w-full px-5 py-4 text-lg border-2 border-green-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-sm"
+                            autoFocus
+                        />
+                        {search && (
+                            <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl">✕</button>
+                        )}
+                    </div>
+
+                    {/* Résultats */}
+                    {search.trim() === '' ? (
+                        <div className="text-center py-16 text-gray-400">
+                            <div className="text-5xl mb-4">📦</div>
+                            <p className="text-lg font-semibold">Tapez le nom d'un article</p>
+                            <p className="text-sm mt-2">pour trouver les commandes prêtes à expédier</p>
+                        </div>
+                    ) : results.length === 0 ? (
+                        <div className="text-center py-16 text-gray-400">
+                            <div className="text-5xl mb-4">🔍</div>
+                            <p className="text-lg font-semibold">Aucune commande prête</p>
+                            <p className="text-sm mt-2">Aucune commande n'a "{search}" comme seul article en attente</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm text-gray-500"><span className="font-bold text-green-600">{results.length} commande(s)</span> prête(s) à expédier dès réception de cet article</p>
+                            </div>
+                            {results.map(cmd => (
+                                <div key={cmd.reference} className="bg-white rounded-xl border-2 border-green-300 shadow-sm p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div>
+                                            <span className="font-mono font-bold text-green-700 text-lg">#{cmd.reference}</span>
+                                            <span className="ml-3 font-semibold text-gray-700">{cmd.client}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{cmd.total} article(s)</span>
+                                            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">🚚 {cmd.transporteur || '-'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Articles déjà terminés */}
+                                    {cmd.articlesTermines.length > 0 && (
+                                        <div className="mb-2">
+                                            {cmd.articlesTermines.map((a, i) => (
+                                                <div key={i} className="flex items-center gap-2 py-1 text-sm text-gray-400">
+                                                    <span className="text-green-500">✅</span>
+                                                    <span className="line-through truncate">{a.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Article(s) à terminer */}
+                                    {cmd.articlesATerminer.map((a, i) => (
+                                        <div key={i} className="flex items-center justify-between gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-1">
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                {a.url_image && <img src={a.url_image} className="w-10 h-10 object-cover rounded" onError={e => e.target.style.display='none'} />}
+                                                <span className="text-sm font-semibold text-green-800 truncate">{a.name}</span>
+                                            </div>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={() => updateStatus(a.id, 'Terminé', a.commentaires)}
+                                                    className="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition"
+                                                >
+                                                    ✅ Terminer
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         // MultiOrdersTab - Clientes avec plusieurs commandes
         function MultiOrdersTab({ orders }) {
             const [selectedClient, setSelectedClient] = React.useState(null);
@@ -1571,6 +1909,171 @@
                             );
                         })}
                     </div>
+                </div>
+            );
+        }
+
+
+        // ReadyToShipTab - Commandes prêtes à expédier dès réception d'un article
+        function ReadyToShipTab({ orders, updateStatus, isAdmin }) {
+            const [search, setSearch] = React.useState('');
+            const [selectedOrder, setSelectedOrder] = React.useState(null);
+
+            // Trouver les commandes où l'article recherché est le DERNIER en attente
+            const results = React.useMemo(() => {
+                if (!search.trim()) return [];
+                const q = search.toLowerCase();
+                const refs = [...new Set(orders.map(o => o.reference))];
+                const matches = [];
+
+                refs.forEach(ref => {
+                    const articles = orders.filter(o => o.reference === ref);
+                    const enAttente = articles.filter(o => o.status !== 'Terminé');
+                    
+                    // Il ne reste qu'UN article en attente ET il correspond à la recherche
+                    if (enAttente.length === 1 && enAttente[0].name.toLowerCase().includes(q)) {
+                        const termines = articles.filter(o => o.status === 'Terminé');
+                        matches.push({
+                            reference: ref,
+                            client: articles[0].client,
+                            transporteur: articles[0].transporteur,
+                            email: articles[0].email,
+                            adresse_livraison: articles[0].adresse_livraison,
+                            telephone: articles[0].telephone,
+                            dernierArticle: enAttente[0],
+                            articlesTermines: termines,
+                            totalArticles: articles.length
+                        });
+                    }
+                });
+
+                return matches.sort((a, b) => b.reference - a.reference);
+            }, [search, orders]);
+
+            return (
+                <div className="space-y-4">
+                    {/* Modal détail commande */}
+                    {selectedOrder && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4" onClick={() => setSelectedOrder(null)}>
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                                <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-xl">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="text-xl font-bold">📦 Commande #{selectedOrder.reference}</h3>
+                                            {selectedOrder.client && <p className="text-blue-200 text-sm mt-1">👤 {selectedOrder.client}</p>}
+                                            {selectedOrder.transporteur && <p className="text-blue-200 text-sm">🚚 {selectedOrder.transporteur}</p>}
+                                        </div>
+                                        <button onClick={() => setSelectedOrder(null)} className="text-white text-2xl">✕</button>
+                                    </div>
+                                </div>
+                                <div className="p-6 space-y-3">
+                                    {/* Dernier article en attente */}
+                                    <div className="bg-orange-50 border-2 border-orange-300 rounded-xl p-4">
+                                        <p className="text-xs font-bold text-orange-600 mb-2">⏳ DERNIER ARTICLE EN ATTENTE</p>
+                                        <div className="flex items-center gap-3">
+                                            {selectedOrder.dernierArticle.url_image && <img src={selectedOrder.dernierArticle.url_image} className="w-16 h-16 object-cover rounded" onError={e => e.target.style.display='none'} />}
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-gray-800">{selectedOrder.dernierArticle.name}</p>
+                                                {isAdmin && (
+                                                    <button
+                                                        onClick={() => {
+                                                            updateStatus(selectedOrder.dernierArticle.id, 'Terminé', selectedOrder.dernierArticle.commentaires);
+                                                            setSelectedOrder(null);
+                                                        }}
+                                                        className="mt-2 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition"
+                                                    >
+                                                        ✅ Marquer terminé
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* Articles déjà terminés */}
+                                    {selectedOrder.articlesTermines.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-bold text-green-600 mb-2">✅ ARTICLES TERMINÉS ({selectedOrder.articlesTermines.length})</p>
+                                            {selectedOrder.articlesTermines.map((a, i) => (
+                                                <div key={i} className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
+                                                    {a.url_image && <img src={a.url_image} className="w-12 h-12 object-cover rounded" onError={e => e.target.style.display='none'} />}
+                                                    <p className="text-sm text-gray-700">{a.name}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 mb-1">🎯 Prêt à expédier</h2>
+                        <p className="text-sm text-gray-500 mb-4">Tapez le nom d'un article reçu pour voir les commandes qu'il permet de clôturer.</p>
+                    </div>
+
+                    {/* Barre de recherche */}
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="🔍 Ex: Abaya Sineme, Robe Mina..."
+                            className="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            autoFocus
+                        />
+                        {search && <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl">✕</button>}
+                    </div>
+
+                    {/* Résultats */}
+                    {search.trim() && (
+                        <div>
+                            {results.length === 0 ? (
+                                <div className="text-center py-12 text-gray-400">
+                                    <div className="text-4xl mb-3">🔍</div>
+                                    <p className="font-semibold">Aucune commande prête à clôturer</p>
+                                    <p className="text-sm mt-1">Soit l'article n'existe pas, soit d'autres articles sont encore en attente</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="text-sm font-semibold text-green-700 mb-3">🎉 {results.length} commande(s) prête(s) à clôturer dès réception de cet article !</p>
+                                    <div className="space-y-3">
+                                        {results.map(cmd => (
+                                            <div key={cmd.reference}
+                                                className="bg-white border-2 border-green-200 rounded-xl p-4 cursor-pointer hover:shadow-md hover:border-green-400 transition-all"
+                                                onClick={() => setSelectedOrder(cmd)}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="font-mono font-bold text-gray-800">#{cmd.reference}</span>
+                                                            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">1 article restant</span>
+                                                            {cmd.totalArticles > 1 && <span className="text-xs text-gray-400">{cmd.totalArticles} articles au total</span>}
+                                                        </div>
+                                                        <p className="text-sm text-gray-600">👤 {cmd.client}</p>
+                                                        {cmd.transporteur && <p className="text-xs text-gray-400 mt-0.5">🚚 {cmd.transporteur}</p>}
+                                                    </div>
+                                                    <div className="flex-shrink-0 text-right">
+                                                        {cmd.articlesTermines.length > 0 && (
+                                                            <span className="text-xs text-green-600">✅ {cmd.articlesTermines.length} terminé(s)</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="mt-2 bg-orange-50 rounded-lg px-3 py-2">
+                                                    <p className="text-sm text-orange-800 font-medium truncate">⏳ {cmd.dernierArticle.name}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {!search.trim() && (
+                        <div className="text-center py-16 text-gray-300">
+                            <div className="text-6xl mb-4">🎯</div>
+                            <p className="text-lg font-semibold text-gray-400">Commencez à taper un nom d'article</p>
+                        </div>
+                    )}
                 </div>
             );
         }
