@@ -758,6 +758,7 @@
         function Dashboard({ stats, orders, listName, openOrderRecap }) {
             const [showTerminesModal, setShowTerminesModal] = useState(false);
             const [showCommentairesModal, setShowCommentairesModal] = useState(false);
+            const [showCommandesModal, setShowCommandesModal] = useState(false);
             const terminesOrders = orders.filter(o => o.status === STATUTS.TERMINE);
             // Une commande est "terminée" uniquement si TOUS ses articles sont terminés
             const terminesRefs = [...new Set(orders.map(o => o.reference))].filter(ref => {
@@ -773,7 +774,7 @@
                     
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <StatCard title="Total Articles" value={stats.total} color="blue" icon="📦" />
-                        <StatCard title="Commandes" value={[...new Set(orders.map(o => o.reference))].length} color="indigo" icon="🛒" />
+                        <StatCard title="Commandes" value={[...new Set(orders.map(o => o.reference))].length} color="indigo" icon="🛒" onClick={() => setShowCommandesModal(true)} clickable={true} />
                         <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />
                         <StatCard title="Terminés" value={stats.termines} subtitle={`${orders.filter(o => o.status === STATUTS.TERMINE).length} articles terminés`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
                         <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />
@@ -790,6 +791,63 @@
                             </div>
                         </div>
                     </div>
+
+                    {showCommandesModal && (() => {
+                        const allRefs = [...new Set(orders.map(o => o.reference))].sort((a,b) => a - b);
+                        const byTransporteur = {};
+                        allRefs.forEach(ref => {
+                            const firstItem = orders.find(o => o.reference === ref);
+                            const t = (firstItem && firstItem.transporteur) || 'Non défini';
+                            if (!byTransporteur[t]) byTransporteur[t] = [];
+                            byTransporteur[t].push(ref);
+                        });
+                        return (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCommandesModal(false)}>
+                                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                                    <div className="flex justify-between items-center p-6 border-b">
+                                        <h3 className="text-xl font-bold text-indigo-700">🛒 Toutes les commandes ({allRefs.length})</h3>
+                                        <button onClick={() => setShowCommandesModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+                                    </div>
+                                    <div className="overflow-y-auto p-6">
+                                        <div className="space-y-6">
+                                            {Object.entries(byTransporteur).sort((a,b) => a[0].localeCompare(b[0])).map(([transporteur, refs]) => (
+                                                <div key={transporteur}>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <h4 className="font-bold text-gray-700">🚚 {transporteur}</h4>
+                                                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{refs.length} commande(s)</span>
+                                                    </div>
+                                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                                        {refs.map((ref, index) => {
+                                                            const items = orders.filter(o => o.reference === ref);
+                                                            const termines = items.filter(o => o.status === 'Terminé').length;
+                                                            const total = items.length;
+                                                            const pct = total > 0 ? Math.round(termines/total*100) : 0;
+                                                            return (
+                                                                <div key={ref} className={`py-2 px-3 flex items-center justify-between gap-3 ${index % 2 === 0 ? 'bg-indigo-50' : 'bg-white'}`}>
+                                                                    <button onClick={() => { setShowCommandesModal(false); openOrderRecap(ref); }} className="font-mono text-indigo-800 font-semibold hover:text-blue-600 hover:underline">
+                                                                        #{ref}
+                                                                    </button>
+                                                                    <div className="flex items-center gap-2 flex-1 justify-end">
+                                                                        <div className="w-20 bg-gray-200 rounded-full h-1.5">
+                                                                            <div className={`h-1.5 rounded-full ${pct === 100 ? 'bg-green-500' : 'bg-blue-400'}`} style={{width: `${pct}%`}}></div>
+                                                                        </div>
+                                                                        <span className="text-xs text-gray-500 whitespace-nowrap">{termines}/{total}</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="p-4 border-t bg-gray-50 rounded-b-xl">
+                                        <p className="text-sm text-gray-500 text-center">{allRefs.length} commandes • {orders.length} articles au total</p>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {showTerminesModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
