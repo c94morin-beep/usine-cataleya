@@ -54,6 +54,9 @@
         window.firebaseSaveCasiers = async (data) => {
             await set(ref(db, 'casiers'), data);
         };
+        window.firebaseMergeCasiers = async (newData) => {
+            await update(ref(db, 'casiers'), newData);
+        };
         window.firebaseUpdateCasier = async (key, data) => {
             await update(ref(db, 'casiers/' + key), data);
         };
@@ -645,7 +648,7 @@
                                     <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'casiers' && (
-                                    <CasiersTab orders={activeOrders} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} />
+                                    <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} />
                                 )}
 
 
@@ -1855,8 +1858,8 @@
                     }
                 });
 
-                // Fusionner avec les assignations existantes
-                await window.firebaseSaveCasiers({ ...currentCasiers, ...nouvellesAssignations });
+                // Ajouter uniquement les nouvelles assignations sans toucher aux existantes
+                await window.firebaseMergeCasiers(nouvellesAssignations);
                 alert(`✅ ${nouvellesCommandes.length} nouvelle(s) commande(s) assignée(s) aux casiers !`);
             };
 
