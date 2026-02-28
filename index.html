@@ -422,6 +422,8 @@
             );
             if (!user) return <LoginPage />;
             const isAdmin = userRole === 'admin';
+            const isOperateur = userRole === 'operateur';
+            const canEditStatus = isAdmin || isOperateur;
 
             return (
                 <div className="min-h-screen">
@@ -570,8 +572,8 @@
                             <div className="flex items-center gap-3">
                                 <div className="text-right">
                                     <p className="text-xs md:text-sm font-semibold truncate max-w-32 md:max-w-none">{user.email}</p>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-yellow-300 text-yellow-900' : 'bg-white bg-opacity-30 text-white'}`}>
-                                        {isAdmin ? '🔑 Admin' : '👁 Lecture'}
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-yellow-300 text-yellow-900' : isOperateur ? 'bg-blue-300 text-blue-900' : 'bg-white bg-opacity-30 text-white'}`}>
+                                        {isAdmin ? '🔑 Admin' : isOperateur ? '⚙️ Opérateur' : '👁 Lecture'}
                                     </span>
                                 </div>
                                 <button onClick={() => window.firebaseSignOut()} className="px-2 md:px-3 py-1 md:py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs md:text-sm font-semibold transition">
@@ -691,20 +693,21 @@
                                         updateStatus={updateStatus}
                                         updateComment={updateComment}
                                         isAdmin={isAdmin}
+                                        canEditStatus={canEditStatus}
                                         openOrderRecap={openGlobalOrderRecap}
                                     />
                                 )}
                                 {activeTab === 'orders' && (
-                                    <OrdersTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} />
+                                    <OrdersTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'multiorders' && (
                                     <MultiOrdersTab orders={activeOrders} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'ready' && (
-                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} />
+                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'casiers' && (
-                                    <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
+                                    <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
                                 )}
 
 
@@ -1093,7 +1096,7 @@
         }
 
         // ProductionTab
-        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, isAdmin, openOrderRecap }) {
+        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, canEditStatus, openOrderRecap }) {
             const [selectedImage, setSelectedImage] = React.useState(null);
             const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
             const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
@@ -1244,9 +1247,9 @@
                                             <span className="font-bold text-blue-600 cursor-pointer text-sm" onClick={() => openOrderRecap(order.reference)}>#{order.reference}</span>
                                             <select
                                                 value={order.status}
-                                                onChange={(e) => isAdmin && updateStatus(order.id, e.target.value, order.commentaires)}
-                                                disabled={!isAdmin}
-                                                className={`text-xs px-2 py-1 border rounded flex-shrink-0 ${!isAdmin ? 'bg-gray-100 text-gray-400' : ''}`}
+                                                onChange={(e) => canEditStatus && updateStatus(order.id, e.target.value, order.commentaires)}
+                                                disabled={!canEditStatus}
+                                                className={`text-xs px-2 py-1 border rounded flex-shrink-0 ${!canEditStatus ? 'bg-gray-100 text-gray-400' : ''}`}
                                             >
                                                 {Object.values(STATUTS).map(s => (<option key={s} value={s}>{s}</option>))}
                                             </select>
@@ -1356,7 +1359,7 @@
         }
 
         // OrdersTab
-        function OrdersTab({ orders, updateStatus, isAdmin, openOrderRecap }) {
+        function OrdersTab({ orders, updateStatus, isAdmin, canEditStatus, openOrderRecap }) {
             const [selectedOrder, setSelectedOrder] = useState('');
             const [searchOrder, setSearchOrder] = useState('');
             const [selectedImage, setSelectedImage] = React.useState(null);
@@ -1862,7 +1865,7 @@
         }
 
         // CasiersTab
-        function CasiersTab({ orders, isAdmin, openOrderRecap, updateStatus, setCasierAlert }) {
+        function CasiersTab({ orders, isAdmin, canEditStatus, openOrderRecap, updateStatus, setCasierAlert }) {
             const CONFIG = {
                 colonneGauche: { etageres: 4, etages: 4, casiersParEtage: 6 },
                 rangeesMilieu: { nb: 3, etageresParRangee: 8, etages: 4, casiersParEtage: 6 },
