@@ -425,7 +425,7 @@
             const isOperateur = userRole === 'operateur';
             const isCommentaires = userRole === 'commentaires';
             const canEditStatus = isAdmin || isOperateur;
-            const canEditComment = isAdmin || isOperateur || isCommentaires;
+            const canEditComment = isAdmin || isCommentaires;
 
             return (
                 <div className="min-h-screen">
