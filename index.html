@@ -72,7 +72,7 @@
         // Statuts
         const STATUTS = {
             EN_ATTENTE: 'En attente',
-            TERMINE: 'Terminé',
+            RECU: 'Reçu',
             RANGE: 'Rangé',
             AVEC_COMMENTAIRE: 'Avec commentaire'
         };
@@ -162,7 +162,7 @@
                     total: orders.length,
                     enAttente: orders.filter(o => o.status === STATUTS.EN_ATTENTE).length,
                     termines: [...new Set(orders.map(o => o.reference))].filter(ref => 
-                        orders.filter(o => o.reference === ref).every(o => o.status === STATUTS.TERMINE)
+                        orders.filter(o => o.reference === ref).every(o => o.status === STATUTS.RANGE)
                     ).length,
                     avecCommentaire: [...new Set(orders.filter(o => o.commentaires && o.commentaires.trim() !== '').map(o => o.reference))].length
                 };
@@ -267,7 +267,7 @@
                 saveLists(updatedLists);
 
                 // Afficher la popup à chaque fois qu'un article est terminé
-                if (newStatus === STATUTS.TERMINE) {
+                if (newStatus === STATUTS.RECU) {
                     const allOrders = updatedLists.flatMap(l => l.orders);
                     const thisOrder = allOrders.find(o => o.id === orderId);
                     if (thisOrder) {
@@ -276,13 +276,13 @@
                         const email = thisOrder.email;
                         const articlesCommande = allOrders.filter(o => o.reference === ref);
                         const total = articlesCommande.length;
-                        const termines = articlesCommande.filter(o => o.status === STATUTS.TERMINE).length;
+                        const termines = articlesCommande.filter(o => o.status === STATUTS.RECU || o.status === STATUTS.RANGE).length;
                         const tousTermines = termines === total;
                         const autresCommandes = [...new Set(
                             allOrders
                                 .filter(o => 
                                     o.reference !== ref &&
-                                    o.status !== STATUTS.TERMINE &&
+                                    o.status !== STATUTS.RECU &&
                                     (o.client === client || (email && o.email === email))
                                 )
                                 .map(o => o.reference)
@@ -301,7 +301,7 @@
                             if (tousRefs.length >= 2) {
                                 // Vérifier que toutes sont bien terminées
                                 const toutesOk = tousRefs.every(r =>
-                                    allOrders.filter(o => o.reference === r).every(o => o.status === STATUTS.TERMINE)
+                                    allOrders.filter(o => o.reference === r).every(o => o.status === STATUTS.RECU || o.status === STATUTS.RANGE)
                                 );
                                 if (toutesOk) {
                                     toutesCommandesTerminees = true;
@@ -317,8 +317,8 @@
                     }
                 }
 
-                // Allumer la LED automatiquement quand article terminé
-                if (newStatus === STATUTS.TERMINE) {
+                // Allumer la LED automatiquement quand article reçu
+                if (newStatus === STATUTS.RECU) {
                     const allOrders2 = updatedLists.flatMap(l => l.orders);
                     const thisOrder2 = allOrders2.find(o => o.id === orderId);
                     if (thisOrder2) {
@@ -334,7 +334,7 @@
                     }
                 }
 
-                // Éteindre la LED automatiquement quand tous les articles sont rangés
+                // Éteindre la LED quand tous les articles sont rangés
                 if (newStatus === STATUTS.RANGE) {
                     const allOrders3 = updatedLists.flatMap(l => l.orders);
                     const thisOrder3 = allOrders3.find(o => o.id === orderId);
@@ -465,7 +465,7 @@
                                                     <h5 className="font-semibold text-gray-900">{item.name}</h5>
                                                     <div className="mt-2 flex flex-wrap items-center gap-2">
                                                         <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">Qté: {item.quantity || 1}</span>
-                                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.status === 'Rangé' ? 'bg-purple-100 text-purple-700' : item.status === 'Terminé' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
+                                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.status === 'Rangé' ? 'bg-purple-100 text-purple-700' : item.status === 'Reçu' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
                                                     </div>
                                                     {item.commentaires && <p className="mt-2 text-sm text-purple-600 italic">💬 {item.commentaires}</p>}
                                                 </div>
@@ -819,11 +819,11 @@
             const [showCommentairesModal, setShowCommentairesModal] = useState(false);
             const [showCommandesModal, setShowCommandesModal] = useState(false);
             const [showRangesModal, setShowRangesModal] = useState(false);
-            const terminesOrders = orders.filter(o => o.status === STATUTS.TERMINE || o.status === STATUTS.RANGE);
+            const terminesOrders = orders.filter(o => o.status === STATUTS.RANGE);
             // Une commande est "terminée" uniquement si TOUS ses articles sont terminés
             const terminesRefs = [...new Set(orders.map(o => o.reference))].filter(ref => {
                 const articlesCommande = orders.filter(o => o.reference === ref);
-                return articlesCommande.every(o => o.status === STATUTS.TERMINE);
+                return articlesCommande.every(o => o.status === STATUTS.RANGE);
             }).sort((a, b) => b - a);
 
 
@@ -836,7 +836,7 @@
                         <StatCard title="Total Articles" value={stats.total} color="blue" icon="📦" />
                         <StatCard title="Commandes" value={[...new Set(orders.map(o => o.reference))].length} color="indigo" icon="🛒" onClick={() => setShowCommandesModal(true)} clickable={true} />
                         <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />
-                        <StatCard title="Terminés" value={stats.termines} subtitle={`${orders.filter(o => o.status === STATUTS.TERMINE).length} articles terminés`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
+                        <StatCard title="Terminés" value={stats.termines} subtitle={`commandes complètes`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
                         <StatCard title="Rangés" value={[...new Set(orders.filter(o => o.status === STATUTS.RANGE).map(o => o.reference))].length} subtitle={`${orders.filter(o => o.status === STATUTS.RANGE).length} articles rangés`} color="teal" icon="📦" onClick={() => setShowRangesModal(true)} clickable={true} />
                         <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />
                     </div>
@@ -880,7 +880,7 @@
                                                     <div className="border border-gray-200 rounded-lg overflow-hidden">
                                                         {refs.map((ref, index) => {
                                                             const items = orders.filter(o => o.reference === ref);
-                                                            const termines = items.filter(o => o.status === 'Terminé').length;
+                                                            const termines = items.filter(o => o.status === 'Reçu').length;
                                                             const total = items.length;
                                                             const pct = total > 0 ? Math.round(termines/total*100) : 0;
                                                             return (
@@ -1226,7 +1226,7 @@
                     <div className="md:hidden space-y-3">
                         {sortedOrders.map(order => (
                             <div key={order.id} className={`rounded-xl shadow p-4 border transition-colors ${
-                                order.status === STATUTS.TERMINE ? 'bg-green-50 border-green-200' :
+                                order.status === STATUTS.RECU ? 'bg-green-50 border-green-200' :
                                 order.status === STATUTS.AVEC_COMMENTAIRE ? 'bg-orange-50 border-orange-200' :
                                 'bg-white border-gray-200'
                             }`}>
@@ -1302,7 +1302,7 @@
                             <tbody>
                                 {sortedOrders.map(order => (
                                     <tr key={order.id} className={`border-b transition-colors ${
-                                        order.status === STATUTS.TERMINE ? 'bg-green-50 hover:bg-green-100' :
+                                        order.status === STATUTS.RECU ? 'bg-green-50 hover:bg-green-100' :
                                         order.status === STATUTS.AVEC_COMMENTAIRE ? 'bg-orange-50 hover:bg-orange-100' :
                                         'bg-white hover:bg-gray-50'
                                     }`}>
@@ -1552,12 +1552,12 @@
                                 <div className="p-6 space-y-4">
                                     {selectedClient.commandes.map(ref => {
                                         const items = selectedClient.articles.filter(a => a.reference === ref);
-                                        const allDone = items.every(i => i.status === 'Terminé');
+                                        const allDone = items.every(i => i.status === 'Reçu');
                                         return (
                                             <div key={ref} className={`border rounded-lg overflow-hidden ${allDone ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}>
                                                 <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
                                                     <span className="font-bold text-gray-800">Commande #{ref}</span>
-                                                    {allDone ? <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">✅ Terminée</span> : <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">⏳ En cours</span>}
+                                                    {allDone ? <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">✅ Complète</span> : <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">⏳ En cours</span>}
                                                 </div>
                                                 {items.map((item, i) => (
                                                     <div key={i} className="flex items-center gap-3 px-4 py-3 border-b last:border-0">
@@ -1566,7 +1566,7 @@
                                                             <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
                                                             {item.transporteur && <p className="text-xs text-gray-500">🚚 {item.transporteur}</p>}
                                                         </div>
-                                                        <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'Rangé' ? 'bg-purple-100 text-purple-700' : item.status === 'Terminé' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
+                                                        <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'Rangé' ? 'bg-purple-100 text-purple-700' : item.status === 'Reçu' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -1586,7 +1586,7 @@
                     <div className="space-y-3">
                         {multiClients.map((client, i) => {
                             const totalArticles = client.articles.length;
-                            const termines = client.articles.filter(a => a.status === 'Terminé').length;
+                            const termines = client.articles.filter(a => a.status === 'Reçu').length;
                             const allDone = termines === totalArticles;
                             const transporteurs = [...new Set(client.articles.map(a => a.transporteur).filter(Boolean))];
                             return (
@@ -1641,13 +1641,13 @@
                 const matches = [];
                 Object.entries(byRef).forEach(([ref, items]) => {
                     // Articles en attente qui correspondent à la recherche
-                    const enAttente = items.filter(o => o.status !== 'Terminé');
+                    const enAttente = items.filter(o => o.status !== 'Reçu');
                     const matchingEnAttente = enAttente.filter(o => o.name.toLowerCase().includes(query));
                     
                     // La commande est "prête" si :
                     // - il y a exactement 1 article en attente ET il correspond à la recherche
                     if (enAttente.length === 1 && matchingEnAttente.length === 1) {
-                        const termines = items.filter(o => o.status === 'Terminé');
+                        const termines = items.filter(o => o.status === 'Reçu');
                         matches.push({
                             reference: ref,
                             client: items[0].client,
@@ -1666,7 +1666,7 @@
             }, [search, orders]);
 
             const terminerArticle = (article) => {
-                updateStatus(article.id, 'Terminé', article.commentaires);
+                updateStatus(article.id, 'Reçu', article.commentaires);
             };
 
             return (
@@ -1709,7 +1709,7 @@
                                         <div key={i} className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-lg p-3">
                                             {item.url_image && <img src={item.url_image} className="w-12 h-12 object-cover rounded" onError={e => e.target.style.display='none'} />}
                                             <p className="flex-1 text-sm text-gray-700">{item.name}</p>
-                                            <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">✅ Terminé</span>
+                                            <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">✅ Reçu</span>
                                         </div>
                                     ))}
                                 </div>
@@ -1980,7 +1980,7 @@
                 if (allume && commande && updateStatus) {
                     const articlesCommande = orders.filter(o => String(o.reference) === String(commande));
                     articlesCommande.forEach(o => {
-                        if (o.status === 'Terminé') {
+                        if (o.status === 'Reçu') {
                             updateStatus(o.id, 'Rangé', o.commentaires || '');
                         }
                     });
@@ -2124,7 +2124,7 @@
                                             const orderItems = orders.filter(o => o.reference === val.commande);
                                             const client = orderItems[0]?.client || '—';
                                             const total = orderItems.length;
-                                            const termines = orderItems.filter(o => o.status === 'Terminé').length;
+                                            const termines = orderItems.filter(o => o.status === 'Reçu').length;
                                             const pct = total > 0 ? Math.round(termines / total * 100) : 0;
                                             return (
                                                 <tr key={key} className={`border-t hover:bg-gray-50 ${val.allume ? 'bg-yellow-50' : ''}`}>
