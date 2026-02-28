@@ -1308,6 +1308,7 @@
                             <tbody>
                                 {sortedOrders.map(order => (
                                     <tr key={order.id} className={`border-b transition-colors ${
+                                        order.status === STATUTS.RANGE ? 'bg-green-200 hover:bg-green-300' :
                                         order.status === STATUTS.RECU ? 'bg-green-50 hover:bg-green-100' :
                                         order.status === STATUTS.AVEC_COMMENTAIRE ? 'bg-orange-50 hover:bg-orange-100' :
                                         'bg-white hover:bg-gray-50'
