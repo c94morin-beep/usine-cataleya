@@ -423,7 +423,9 @@
             if (!user) return <LoginPage />;
             const isAdmin = userRole === 'admin';
             const isOperateur = userRole === 'operateur';
+            const isCommentaires = userRole === 'commentaires';
             const canEditStatus = isAdmin || isOperateur;
+            const canEditComment = isAdmin || isOperateur || isCommentaires;
 
             return (
                 <div className="min-h-screen">
@@ -572,8 +574,8 @@
                             <div className="flex items-center gap-3">
                                 <div className="text-right">
                                     <p className="text-xs md:text-sm font-semibold truncate max-w-32 md:max-w-none">{user.email}</p>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-yellow-300 text-yellow-900' : isOperateur ? 'bg-blue-300 text-blue-900' : 'bg-white bg-opacity-30 text-white'}`}>
-                                        {isAdmin ? '🔑 Admin' : isOperateur ? '⚙️ Opérateur' : '👁 Lecture'}
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-yellow-300 text-yellow-900' : isOperateur ? 'bg-blue-300 text-blue-900' : isCommentaires ? 'bg-green-300 text-green-900' : 'bg-white bg-opacity-30 text-white'}`}>
+                                        {isAdmin ? '🔑 Admin' : isOperateur ? '⚙️ Opérateur' : isCommentaires ? '💬 Commentaires' : '👁 Lecture'}
                                     </span>
                                 </div>
                                 <button onClick={() => window.firebaseSignOut()} className="px-2 md:px-3 py-1 md:py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs md:text-sm font-semibold transition">
@@ -694,6 +696,7 @@
                                         updateComment={updateComment}
                                         isAdmin={isAdmin}
                                         canEditStatus={canEditStatus}
+                                        canEditComment={canEditComment}
                                         openOrderRecap={openGlobalOrderRecap}
                                     />
                                 )}
@@ -1096,7 +1099,7 @@
         }
 
         // ProductionTab
-        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, canEditStatus, openOrderRecap }) {
+        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, canEditStatus, canEditComment, openOrderRecap }) {
             const [selectedImage, setSelectedImage] = React.useState(null);
             const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
             const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
@@ -1262,9 +1265,9 @@
                                 {order.commentaires ? (
                                     <div className="mt-3 flex items-center gap-2">
                                         <p className="flex-1 text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">💬 {order.commentaires}</p>
-                                        {isAdmin && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-red-400 hover:text-red-600">✕</button>}
+                                        {canEditComment && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-red-400 hover:text-red-600">✕</button>}
                                     </div>
-                                ) : isAdmin ? (
+                                ) : canEditComment ? (
                                     <input
                                         type="text"
                                         defaultValue=""
@@ -1329,9 +1332,9 @@
                                             {order.commentaires ? (
                                                 <div className="flex items-center gap-1">
                                                     <p className="text-sm italic text-purple-700">💬 {order.commentaires}</p>
-                                                    {isAdmin && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-red-400 hover:text-red-600 ml-1">✕</button>}
+                                                    {canEditComment && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-red-400 hover:text-red-600 ml-1">✕</button>}
                                                 </div>
-                                            ) : isAdmin ? (
+                                            ) : canEditComment ? (
                                                 <input type="text" defaultValue=""
                                                     onBlur={(e) => e.target.value && updateStatus(order.id, order.status, e.target.value)}
                                                     onKeyDown={(e) => e.key === 'Enter' && e.target.value && updateStatus(order.id, order.status, e.target.value)}
