@@ -87,6 +87,7 @@
             const [filterStatus, setFilterStatus] = useState('all');
             const [showImportModal, setShowImportModal] = useState(false);
             const [completionAlert, setCompletionAlert] = useState(null); // {reference, client, autresCommandes[]}
+            const [casierAlert, setCasierAlert] = useState(null); // {casierNum, reference}
 
             // Auth
             const [user, setUser] = useState(null);
@@ -327,6 +328,7 @@
                             const entry = Object.entries(casiers).find(([, v]) => String(v.commande) === String(ref2));
                             if (entry) {
                                 window.firebaseUpdateCasier(entry[0], { allume: true });
+                                setCasierAlert({ casierNum: casiers[entry[0]].casierNum, reference: ref2 });
                             }
                         });
                     }
@@ -540,6 +542,24 @@
                             </div>
                         </div>
                     )}
+                    {/* Popup LED allumée */}
+                    {casierAlert && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
+                            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+                                <div className="text-6xl mb-4">💡</div>
+                                <h3 className="text-2xl font-bold text-yellow-600 mb-2">LED allumée !</h3>
+                                <p className="text-gray-600 mb-1">Casier <span className="font-bold text-gray-800">#{casierAlert.casierNum}</span></p>
+                                <p className="text-gray-500 text-sm mb-6">Commande #{casierAlert.reference}</p>
+                                <button
+                                    onClick={() => setCasierAlert(null)}
+                                    className="w-full py-3 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-xl transition"
+                                >
+                                    OK, compris !
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Header */}
                     <header className="bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg">
                         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -684,7 +704,7 @@
                                     <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'casiers' && (
-                                    <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} />
+                                    <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
                                 )}
 
 
@@ -1795,7 +1815,7 @@
         }
 
         // CasiersTab
-        function CasiersTab({ orders, isAdmin, openOrderRecap }) {
+        function CasiersTab({ orders, isAdmin, openOrderRecap, updateStatus, setCasierAlert }) {
             const CONFIG = {
                 colonneGauche: { etageres: 4, etages: 4, casiersParEtage: 6 },
                 rangeesMilieu: { nb: 3, etageresParRangee: 8, etages: 4, casiersParEtage: 6 },
@@ -1907,8 +1927,17 @@
             };
 
             // Allumer/éteindre un casier manuellement
-            const toggleCasier = async (casierKey, allume) => {
+            const toggleCasier = async (casierKey, allume, commande) => {
                 await window.firebaseUpdateCasier(casierKey, { allume: !allume });
+                // Si on éteint la LED → passer tous les articles en "Rangé"
+                if (allume && commande && updateStatus) {
+                    const articlesCommande = orders.filter(o => String(o.reference) === String(commande));
+                    articlesCommande.forEach(o => {
+                        if (o.status === 'Terminé') {
+                            updateStatus(o.id, 'Rangé', o.commentaires || '');
+                        }
+                    });
+                }
             };
 
             if (loading) return <div className="text-center py-20 text-gray-400">⏳ Chargement...</div>;
@@ -2014,7 +2043,7 @@
                                             <p className="font-bold text-yellow-900">Casier #{val.casierNum}</p>
                                             <p className="text-yellow-700 text-xs">Commande #{val.commande}</p>
                                         </div>
-                                        <button onClick={() => toggleCasier(key, val.allume)} className="ml-2 px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded font-semibold">
+                                        <button onClick={() => toggleCasier(key, val.allume, val.commande)} className="ml-2 px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded font-semibold">
                                             Éteindre
                                         </button>
                                         <button onClick={() => openOrderRecap(val.commande)} className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded font-semibold">
@@ -2066,7 +2095,7 @@
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-2">
-                                                        <button onClick={() => toggleCasier(key, val.allume)} className={`px-3 py-1 rounded-full text-xs font-semibold transition ${val.allume ? 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                                        <button onClick={() => toggleCasier(key, val.allume, val.commande)} className={`px-3 py-1 rounded-full text-xs font-semibold transition ${val.allume ? 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                                                             {val.allume ? '💡 Allumé' : '○ Éteint'}
                                                         </button>
                                                     </td>
