@@ -317,13 +317,15 @@
                     }
                 }
 
+                // ⚡ LED AUTOMATION - DÉSACTIVÉ EN ATTENDANT LE HARDWARE
+                // Décommenter quand les ESP32 sont installés :
+                /*
                 // Allumer la LED automatiquement quand article reçu
                 if (newStatus === STATUTS.RECU) {
                     const allOrders2 = updatedLists.flatMap(l => l.orders);
                     const thisOrder2 = allOrders2.find(o => o.id === orderId);
                     if (thisOrder2) {
                         const ref2 = thisOrder2.reference;
-                        // Chercher le casier correspondant et l'allumer
                         window.firebaseGetCasiers().then(casiers => {
                             const entry = Object.entries(casiers).find(([, v]) => String(v.commande) === String(ref2));
                             if (entry) {
@@ -352,6 +354,7 @@
                         }
                     }
                 }
+                */
             };
 
             // Mettre à jour un commentaire
