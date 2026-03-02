@@ -83,6 +83,8 @@
             const [activeListId, setActiveListId] = useState('global');
             const [activeTab, setActiveTab] = useState('dashboard');
             const [globalSelectedOrder, setGlobalSelectedOrder] = useState(null);
+            const [zoomedImage, setZoomedImage] = useState(null);
+            const [boxPopup, setBoxPopup] = useState(null); // {articleName, casierNum, reference}
             const [searchTerm, setSearchTerm] = useState('');
             const [filterStatus, setFilterStatus] = useState('all');
             const [showImportModal, setShowImportModal] = useState(false);
@@ -435,6 +437,35 @@
 
             return (
                 <div className="min-h-screen">
+                    {/* Modal Zoom Image */}
+                    {zoomedImage && (
+                        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[100] p-4" onClick={() => setZoomedImage(null)}>
+                            <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => setZoomedImage(null)} className="absolute -top-10 right-0 text-white text-3xl font-bold hover:text-gray-300">✕</button>
+                                <img src={zoomedImage.url} alt={zoomedImage.name} className="w-full max-h-[80vh] object-contain rounded-lg" />
+                                <p className="text-white text-center mt-3 text-sm opacity-80">{zoomedImage.name}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Popup Box Achraf */}
+                    {boxPopup && (
+                        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[90] p-4" onClick={() => setBoxPopup(null)}>
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center" onClick={e => e.stopPropagation()}>
+                                <p className="text-5xl mb-4">📦</p>
+                                <h3 className="text-lg font-bold text-gray-800 mb-2">Range cet article !</h3>
+                                <p className="text-gray-600 text-sm mb-4">
+                                    <span className="font-semibold text-blue-700">{boxPopup.articleName}</span>
+                                </p>
+                                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
+                                    <p className="text-3xl font-bold text-blue-700">Box {boxPopup.casierNum}</p>
+                                    <p className="text-sm text-blue-500 mt-1">Commande #{boxPopup.reference}</p>
+                                </div>
+                                <button onClick={() => setBoxPopup(null)} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition">OK ✓</button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Modal Fiche Commande Globale */}
                     {globalSelectedOrder && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[75] p-4" onClick={() => setGlobalSelectedOrder(null)}>
@@ -471,12 +502,18 @@
                                     <div className="space-y-3">
                                         {globalSelectedOrder.items.map((item) => (
                                             <div key={item.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
-                                                {item.url_image && <img src={item.url_image} alt={item.name} className="w-20 h-20 object-cover rounded border" onError={e => e.target.style.display='none'} />}
+                                                {item.url_image && <img src={item.url_image} alt={item.name} className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition" onClick={() => setZoomedImage({url: item.url_image, name: item.name})} onError={e => e.target.style.display='none'} />}
                                                 <div className="flex-1">
                                                     <h5 className="font-semibold text-gray-900">{item.name}</h5>
                                                     <div className="mt-2 flex flex-wrap items-center gap-2">
                                                         <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">Qté: {item.quantity || 1}</span>
-                                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.status === 'Rangé' ? 'bg-purple-100 text-purple-700' : item.status === 'Reçu' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
+                                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.status === 'Rangé' ? 'bg-purple-100 text-purple-700' : item.status === 'Reçu' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
+                                        {item.status === STATUTS.RECU && (() => {
+                                            const allCasiers = window._casiersCache || {};
+                                            const entry = Object.entries(allCasiers).find(([, v]) => String(v.commande) === String(globalSelectedOrder.reference));
+                                            if (!entry) return null;
+                                            return <button onClick={() => setBoxPopup({articleName: item.name, casierNum: entry[1].casierNum || entry[0], reference: globalSelectedOrder.reference})} className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full text-sm font-semibold transition">📦 Box ?</button>;
+                                        })()}
                                                     </div>
                                                     {item.commentaires && <p className="mt-2 text-sm text-purple-600 italic">💬 {item.commentaires}{item.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-400">— {item.commentAuthor}</span>}</p>}
                                                 </div>
@@ -1831,7 +1868,7 @@
                                     <div className="border-2 border-orange-300 bg-orange-50 rounded-lg p-4">
                                         <p className="text-xs font-bold text-orange-600 mb-2">⏳ ARTICLE EN ATTENTE</p>
                                         <div className="flex items-center gap-3">
-                                            {selectedOrder.articleManquant.url_image && <img src={selectedOrder.articleManquant.url_image} className="w-16 h-16 object-cover rounded" onError={e => e.target.style.display='none'} />}
+                                            {selectedOrder.articleManquant.url_image && <img src={selectedOrder.articleManquant.url_image} className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80" onClick={() => setZoomedImage({url: selectedOrder.articleManquant.url_image, name: selectedOrder.articleManquant.name})} onError={e => e.target.style.display='none'} />}
                                             <div className="flex-1">
                                                 <p className="font-semibold text-gray-800">{selectedOrder.articleManquant.name}</p>
                                             </div>
@@ -1848,7 +1885,7 @@
                                     {/* Articles déjà terminés */}
                                     {selectedOrder.articlesTermines.map((item, i) => (
                                         <div key={i} className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-lg p-3">
-                                            {item.url_image && <img src={item.url_image} className="w-12 h-12 object-cover rounded" onError={e => e.target.style.display='none'} />}
+                                            {item.url_image && <img src={item.url_image} className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80" onClick={() => setZoomedImage({url: item.url_image, name: item.name})} onError={e => e.target.style.display='none'} />}
                                             <p className="flex-1 text-sm text-gray-700">{item.name}</p>
                                             <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">✅ Déposé</span>
                                         </div>
@@ -2186,6 +2223,7 @@
             React.useEffect(() => {
                 const unsubscribe = window.firebaseOnCasiers((data) => {
                     setCasiersData(data);
+                    window._casiersCache = data || {};
                     setLoading(false);
                 });
                 return () => unsubscribe();
