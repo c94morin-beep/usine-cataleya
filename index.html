@@ -72,6 +72,7 @@
         // Statuts
         const STATUTS = {
             EN_ATTENTE: 'En attente',
+            DEPOSE: 'Déposé',
             RECU: 'Reçu',
             RANGE: 'Rangé',
             AVEC_COMMENTAIRE: 'Avec commentaire'
@@ -710,6 +711,8 @@
                                         updateStatus={updateStatus}
                                         updateComment={updateComment}
                                         isAdmin={isAdmin}
+                                        isOperateur={isOperateur}
+                                        isSara={isSara}
                                         canEditStatus={canEditStatus}
                                         canEditComment={canEditComment}
                                         userName={userName}
@@ -1118,7 +1121,12 @@
         }
 
         // ProductionTab
-        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, canEditStatus, canEditComment, userName, openOrderRecap }) {
+        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, isOperateur, isSara, canEditStatus, canEditComment, userName, openOrderRecap }) {
+            const statutsDisponibles = isSara 
+                ? [STATUTS.EN_ATTENTE, STATUTS.DEPOSE, STATUTS.AVEC_COMMENTAIRE]
+                : isOperateur 
+                ? [STATUTS.EN_ATTENTE, STATUTS.DEPOSE, STATUTS.RANGE, STATUTS.AVEC_COMMENTAIRE]
+                : Object.values(STATUTS);
             const [selectedImage, setSelectedImage] = React.useState(null);
             const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
             const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
@@ -1209,7 +1217,7 @@
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                                 >
                                     <option value="all">Tous</option>
-                                    {Object.values(STATUTS).map(s => (
+                                    {statutsDisponibles.map(s => (
                                         <option key={s} value={s}>{s}</option>
                                     ))}
                                 </select>
@@ -1273,7 +1281,7 @@
                                                 disabled={!canEditStatus}
                                                 className={`text-xs px-2 py-1 border rounded flex-shrink-0 ${!canEditStatus ? 'bg-gray-100 text-gray-400' : ''}`}
                                             >
-                                                {Object.values(STATUTS).map(s => (<option key={s} value={s}>{s}</option>))}
+                                                {statutsDisponibles.map(s => (<option key={s} value={s}>{s}</option>))}
                                             </select>
                                         </div>
                                         <p className="text-sm font-medium text-gray-800 mt-1 truncate">{order.name}</p>
@@ -1329,6 +1337,7 @@
                                     <tr key={order.id} className={`border-b transition-colors ${
                                         order.status === STATUTS.RANGE ? 'bg-green-200 hover:bg-green-300' :
                                         order.status === STATUTS.RECU ? 'bg-green-50 hover:bg-green-100' :
+                                        order.status === STATUTS.DEPOSE ? 'bg-blue-50 hover:bg-blue-100' :
                                         order.status === STATUTS.AVEC_COMMENTAIRE ? 'bg-orange-50 hover:bg-orange-100' :
                                         'bg-white hover:bg-gray-50'
                                     }`}>
@@ -1369,7 +1378,7 @@
                                                 onChange={(e) => canEditStatus && updateStatus(order.id, e.target.value, order.commentaires)}
                                                 disabled={!canEditStatus}
                                                 className={`px-3 py-1 border rounded text-sm ${!canEditStatus ? 'bg-gray-100 cursor-not-allowed text-gray-400' : ''}`}>
-                                                {Object.values(STATUTS).map(s => (<option key={s} value={s}>{s}</option>))}
+                                                {statutsDisponibles.map(s => (<option key={s} value={s}>{s}</option>))}
                                             </select>
                                         </td>
                                     </tr>
@@ -1912,14 +1921,14 @@
             const articlesMatch = selectedProduct ? produitsGroupes[selectedProduct] || [] : [];
 
             const handleReception = async (order) => {
-                updateStatus(order.id, STATUTS.RECU, order.commentaires || '', userName);
+                updateStatus(order.id, STATUTS.DEPOSE, order.commentaires || '', userName);
             };
 
             const handleReceptionTous = async () => {
                 if (!selectedProduct) return;
-                if (!window.confirm(`Marquer tous les articles "${selectedProduct}" comme reçus ?`)) return;
+                if (!window.confirm(`Marquer tous les articles "${selectedProduct}" comme déposés ?`)) return;
                 articlesMatch.forEach(o => {
-                    updateStatus(o.id, STATUTS.RECU, o.commentaires || '', userName);
+                    updateStatus(o.id, STATUTS.DEPOSE, o.commentaires || '', userName);
                 });
             };
 
