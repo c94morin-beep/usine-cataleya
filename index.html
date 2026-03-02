@@ -474,7 +474,14 @@
                                     <p className="text-3xl font-bold text-blue-700">Box {boxPopup.casierNum}</p>
                                     <p className="text-sm text-blue-500 mt-1">Commande #{boxPopup.reference}</p>
                                 </div>
-                                <button onClick={() => setBoxPopup(null)} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition">OK ✓</button>
+                                {boxPopup.onConfirm ? (
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setBoxPopup(null)} className="flex-1 py-2.5 border border-gray-300 text-gray-600 font-semibold rounded-xl transition hover:bg-gray-50">Annuler</button>
+                                        <button onClick={() => { boxPopup.onConfirm(); setBoxPopup(null); }} className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition">✅ Confirmer</button>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => setBoxPopup(null)} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition">OK ✓</button>
+                                )}
                             </div>
                         </div>
                     )}
@@ -775,7 +782,7 @@
                                     <MultiOrdersTab orders={activeOrders} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'ready' && (
-                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} />
+                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} casiersData={globalCasiersData} setBoxPopup={setBoxPopup} />
                                 )}
                                 {activeTab === 'casiers' && (
                                     <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
@@ -1813,7 +1820,7 @@
         }
 
         // ReadyToShipTab - Commandes prêtes à expédier dès réception d'un article
-        function ReadyToShipTab({ orders, updateStatus, isAdmin }) {
+        function ReadyToShipTab({ orders, updateStatus, isAdmin, casiersData, setBoxPopup }) {
             const [search, setSearch] = React.useState('');
             const [selectedOrder, setSelectedOrder] = React.useState(null);
 
@@ -1856,8 +1863,20 @@
                 return matches.sort((a, b) => b.reference - a.reference);
             }, [search, orders]);
 
-            const terminerArticle = (article) => {
-                updateStatus(article.id, STATUTS.RANGE, article.commentaires);
+            const terminerArticle = (article, reference) => {
+                const casiers = casiersData || {};
+                const entry = Object.entries(casiers).find(([, v]) => String(v.commande) === String(reference));
+                const casierNum = entry ? (entry[1].casierNum || entry[0]) : null;
+                if (casierNum) {
+                    setBoxPopup({
+                        articleName: article.name,
+                        casierNum,
+                        reference,
+                        onConfirm: () => updateStatus(article.id, STATUTS.RANGE, article.commentaires)
+                    });
+                } else {
+                    updateStatus(article.id, STATUTS.RANGE, article.commentaires);
+                }
             };
 
             return (
@@ -1887,7 +1906,7 @@
                                             </div>
                                             {isAdmin && (
                                                 <button
-                                                    onClick={() => { terminerArticle(selectedOrder.articleManquant); setSelectedOrder(null); }}
+                                                    onClick={() => { terminerArticle(selectedOrder.articleManquant, selectedOrder.reference); setSelectedOrder(null); }}
                                                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg transition"
                                                 >
                                                     ✅ Terminer
@@ -1960,10 +1979,14 @@
                                             <div className="mt-3 pt-3 border-t border-orange-100">
                                                 <p className="text-xs text-orange-600 font-semibold mb-1">⏳ Il manque :</p>
                                                 <p className="text-sm text-gray-700">{order.articleManquant.name}</p>
+                                                {(() => {
+                                                    const entry = Object.entries(casiersData || {}).find(([, v]) => String(v.commande) === String(order.reference));
+                                                    return entry ? <p className="text-xs text-blue-600 font-semibold mt-1">📦 Box {entry[1].casierNum || entry[0]}</p> : null;
+                                                })()}
                                             </div>
                                             {isAdmin && (
                                                 <button
-                                                    onClick={e => { e.stopPropagation(); terminerArticle(order.articleManquant); }}
+                                                    onClick={e => { e.stopPropagation(); terminerArticle(order.articleManquant, order.reference); }}
                                                     className="mt-3 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg transition"
                                                 >
                                                     ✅ Terminer cet article et clôturer la commande
