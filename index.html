@@ -478,7 +478,7 @@
                                                         <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">Qté: {item.quantity || 1}</span>
                                                         <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.status === 'Rangé' ? 'bg-purple-100 text-purple-700' : item.status === 'Reçu' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
                                                     </div>
-                                                    {item.commentaires && <p className="mt-2 text-sm text-purple-600 italic">💬 {item.commentaires}</p>}
+                                                    {item.commentaires && <p className="mt-2 text-sm text-purple-600 italic">💬 {item.commentaires}{item.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-400">— {item.commentAuthor}</span>}</p>}
                                                 </div>
                                             </div>
                                         ))}
@@ -1152,7 +1152,7 @@
                                                         {commandesAvecCommentaire[ref].map((o, i) => (
                                                             <div key={i} className="px-4 py-2 border-t border-purple-50">
                                                                 <p className="text-sm text-gray-700 truncate">{o.name}</p>
-                                                                <p className="text-sm italic text-purple-600 mt-0.5">💬 {o.commentaires}</p>
+                                                                <p className="text-sm italic text-purple-600 mt-0.5">💬 {o.commentaires}{o.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-400">— {o.commentAuthor}</span>}</p>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1585,7 +1585,7 @@
                                                 {/* Commentaire */}
                                                 <div className="mt-3">
                                                     {order.commentaires ? (
-                                                        <p className="text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded px-3 py-2">💬 {order.commentaires}</p>
+                                                        <p className="text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded px-3 py-2">💬 {order.commentaires}{order.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-400">— {order.commentAuthor}</span>}</p>
                                                     ) : (
                                                         <input
                                                             type="text"
