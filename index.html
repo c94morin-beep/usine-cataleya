@@ -72,7 +72,6 @@
         // Statuts
         const STATUTS = {
             EN_ATTENTE: 'En attente',
-            DEPOSE: 'Déposé',
             RECU: 'Reçu',
             RANGE: 'Rangé',
             AVEC_COMMENTAIRE: 'Avec commentaire'
@@ -847,6 +846,7 @@
             const [showCommentairesModal, setShowCommentairesModal] = useState(false);
             const [showCommandesModal, setShowCommandesModal] = useState(false);
             const [showRangesModal, setShowRangesModal] = useState(false);
+            const [showRecusModal, setShowRecusModal] = useState(false);
             const terminesOrders = orders.filter(o => o.status === STATUTS.RANGE);
             // Une commande est "terminée" uniquement si TOUS ses articles sont terminés
             const terminesRefs = [...new Set(orders.map(o => o.reference))].filter(ref => {
@@ -866,6 +866,7 @@
                         <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />
                         <StatCard title="Terminés" value={stats.termines} subtitle={`commandes complètes`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
                         <StatCard title="Rangés" value={[...new Set(orders.filter(o => o.status === STATUTS.RANGE).map(o => o.reference))].length} subtitle={`${orders.filter(o => o.status === STATUTS.RANGE).length} articles rangés`} color="teal" icon="📦" onClick={() => setShowRangesModal(true)} clickable={true} />
+                        <StatCard title="Reçus" value={[...new Set(orders.filter(o => o.status === STATUTS.RECU).map(o => o.reference))].length} subtitle={`${orders.filter(o => o.status === STATUTS.RECU).length} articles reçus`} color="orange" icon="📬" onClick={() => setShowRecusModal(true)} clickable={true} />
                         <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />
                     </div>
 
@@ -932,6 +933,49 @@
                                     </div>
                                     <div className="p-4 border-t bg-gray-50 rounded-b-xl">
                                         <p className="text-sm text-gray-500 text-center">{allRefs.length} commandes • {orders.length} articles au total</p>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {showRecusModal && (() => {
+                        const recusRefs = [...new Set(orders.filter(o => o.status === STATUTS.RECU).map(o => o.reference))].sort((a,b) => a - b);
+                        return (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowRecusModal(false)}>
+                                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                                    <div className="flex justify-between items-center p-6 border-b">
+                                        <h3 className="text-xl font-bold text-orange-700">📬 Articles reçus ({recusRefs.length})</h3>
+                                        <button onClick={() => setShowRecusModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+                                    </div>
+                                    <div className="overflow-y-auto p-6">
+                                        {recusRefs.length === 0 ? (
+                                            <p className="text-gray-500 text-center py-8">Aucun article reçu pour l'instant</p>
+                                        ) : (
+                                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                                {recusRefs.map((ref, index) => {
+                                                    const items = orders.filter(o => o.reference === ref);
+                                                    const recus = items.filter(o => o.status === STATUTS.RECU).length;
+                                                    const total = items.length;
+                                                    return (
+                                                        <div key={ref} className={`py-2 px-3 flex items-center justify-between gap-3 ${index % 2 === 0 ? 'bg-orange-50' : 'bg-white'}`}>
+                                                            <button onClick={() => { setShowRecusModal(false); openOrderRecap(ref); }} className="font-mono text-orange-800 font-semibold hover:text-blue-600 hover:underline">
+                                                                #{ref}
+                                                            </button>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-20 bg-gray-200 rounded-full h-1.5">
+                                                                    <div className="h-1.5 rounded-full bg-orange-500" style={{width: `${total > 0 ? (recus/total)*100 : 0}%`}}></div>
+                                                                </div>
+                                                                <span className="text-xs text-gray-500">{recus}/{total}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-4 border-t bg-gray-50 rounded-b-xl">
+                                        <p className="text-sm text-gray-500 text-center">{recusRefs.length} commandes • {orders.filter(o => o.status === STATUTS.RECU).length} articles reçus</p>
                                     </div>
                                 </div>
                             </div>
@@ -1102,7 +1146,8 @@
                 green: 'bg-green-50 border-green-200 text-green-700',
                 purple: 'bg-purple-50 border-purple-200 text-purple-700',
                 teal: 'bg-teal-50 border-teal-200 text-teal-700',
-                indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+                orange: 'bg-orange-50 border-orange-200 text-orange-700'
             };
             return (
                 <div className={`rounded-lg border-2 p-6 ${colors[color]} ${clickable ? 'cursor-pointer hover:shadow-md hover:scale-105 transition-transform' : ''}`}
@@ -1123,9 +1168,9 @@
         // ProductionTab
         function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, isOperateur, isSara, canEditStatus, canEditComment, userName, openOrderRecap }) {
             const statutsDisponibles = isSara 
-                ? [STATUTS.EN_ATTENTE, STATUTS.DEPOSE, STATUTS.AVEC_COMMENTAIRE]
+                ? [STATUTS.EN_ATTENTE, STATUTS.AVEC_COMMENTAIRE]
                 : isOperateur 
-                ? [STATUTS.EN_ATTENTE, STATUTS.DEPOSE, STATUTS.RANGE, STATUTS.AVEC_COMMENTAIRE]
+                ? [STATUTS.EN_ATTENTE, STATUTS.RECU, STATUTS.RANGE, STATUTS.AVEC_COMMENTAIRE]
                 : Object.values(STATUTS);
             const [selectedImage, setSelectedImage] = React.useState(null);
             const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
@@ -1336,8 +1381,7 @@
                                 {sortedOrders.map(order => (
                                     <tr key={order.id} className={`border-b transition-colors ${
                                         order.status === STATUTS.RANGE ? 'bg-green-200 hover:bg-green-300' :
-                                        order.status === STATUTS.RECU ? 'bg-green-50 hover:bg-green-100' :
-                                        order.status === STATUTS.DEPOSE ? 'bg-blue-50 hover:bg-blue-100' :
+                                        order.status === STATUTS.RECU ? 'bg-orange-100 hover:bg-orange-200' :
                                         order.status === STATUTS.AVEC_COMMENTAIRE ? 'bg-orange-50 hover:bg-orange-100' :
                                         'bg-white hover:bg-gray-50'
                                     }`}>
@@ -1744,7 +1788,7 @@
                                         <div key={i} className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-lg p-3">
                                             {item.url_image && <img src={item.url_image} className="w-12 h-12 object-cover rounded" onError={e => e.target.style.display='none'} />}
                                             <p className="flex-1 text-sm text-gray-700">{item.name}</p>
-                                            <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">✅ Reçu</span>
+                                            <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">✅ Déposé</span>
                                         </div>
                                     ))}
                                 </div>
@@ -1921,14 +1965,14 @@
             const articlesMatch = selectedProduct ? produitsGroupes[selectedProduct] || [] : [];
 
             const handleReception = async (order) => {
-                updateStatus(order.id, STATUTS.DEPOSE, order.commentaires || '', userName);
+                updateStatus(order.id, STATUTS.RECU, order.commentaires || '', userName);
             };
 
             const handleReceptionTous = async () => {
                 if (!selectedProduct) return;
                 if (!window.confirm(`Marquer tous les articles "${selectedProduct}" comme déposés ?`)) return;
                 articlesMatch.forEach(o => {
-                    updateStatus(o.id, STATUTS.DEPOSE, o.commentaires || '', userName);
+                    updateStatus(o.id, STATUTS.RECU, o.commentaires || '', userName);
                 });
             };
 
@@ -1975,7 +2019,7 @@
                                         onClick={handleReceptionTous}
                                         className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition"
                                     >
-                                        ✅ Tout marquer reçu
+                                        ✅ Tout marquer déposé
                                     </button>
                                 </div>
                                 <div className="space-y-3">
