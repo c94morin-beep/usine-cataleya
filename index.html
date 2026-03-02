@@ -260,7 +260,7 @@
                     ...list,
                     orders: list.orders.map(order =>
                         order.id === orderId 
-                            ? { ...order, status: newStatus, commentaires: newCommentaires !== undefined ? newCommentaires : order.commentaires } 
+                            ? { ...order, status: newStatus, commentaires: newCommentaires !== undefined ? newCommentaires : order.commentaires, commentAuthor: (newCommentaires && author) ? author : (newCommentaires === '' ? null : order.commentAuthor) } 
                             : order
                     )
                 }));
