@@ -1832,13 +1832,13 @@
                 const matches = [];
                 Object.entries(byRef).forEach(([ref, items]) => {
                     // Articles en attente qui correspondent à la recherche
-                    const enAttente = items.filter(o => o.status !== 'Reçu');
+                    const enAttente = items.filter(o => o.status !== STATUTS.RECU && o.status !== STATUTS.RANGE);
                     const matchingEnAttente = enAttente.filter(o => o.name.toLowerCase().includes(query));
                     
                     // La commande est "prête" si :
                     // - il y a exactement 1 article en attente ET il correspond à la recherche
                     if (enAttente.length === 1 && matchingEnAttente.length === 1) {
-                        const termines = items.filter(o => o.status === 'Reçu');
+                        const termines = items.filter(o => o.status === STATUTS.RECU || o.status === STATUTS.RANGE);
                         matches.push({
                             reference: ref,
                             client: items[0].client,
@@ -1857,7 +1857,7 @@
             }, [search, orders]);
 
             const terminerArticle = (article) => {
-                updateStatus(article.id, 'Reçu', article.commentaires);
+                updateStatus(article.id, STATUTS.RANGE, article.commentaires);
             };
 
             return (
