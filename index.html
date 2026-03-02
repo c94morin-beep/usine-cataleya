@@ -512,7 +512,7 @@
                                             const allCasiers = window._casiersCache || {};
                                             const entry = Object.entries(allCasiers).find(([, v]) => String(v.commande) === String(globalSelectedOrder.reference));
                                             if (!entry) return null;
-                                            return <button onClick={() => setBoxPopup({articleName: item.name, casierNum: entry[1].casierNum || entry[0], reference: globalSelectedOrder.reference})} className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full text-sm font-semibold transition">📦 Box ?</button>;
+                                            return <button onClick={() => setBoxPopup({articleName: item.name, casierNum: entry[1].casierNum || entry[0], reference: globalSelectedOrder.reference})} className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full text-sm font-semibold transition">📦 Box {entry[1].casierNum || entry[0]}</button>;
                                         })()}
                                                     </div>
                                                     {item.commentaires && <p className="mt-2 text-sm text-purple-600 italic">💬 {item.commentaires}{item.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-400">— {item.commentAuthor}</span>}</p>}
