@@ -87,6 +87,7 @@
             const [boxPopup, setBoxPopup] = useState(null); // {articleName, casierNum, reference}
             const [globalCasiersData, setGlobalCasiersData] = useState({});
             React.useEffect(() => { if (window._casiersCache) setGlobalCasiersData(window._casiersCache); }, []);
+            const getCasierNum = (reference) => { const entry = Object.entries(globalCasiersData || {}).find(([, v]) => String(v.commande) === String(reference)); return entry ? (entry[1].casierNum || entry[0]) : null; };
             const [globalCasiers, setGlobalCasiers] = useState({});
             const [searchTerm, setSearchTerm] = useState('');
             const [filterStatus, setFilterStatus] = useState('all');
@@ -493,7 +494,7 @@
                                 <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
-                                            <h3 className="text-2xl font-bold mb-3">📦 Commande #{globalSelectedOrder.reference}</h3>
+                                            <h3 className="text-2xl font-bold mb-3">📦 Commande #{globalSelectedOrder.reference}{getCasierNum(globalSelectedOrder.reference) && <span className="ml-3 text-lg font-semibold bg-white bg-opacity-20 px-2 py-0.5 rounded-lg">Box {getCasierNum(globalSelectedOrder.reference)}</span>}</h3>
                                             <div className="space-y-2 text-blue-100">
                                                 {globalSelectedOrder.client && <p className="flex items-start gap-2"><span className="text-lg">👤</span><span className="font-semibold">{globalSelectedOrder.client}</span></p>}
                                                 {globalSelectedOrder.adresse_livraison && <p className="flex items-start gap-2"><span className="text-lg">📍</span><span>{globalSelectedOrder.adresse_livraison}</span></p>}
@@ -772,6 +773,7 @@
                                         canEditStatus={canEditStatus}
                                         canEditComment={canEditComment}
                                         userName={userName}
+                                        getCasierNum={getCasierNum}
                                         openOrderRecap={openGlobalOrderRecap}
                                     />
                                 )}
@@ -1031,7 +1033,7 @@
                                                         <p className="text-sm font-semibold text-orange-800">{name} <span className="text-xs text-orange-400 font-normal">({arts.length}x)</span></p>
                                                         <div className="flex flex-wrap gap-1 mt-1">
                                                             {arts.map((art, i) => (
-                                                                <button key={i} onClick={() => { setShowRecusModal(false); openOrderRecap(art.reference); }} className="text-xs text-blue-600 hover:underline">#{art.reference}</button>
+                                                                <button key={i} onClick={() => { setShowRecusModal(false); openOrderRecap(art.reference); }} className="text-xs text-blue-600 hover:underline">#{art.reference}{getCasierNum(art.reference) ? ` (Box ${getCasierNum(art.reference)})` : ''}</button>
                                                             ))}
                                                         </div>
                                                     </div>
@@ -1109,7 +1111,7 @@
                                                         <p className="text-sm font-semibold text-teal-800">{name} <span className="text-xs text-teal-500 font-normal">({arts.length}x)</span></p>
                                                         <div className="flex flex-wrap gap-1 mt-1">
                                                             {arts.map((art, i) => (
-                                                                <button key={i} onClick={() => { setShowRangesModal(false); openOrderRecap(art.reference); }} className="text-xs text-blue-600 hover:underline">#{art.reference}</button>
+                                                                <button key={i} onClick={() => { setShowRangesModal(false); openOrderRecap(art.reference); }} className="text-xs text-blue-600 hover:underline">#{art.reference}{getCasierNum(art.reference) ? ` (Box ${getCasierNum(art.reference)})` : ''}</button>
                                                             ))}
                                                         </div>
                                                     </div>
@@ -1285,7 +1287,7 @@
         }
 
         // ProductionTab
-        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, isOperateur, isSara, canEditStatus, canEditComment, userName, openOrderRecap }) {
+        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, isOperateur, isSara, canEditStatus, canEditComment, userName, getCasierNum, openOrderRecap }) {
             const statutsDisponibles = isSara 
                 ? [STATUTS.EN_ATTENTE, STATUTS.AVEC_COMMENTAIRE]
                 : isOperateur 
@@ -1515,7 +1517,7 @@
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="font-semibold text-blue-600 cursor-pointer hover:text-blue-800 hover:underline" onClick={() => openOrderRecap(order.reference)}>#{order.reference}</span>
+                                            <span className="font-semibold text-blue-600 cursor-pointer hover:text-blue-800 hover:underline" onClick={() => openOrderRecap(order.reference)}>#{order.reference}</span>{getCasierNum && getCasierNum(order.reference) && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">Box {getCasierNum(order.reference)}</span>}
                                         </td>
                                         <td className="px-4 py-3">{order.name}</td>
                                         <td className="px-4 py-3 text-sm">{order.client || '-'}</td>
