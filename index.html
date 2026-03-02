@@ -87,7 +87,7 @@
             const [boxPopup, setBoxPopup] = useState(null); // {articleName, casierNum, reference}
             const [globalCasiersData, setGlobalCasiersData] = useState({});
             React.useEffect(() => { if (window._casiersCache) setGlobalCasiersData(window._casiersCache); }, []);
-            const getCasierNum = (reference) => { const entry = Object.entries(globalCasiersData || {}).find(([, v]) => String(v.commande) === String(reference)); return entry ? (entry[1].casierNum || entry[0]) : null; };
+            const getCasierNum = (reference) => { const entry = Object.entries(globalCasiers || {}).find(([, v]) => String(v.commande) === String(reference)); return entry ? (entry[1].casierNum || entry[0]) : null; };
             const [globalCasiers, setGlobalCasiers] = useState({});
             const [searchTerm, setSearchTerm] = useState('');
             const [filterStatus, setFilterStatus] = useState('all');
@@ -785,7 +785,7 @@
                                     <MultiOrdersTab orders={activeOrders} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'ready' && (
-                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} casiersData={globalCasiersData} setBoxPopup={setBoxPopup} />
+                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} casiersData={globalCasiers} setBoxPopup={setBoxPopup} />
                                 )}
                                 {activeTab === 'casiers' && (
                                     <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
@@ -1907,7 +1907,7 @@
                                             <div className="flex-1">
                                                 <p className="font-semibold text-gray-800">{selectedOrder.articleManquant.name}</p>
                                             </div>
-                                            {canEditStatus && (
+                                            {isAdmin && (
                                                 <button
                                                     onClick={() => { terminerArticle(selectedOrder.articleManquant, selectedOrder.reference); setSelectedOrder(null); }}
                                                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg transition"
@@ -1987,7 +1987,7 @@
                                                     return entry ? <p className="text-xs text-blue-600 font-semibold mt-1">📦 Box {entry[1].casierNum || entry[0]}</p> : null;
                                                 })()}
                                             </div>
-                                            {canEditStatus && (
+                                            {isAdmin && (
                                                 <button
                                                     onClick={e => { e.stopPropagation(); terminerArticle(order.articleManquant, order.reference); }}
                                                     className="mt-3 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg transition"
