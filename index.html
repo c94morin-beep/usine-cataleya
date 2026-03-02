@@ -494,7 +494,8 @@
                                 <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
-                                            <h3 className="text-2xl font-bold mb-3">📦 Commande #{globalSelectedOrder.reference}{getCasierNum(globalSelectedOrder.reference) && <span className="ml-3 text-lg font-semibold bg-white bg-opacity-20 px-2 py-0.5 rounded-lg">Box {getCasierNum(globalSelectedOrder.reference)}</span>}</h3>
+                                            <h3 className="text-2xl font-bold mb-3">📦 Commande #{globalSelectedOrder.reference}</h3>
+                                            {getCasierNum(globalSelectedOrder.reference) && <p className="flex items-center gap-2 mt-1"><span className="text-2xl">📦</span><span className="text-xl font-bold bg-white bg-opacity-20 px-3 py-1 rounded-lg">Box {getCasierNum(globalSelectedOrder.reference)}</span></p>}
                                             <div className="space-y-2 text-blue-100">
                                                 {globalSelectedOrder.client && <p className="flex items-start gap-2"><span className="text-lg">👤</span><span className="font-semibold">{globalSelectedOrder.client}</span></p>}
                                                 {globalSelectedOrder.adresse_livraison && <p className="flex items-start gap-2"><span className="text-lg">📍</span><span>{globalSelectedOrder.adresse_livraison}</span></p>}
@@ -1906,7 +1907,7 @@
                                             <div className="flex-1">
                                                 <p className="font-semibold text-gray-800">{selectedOrder.articleManquant.name}</p>
                                             </div>
-                                            {isAdmin && (
+                                            {canEditStatus && (
                                                 <button
                                                     onClick={() => { terminerArticle(selectedOrder.articleManquant, selectedOrder.reference); setSelectedOrder(null); }}
                                                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg transition"
@@ -1986,7 +1987,7 @@
                                                     return entry ? <p className="text-xs text-blue-600 font-semibold mt-1">📦 Box {entry[1].casierNum || entry[0]}</p> : null;
                                                 })()}
                                             </div>
-                                            {isAdmin && (
+                                            {canEditStatus && (
                                                 <button
                                                     onClick={e => { e.stopPropagation(); terminerArticle(order.articleManquant, order.reference); }}
                                                     className="mt-3 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg transition"
