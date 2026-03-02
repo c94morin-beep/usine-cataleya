@@ -255,7 +255,7 @@
             };
 
             // Mettre à jour un statut
-            const updateStatus = (orderId, newStatus, newCommentaires) => {
+            const updateStatus = (orderId, newStatus, newCommentaires, author) => {
                 const updatedLists = lists.map(list => ({
                     ...list,
                     orders: list.orders.map(order =>
@@ -427,8 +427,11 @@
             const isAdmin = userRole === 'admin';
             const isOperateur = userRole === 'operateur';
             const isCommentaires = userRole === 'commentaires';
+            const isSara = userRole === 'livreur';
             const canEditStatus = isAdmin || isOperateur;
-            const canEditComment = isAdmin || isCommentaires;
+            const canEditComment = isAdmin || isCommentaires || isSara;
+            // Nom affiché de l'utilisateur pour les commentaires
+            const userName = isAdmin ? 'Admin' : isOperateur ? 'Opérateur' : isCommentaires ? 'Commentaires' : isSara ? 'Sara' : 'Lecteur';
 
             return (
                 <div className="min-h-screen">
@@ -578,8 +581,8 @@
                             <div className="flex items-center gap-3">
                                 <div className="text-right">
                                     <p className="text-xs md:text-sm font-semibold truncate max-w-32 md:max-w-none">{user.email}</p>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-yellow-300 text-yellow-900' : isOperateur ? 'bg-blue-300 text-blue-900' : isCommentaires ? 'bg-green-300 text-green-900' : 'bg-white bg-opacity-30 text-white'}`}>
-                                        {isAdmin ? '🔑 Admin' : isOperateur ? '⚙️ Opérateur' : isCommentaires ? '💬 Commentaires' : '👁 Lecture'}
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-yellow-300 text-yellow-900' : isOperateur ? 'bg-blue-300 text-blue-900' : isCommentaires ? 'bg-green-300 text-green-900' : isSara ? 'bg-pink-300 text-pink-900' : 'bg-white bg-opacity-30 text-white'}`}>
+                                        {isAdmin ? '🔑 Admin' : isOperateur ? '⚙️ Opérateur' : isCommentaires ? '💬 Commentaires' : isSara ? '🚗 Sara' : '👁 Lecture'}
                                     </span>
                                 </div>
                                 <button onClick={() => window.firebaseSignOut()} className="px-2 md:px-3 py-1 md:py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs md:text-sm font-semibold transition">
@@ -675,6 +678,14 @@
                                     icon="💡"
                                     label="Casiers"
                                 />
+                                {(isAdmin || isSara) && (
+                                    <TabButton
+                                        active={activeTab === 'reception'}
+                                        onClick={() => setActiveTab('reception')}
+                                        icon="📥"
+                                        label="Réception"
+                                    />
+                                )}
 
                             </div>
                         </div>
@@ -701,6 +712,7 @@
                                         isAdmin={isAdmin}
                                         canEditStatus={canEditStatus}
                                         canEditComment={canEditComment}
+                                        userName={userName}
                                         openOrderRecap={openGlobalOrderRecap}
                                     />
                                 )}
@@ -715,6 +727,9 @@
                                 )}
                                 {activeTab === 'casiers' && (
                                     <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
+                                )}
+                                {activeTab === 'reception' && (
+                                    <ReceptionTab orders={getAllOrders()} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} />
                                 )}
 
 
@@ -1103,7 +1118,7 @@
         }
 
         // ProductionTab
-        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, canEditStatus, canEditComment, openOrderRecap }) {
+        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, canEditStatus, canEditComment, userName, openOrderRecap }) {
             const [selectedImage, setSelectedImage] = React.useState(null);
             const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
             const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
@@ -1268,15 +1283,15 @@
                                 </div>
                                 {order.commentaires ? (
                                     <div className="mt-3 flex items-center gap-2">
-                                        <p className="flex-1 text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">💬 {order.commentaires}</p>
+                                        <p className="flex-1 text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">💬 {order.commentaires}{order.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-500">— {order.commentAuthor}</span>}</p>
                                         {canEditComment && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-red-400 hover:text-red-600">✕</button>}
                                     </div>
                                 ) : canEditComment ? (
                                     <input
                                         type="text"
                                         defaultValue=""
-                                        onBlur={(e) => e.target.value && updateStatus(order.id, order.status, e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && e.target.value && updateStatus(order.id, order.status, e.target.value)}
+                                        onBlur={(e) => e.target.value && updateStatus(order.id, order.status, e.target.value, userName)}
+                                        onKeyDown={(e) => e.key === 'Enter' && e.target.value && updateStatus(order.id, order.status, e.target.value, userName)}
                                         placeholder="💬 Ajouter une note..."
                                         className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
                                     />
@@ -1336,13 +1351,13 @@
                                         <td className="px-4 py-3">
                                             {order.commentaires ? (
                                                 <div className="flex items-center gap-1">
-                                                    <p className="text-sm italic text-purple-700">💬 {order.commentaires}</p>
+                                                    <p className="text-sm italic text-purple-700">💬 {order.commentaires}{order.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-500">— {order.commentAuthor}</span>}</p>
                                                     {canEditComment && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-red-400 hover:text-red-600 ml-1">✕</button>}
                                                 </div>
                                             ) : canEditComment ? (
                                                 <input type="text" defaultValue=""
-                                                    onBlur={(e) => e.target.value && updateStatus(order.id, order.status, e.target.value)}
-                                                    onKeyDown={(e) => e.key === 'Enter' && e.target.value && updateStatus(order.id, order.status, e.target.value)}
+                                                    onBlur={(e) => e.target.value && updateStatus(order.id, order.status, e.target.value, userName)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && e.target.value && updateStatus(order.id, order.status, e.target.value, userName)}
                                                     placeholder="Ajouter une note..."
                                                     className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                                             ) : (
@@ -1873,6 +1888,127 @@
         }
 
         // CasiersTab
+        function ReceptionTab({ orders, updateStatus, userName, openOrderRecap }) {
+            const [searchProduct, setSearchProduct] = React.useState('');
+            const [selectedProduct, setSelectedProduct] = React.useState(null);
+            const [showDropdown, setShowDropdown] = React.useState(false);
+
+            // Liste des produits encore "En attente"
+            const produitsEnAttente = orders.filter(o => o.status === STATUTS.EN_ATTENTE);
+            
+            // Grouper par nom de produit
+            const produitsGroupes = {};
+            produitsEnAttente.forEach(o => {
+                if (!produitsGroupes[o.name]) produitsGroupes[o.name] = [];
+                produitsGroupes[o.name].push(o);
+            });
+
+            // Filtrer selon recherche
+            const produitsFiltres = Object.entries(produitsGroupes)
+                .filter(([name]) => name.toLowerCase().includes(searchProduct.toLowerCase()))
+                .sort((a, b) => a[0].localeCompare(b[0]));
+
+            // Articles correspondant au produit sélectionné
+            const articlesMatch = selectedProduct ? produitsGroupes[selectedProduct] || [] : [];
+
+            const handleReception = async (order) => {
+                updateStatus(order.id, STATUTS.RECU, order.commentaires || '', userName);
+            };
+
+            const handleReceptionTous = async () => {
+                if (!selectedProduct) return;
+                if (!window.confirm(`Marquer tous les articles "${selectedProduct}" comme reçus ?`)) return;
+                articlesMatch.forEach(o => {
+                    updateStatus(o.id, STATUTS.RECU, o.commentaires || '', userName);
+                });
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white rounded-xl shadow p-6">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4">📥 Réception des articles</h2>
+                        <p className="text-gray-500 text-sm mb-6">Sélectionnez un produit apporté pour identifier et mettre à jour les commandes correspondantes.</p>
+
+                        {/* Recherche produit */}
+                        <div className="relative mb-6">
+                            <input
+                                type="text"
+                                value={searchProduct}
+                                onChange={e => { setSearchProduct(e.target.value); setShowDropdown(true); setSelectedProduct(null); }}
+                                onFocus={() => setShowDropdown(true)}
+                                placeholder="🔍 Rechercher un produit..."
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            />
+                            {showDropdown && produitsFiltres.length > 0 && !selectedProduct && (
+                                <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
+                                    {produitsFiltres.map(([name, articles]) => (
+                                        <div
+                                            key={name}
+                                            onClick={() => { setSelectedProduct(name); setSearchProduct(name); setShowDropdown(false); }}
+                                            className="px-4 py-3 hover:bg-green-50 cursor-pointer border-b border-gray-100 flex justify-between items-center"
+                                        >
+                                            <span className="text-sm font-medium text-gray-800">{name}</span>
+                                            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">{articles.length} en attente</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Résultats */}
+                        {selectedProduct && articlesMatch.length > 0 && (
+                            <div>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-gray-700">
+                                        {articlesMatch.length} commande(s) en attente de <span className="text-green-600">"{selectedProduct}"</span>
+                                    </h3>
+                                    <button
+                                        onClick={handleReceptionTous}
+                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition"
+                                    >
+                                        ✅ Tout marquer reçu
+                                    </button>
+                                </div>
+                                <div className="space-y-3">
+                                    {articlesMatch.sort((a,b) => a.reference - b.reference).map(order => (
+                                        <div key={order.id} className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl p-4">
+                                            <div>
+                                                <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline">
+                                                    #{order.reference}
+                                                </button>
+                                                <p className="text-sm text-gray-600">{order.client || '—'}</p>
+                                                <p className="text-xs text-gray-400">{order.transporteur || '—'}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleReception(order)}
+                                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition"
+                                            >
+                                                ✅ Reçu
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedProduct && articlesMatch.length === 0 && (
+                            <div className="text-center py-10 text-gray-400">
+                                <p className="text-4xl mb-2">🎉</p>
+                                <p>Toutes les commandes pour ce produit sont déjà reçues !</p>
+                            </div>
+                        )}
+
+                        {!selectedProduct && searchProduct === '' && (
+                            <div className="text-center py-10 text-gray-300">
+                                <p className="text-5xl mb-3">📦</p>
+                                <p>Recherchez un produit pour commencer</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
         function CasiersTab({ orders, isAdmin, canEditStatus, openOrderRecap, updateStatus, setCasierAlert }) {
             const CONFIG = {
                 colonneGauche: { etageres: 4, etages: 4, casiersParEtage: 6 },
