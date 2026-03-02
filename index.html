@@ -756,7 +756,7 @@
                         ) : (
                             <>
                                 {activeTab === 'dashboard' && (
-                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} />
+                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} getCasierNum={getCasierNum} />
                                 )}
                                 {activeTab === 'production' && (
                                     <ProductionTab
@@ -900,7 +900,7 @@
         }
 
         // Dashboard
-        function Dashboard({ stats, orders, listName, openOrderRecap }) {
+        function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum }) {
             const [showTerminesModal, setShowTerminesModal] = useState(false);
             const [showCommentairesModal, setShowCommentairesModal] = useState(false);
             const [showCommandesModal, setShowCommandesModal] = useState(false);
