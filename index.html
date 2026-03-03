@@ -83,7 +83,7 @@
             const [activeListId, setActiveListId] = useState('global');
             const [activeTab, setActiveTab] = useState('dashboard');
             React.useEffect(() => {
-                if (isSara) setActiveTab('reception');
+                if (isSara) setActiveTab('dashboard');
                 else if (isCommentaires) setActiveTab('production');
                 else if (isOperateur) setActiveTab('dashboard');
             }, [userRole]);
@@ -707,8 +707,8 @@
                     <nav className="bg-white border-b border-gray-200">
                         <div className="container mx-auto px-6">
                             <div className="flex gap-1 overflow-x-auto">
-                                {/* Dashboard — Admin + Achraf */}
-                                {(isAdmin || isOperateur) && (
+                                {/* Dashboard — Admin + Achraf + Sara + Fatima */}
+                                {(isAdmin || isOperateur || isSara || isCommentaires) && (
                                     <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon="📊" label="Dashboard" />
                                 )}
                                 {/* Suivi Production — tous sauf Lecture */}
@@ -731,8 +731,8 @@
                                 {isAdmin && (
                                     <TabButton active={activeTab === 'casiers'} onClick={() => setActiveTab('casiers')} icon="💡" label="Casiers" />
                                 )}
-                                {/* Réception — Admin + Sara */}
-                                {(isAdmin || isSara) && (
+                                {/* Réception — Admin + Achraf */}
+                                {(isAdmin || isOperateur) && (
                                     <TabButton active={activeTab === 'reception'} onClick={() => setActiveTab('reception')} icon="📥" label="Réception" />
                                 )}
                             </div>
@@ -746,7 +746,7 @@
                         ) : (
                             <>
                                 {activeTab === 'dashboard' && (
-                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} getCasierNum={getCasierNum} />
+                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} getCasierNum={getCasierNum} isSara={isSara} isCommentaires={isCommentaires} />
                                 )}
                                 {activeTab === 'production' && (
                                     <ProductionTab
@@ -890,7 +890,7 @@
         }
 
         // Dashboard
-        function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum }) {
+        function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum, isSara, isCommentaires }) {
             const [showTerminesModal, setShowTerminesModal] = useState(false);
             const [showCommentairesModal, setShowCommentairesModal] = useState(false);
             const [showCommandesModal, setShowCommandesModal] = useState(false);
@@ -912,13 +912,16 @@
                     <h2 className="text-2xl font-bold">Dashboard - {listName}</h2>
                     
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <StatCard title="Total Articles" value={stats.total} color="blue" icon="📦" />
-                        <StatCard title="Commandes" value={[...new Set(orders.map(o => o.reference))].length} color="indigo" icon="🛒" onClick={() => setShowCommandesModal(true)} clickable={true} />
-                        <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />
-                        <StatCard title="Terminés" value={stats.termines} subtitle={`commandes complètes`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
-                        <StatCard title="Rangés" value={(() => { const refs = [...new Set(orders.filter(o => o.status === STATUTS.RANGE).map(o => o.reference))]; return refs.filter(ref => { const items = orders.filter(o => o.reference === ref); return !items.every(o => o.status === STATUTS.RANGE); }).length; })()} subtitle={`${orders.filter(o => { if(o.status !== STATUTS.RANGE) return false; const c = orders.filter(a => a.reference === o.reference); return !c.every(a => a.status === STATUTS.RANGE); }).length} articles rangés`} color="teal" icon="📦" onClick={() => setShowRangesModal(true)} clickable={true} />
-                        <StatCard title="Reçus" value={[...new Set(orders.filter(o => o.status === STATUTS.RECU).map(o => o.reference))].length} subtitle={`${orders.filter(o => o.status === STATUTS.RECU).length} articles reçus`} color="orange" icon="📬" onClick={() => setShowRecusModal(true)} clickable={true} />
-                        <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />
+                        {/* Cartes visibles par tous */}
+                        {!isSara && !isCommentaires && <StatCard title="Total Articles" value={stats.total} color="blue" icon="📦" />}
+                        {!isSara && !isCommentaires && <StatCard title="Commandes" value={[...new Set(orders.map(o => o.reference))].length} color="indigo" icon="🛒" onClick={() => setShowCommandesModal(true)} clickable={true} />}
+                        {!isSara && !isCommentaires && <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />}
+                        {!isSara && !isCommentaires && <StatCard title="Terminés" value={stats.termines} subtitle={`commandes complètes`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />}
+                        {!isSara && !isCommentaires && <StatCard title="Rangés" value={(() => { const refs = [...new Set(orders.filter(o => o.status === STATUTS.RANGE).map(o => o.reference))]; return refs.filter(ref => { const items = orders.filter(o => o.reference === ref); return !items.every(o => o.status === STATUTS.RANGE); }).length; })()} subtitle={`${orders.filter(o => { if(o.status !== STATUTS.RANGE) return false; const c = orders.filter(a => a.reference === o.reference); return !c.every(a => a.status === STATUTS.RANGE); }).length} articles rangés`} color="teal" icon="📦" onClick={() => setShowRangesModal(true)} clickable={true} />}
+                        {/* Reçus — Admin/Achraf + Sara */}
+                        {!isCommentaires && <StatCard title="Reçus" value={[...new Set(orders.filter(o => o.status === STATUTS.RECU).map(o => o.reference))].length} subtitle={`${orders.filter(o => o.status === STATUTS.RECU).length} articles reçus`} color="orange" icon="📬" onClick={() => setShowRecusModal(true)} clickable={true} />}
+                        {/* Avec commentaire — Admin/Achraf + Fatima */}
+                        {!isSara && <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />}
                     </div>
 
                     <div className="bg-white rounded-lg shadow p-6">
