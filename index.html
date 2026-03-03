@@ -273,7 +273,7 @@
                 saveLists(updatedLists);
 
                 // Afficher la popup à chaque fois qu'un article est terminé
-                if (newStatus === STATUTS.RECU) {
+                if (newStatus === STATUTS.RECU || newStatus === STATUTS.RANGE) {
                     const allOrders = updatedLists.flatMap(l => l.orders);
                     const thisOrder = allOrders.find(o => o.id === orderId);
                     if (thisOrder) {
@@ -289,6 +289,7 @@
                                 .filter(o => 
                                     o.reference !== ref &&
                                     o.status !== STATUTS.RECU &&
+                                    o.status !== STATUTS.RANGE &&
                                     (o.client === client || (email && o.email === email))
                                 )
                                 .map(o => o.reference)
@@ -927,7 +928,7 @@
                         <StatCard title="Commandes" value={[...new Set(orders.map(o => o.reference))].length} color="indigo" icon="🛒" onClick={() => setShowCommandesModal(true)} clickable={true} />
                         <StatCard title="En attente" value={stats.enAttente} color="yellow" icon="⏳" />
                         <StatCard title="Terminés" value={stats.termines} subtitle={`commandes complètes`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />
-                        <StatCard title="Rangés" value={[...new Set(orders.filter(o => o.status === STATUTS.RANGE).map(o => o.reference))].length} subtitle={`${orders.filter(o => o.status === STATUTS.RANGE).length} articles rangés`} color="teal" icon="📦" onClick={() => setShowRangesModal(true)} clickable={true} />
+                        <StatCard title="Rangés" value={(() => { const refs = [...new Set(orders.filter(o => o.status === STATUTS.RANGE).map(o => o.reference))]; return refs.filter(ref => { const items = orders.filter(o => o.reference === ref); return !items.every(o => o.status === STATUTS.RANGE); }).length; })()} subtitle={`${orders.filter(o => { if(o.status !== STATUTS.RANGE) return false; const c = orders.filter(a => a.reference === o.reference); return !c.every(a => a.status === STATUTS.RANGE); }).length} articles rangés`} color="teal" icon="📦" onClick={() => setShowRangesModal(true)} clickable={true} />
                         <StatCard title="Reçus" value={[...new Set(orders.filter(o => o.status === STATUTS.RECU).map(o => o.reference))].length} subtitle={`${orders.filter(o => o.status === STATUTS.RECU).length} articles reçus`} color="orange" icon="📬" onClick={() => setShowRecusModal(true)} clickable={true} />
                         <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />
                     </div>
@@ -1075,7 +1076,14 @@
                     })()}
 
                     {showRangesModal && (() => {
-                        const rangesArticles = orders.filter(o => o.status === STATUTS.RANGE);
+                        const allOrders = orders;
+                        // Exclure les commandes où TOUS les articles sont Rangés (elles vont dans Terminés)
+                        const rangesArticles = orders.filter(o => {
+                            if (o.status !== STATUTS.RANGE) return false;
+                            const commande = allOrders.filter(a => a.reference === o.reference);
+                            const tousRanges = commande.every(a => a.status === STATUTS.RANGE);
+                            return !tousRanges; // N'afficher que si commande PAS encore complète
+                        });
                         
                         // Par article : grouper par nom d'article trié alphabétiquement
                         const byArticle = Object.entries(
@@ -2512,5 +2520,6 @@
         // Render
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v2.4 — 04/03/26</div>
 </body>
 </html>
