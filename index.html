@@ -2276,11 +2276,15 @@
 
                         {/* Résultats */}
                         {selectedProduct && articlesMatch.length > 0 && (() => {
+                            // Pour chaque commande, déterminer si elle correspond aux tailles sélectionnées
+                            const getTailleOrder = (order) => parseProduct(order.name).attrs['Taille'];
+                            const isActive = (order) => selectedTailles.length === 0 || selectedTailles.includes(getTailleOrder(order));
+
                             // Séparer : commandes où c'est le DERNIER article en attente vs les autres
                             const urgentes = articlesMatch.filter(o => {
                                 const tousArticles = orders.filter(a => a.reference === o.reference);
                                 const enAttente = tousArticles.filter(a => a.status === STATUTS.EN_ATTENTE);
-                                return enAttente.length === 1; // cet article est le seul restant
+                                return enAttente.length === 1;
                             });
                             const normales = articlesMatch.filter(o => {
                                 const tousArticles = orders.filter(a => a.reference === o.reference);
@@ -2314,17 +2318,20 @@
                                         <div className="space-y-2">
                                             {urgentes.sort((a,b) => a.reference - b.reference).map(order => {
                                                 const tousArticles = orders.filter(a => a.reference === order.reference);
+                                                const active = isActive(order);
+                                                const taille = getTailleOrder(order);
                                                 return (
-                                                    <div key={order.id} className="flex items-center justify-between bg-green-50 border-2 border-green-400 rounded-xl p-4 shadow-sm">
+                                                    <div key={order.id} className={`flex items-center justify-between rounded-xl p-4 shadow-sm border-2 transition-all ${active ? 'bg-green-50 border-green-400' : 'bg-gray-50 border-gray-200 opacity-40'}`}>
                                                         <div>
                                                             <div className="flex items-center gap-2">
                                                                 <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline text-lg">#{order.reference}</button>
                                                                 <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">Dernière pièce !</span>
+                                                                {taille && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${active && selectedTailles.length > 0 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}>T.{taille}</span>}
                                                             </div>
                                                             <p className="text-sm text-gray-600 mt-0.5">{order.client}</p>
                                                             <p className="text-xs text-green-600 mt-0.5">✅ {tousArticles.length - 1} autre(s) article(s) déjà prêt(s)</p>
                                                         </div>
-                                                        <button onClick={() => handleReception(order)} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition">✅ Déposé</button>
+                                                        {active && <button onClick={() => handleReception(order)} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition">✅ Déposé</button>}
                                                     </div>
                                                 );
                                             })}
@@ -2337,23 +2344,23 @@
                                     <div>
                                         {urgentes.length > 0 && <p className="text-xs text-gray-400 uppercase font-semibold mb-2 tracking-wide">Autres commandes</p>}
                                         <div className="space-y-2">
-                                            {normales.sort((a,b) => a.reference - b.reference).map(order => (
-                                                <div key={order.id} className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl p-4">
-                                                    <div>
-                                                        <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline">
-                                                            #{order.reference}
-                                                </button>
-                                                <p className="text-sm text-gray-600">{order.client || '—'}</p>
-                                                <p className="text-xs text-gray-400">{order.transporteur || '—'}</p>
-                                            </div>
-                                            <button
-                                                onClick={() => handleReception(order)}
-                                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition"
-                                            >
-                                                ✅ Déposé
-                                            </button>
-                                        </div>
-                                            ))}
+                                            {normales.sort((a,b) => a.reference - b.reference).map(order => {
+                                                const active = isActive(order);
+                                                const taille = getTailleOrder(order);
+                                                return (
+                                                    <div key={order.id} className={`flex items-center justify-between rounded-xl p-4 border transition-all ${active ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200 opacity-40'}`}>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline">#{order.reference}</button>
+                                                                {taille && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${active && selectedTailles.length > 0 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}>T.{taille}</span>}
+                                                            </div>
+                                                            <p className="text-sm text-gray-600">{order.client || '—'}</p>
+                                                            <p className="text-xs text-gray-400">{order.transporteur || '—'}</p>
+                                                        </div>
+                                                        {active && <button onClick={() => handleReception(order)} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition">✅ Déposé</button>}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
