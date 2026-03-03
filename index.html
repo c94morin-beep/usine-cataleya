@@ -82,6 +82,11 @@
             const [lists, setLists] = useState([]);
             const [activeListId, setActiveListId] = useState('global');
             const [activeTab, setActiveTab] = useState('dashboard');
+            React.useEffect(() => {
+                if (isSara) setActiveTab('reception');
+                else if (isCommentaires) setActiveTab('production');
+                else if (isOperateur) setActiveTab('dashboard');
+            }, [userRole]);
             const [globalSelectedOrder, setGlobalSelectedOrder] = useState(null);
             const [zoomedImage, setZoomedImage] = useState(null);
             const [boxPopup, setBoxPopup] = useState(null); // {articleName, casierNum, reference}
@@ -701,52 +706,35 @@
                     {/* Tabs */}
                     <nav className="bg-white border-b border-gray-200">
                         <div className="container mx-auto px-6">
-                            <div className="flex gap-1">
-                                <TabButton
-                                    active={activeTab === 'dashboard'}
-                                    onClick={() => setActiveTab('dashboard')}
-                                    icon="📊"
-                                    label="Dashboard"
-                                />
-                                <TabButton
-                                    active={activeTab === 'production'}
-                                    onClick={() => setActiveTab('production')}
-                                    icon="✂️"
-                                    label="Suivi Production"
-                                />
-                                <TabButton
-                                    active={activeTab === 'orders'}
-                                    onClick={() => setActiveTab('orders')}
-                                    icon="🔍"
-                                    label="Par Commande"
-                                />
-                                <TabButton
-                                    active={activeTab === 'multiorders'}
-                                    onClick={() => setActiveTab('multiorders')}
-                                    icon="👯"
-                                    label="Multi-Commandes"
-                                />
-                                <TabButton
-                                    active={activeTab === 'ready'}
-                                    onClick={() => setActiveTab('ready')}
-                                    icon="🎯"
-                                    label="Prêt à expédier"
-                                />
-                                <TabButton
-                                    active={activeTab === 'casiers'}
-                                    onClick={() => setActiveTab('casiers')}
-                                    icon="💡"
-                                    label="Casiers"
-                                />
-                                {(isAdmin || isSara) && (
-                                    <TabButton
-                                        active={activeTab === 'reception'}
-                                        onClick={() => setActiveTab('reception')}
-                                        icon="📥"
-                                        label="Réception"
-                                    />
+                            <div className="flex gap-1 overflow-x-auto">
+                                {/* Dashboard — Admin + Achraf */}
+                                {(isAdmin || isOperateur) && (
+                                    <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon="📊" label="Dashboard" />
                                 )}
-
+                                {/* Suivi Production — tous sauf Lecture */}
+                                {(isAdmin || isOperateur || isSara || isCommentaires) && (
+                                    <TabButton active={activeTab === 'production'} onClick={() => setActiveTab('production')} icon="✂️" label="Suivi Production" />
+                                )}
+                                {/* Par Commande — Admin seulement */}
+                                {isAdmin && (
+                                    <TabButton active={activeTab === 'orders'} onClick={() => setActiveTab('orders')} icon="🔍" label="Par Commande" />
+                                )}
+                                {/* Multi-Commandes — Admin + Achraf */}
+                                {(isAdmin || isOperateur) && (
+                                    <TabButton active={activeTab === 'multiorders'} onClick={() => setActiveTab('multiorders')} icon="👯" label="Multi-Commandes" />
+                                )}
+                                {/* Prêt à expédier — Admin + Achraf */}
+                                {(isAdmin || isOperateur) && (
+                                    <TabButton active={activeTab === 'ready'} onClick={() => setActiveTab('ready')} icon="🎯" label="Prêt à expédier" />
+                                )}
+                                {/* Casiers — Admin seulement */}
+                                {isAdmin && (
+                                    <TabButton active={activeTab === 'casiers'} onClick={() => setActiveTab('casiers')} icon="💡" label="Casiers" />
+                                )}
+                                {/* Réception — Admin + Sara */}
+                                {(isAdmin || isSara) && (
+                                    <TabButton active={activeTab === 'reception'} onClick={() => setActiveTab('reception')} icon="📥" label="Réception" />
+                                )}
                             </div>
                         </div>
                     </nav>
