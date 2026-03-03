@@ -2073,6 +2073,7 @@
             const [selectedBase, setSelectedBase] = React.useState(null);
             const [selectedAttrs, setSelectedAttrs] = React.useState({});
             const [showDropdown, setShowDropdown] = React.useState(false);
+            const [selectedTailles, setSelectedTailles] = React.useState([]); // multi-sélection tailles
 
             // Parser un nom de produit en {base, attrs}
             const parseProduct = (name) => {
@@ -2138,6 +2139,7 @@
 
             const handleSelectAttr = (key, val) => {
                 setSelectedAttrs(prev => ({ ...prev, [key]: val }));
+                setSelectedTailles([]); // reset tailles si on change un attribut
             };
 
             const resetSelection = () => {
@@ -2145,15 +2147,30 @@
                 setSelectedBase(null);
                 setSelectedAttrs({});
                 setShowDropdown(false);
+                setSelectedTailles([]);
             };
 
             const handleReception = (order) => {
                 updateStatus(order.id, STATUTS.RECU, order.commentaires || '', userName);
             };
 
+            const getArticlesARecevoir = () => {
+                if (selectedTailles.length > 0) {
+                    return articlesMatch.filter(o => {
+                        const taille = parseProduct(o.name).attrs['Taille'];
+                        return selectedTailles.includes(taille);
+                    });
+                }
+                return articlesMatch;
+            };
+
             const handleReceptionTous = () => {
-                if (!window.confirm(`Marquer ${articlesMatch.length} article(s) comme déposés ?`)) return;
-                articlesMatch.forEach(o => updateStatus(o.id, STATUTS.RECU, o.commentaires || '', userName));
+                const articles = getArticlesARecevoir();
+                const label = selectedTailles.length > 0 
+                    ? `Marquer ${articles.length} article(s) taille(s) ${selectedTailles.join(', ')} comme déposés ?`
+                    : `Marquer ${articles.length} article(s) comme déposés ?`;
+                if (!window.confirm(label)) return;
+                articles.forEach(o => updateStatus(o.id, STATUTS.RECU, o.commentaires || '', userName));
             };
 
             // Pour compat avec le reste du code
@@ -2220,12 +2237,34 @@
                                     </div>
                                     {(!isSelected) && (
                                         <div className="flex flex-wrap gap-2">
-                                            {vals.map(val => (
-                                                <button key={val} onClick={() => handleSelectAttr(key, val)}
-                                                    className="px-4 py-2 bg-white border-2 border-blue-200 hover:border-blue-500 hover:bg-blue-50 rounded-xl text-sm font-semibold text-gray-700 transition">
-                                                    {val}
-                                                </button>
-                                            ))}
+                                            {key === 'Taille' ? (
+                                                // Multi-sélection pour les tailles
+                                                <>
+                                                    {vals.map(val => {
+                                                        const isChecked = selectedTailles.includes(val);
+                                                        return (
+                                                            <button key={val}
+                                                                onClick={() => setSelectedTailles(prev => isChecked ? prev.filter(t => t !== val) : [...prev, val])}
+                                                                className={`px-4 py-2 border-2 rounded-xl text-sm font-semibold transition ${isChecked ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-blue-200 hover:border-blue-500 hover:bg-blue-50 text-gray-700'}`}>
+                                                                {isChecked ? '✓ ' : ''}{val}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    {selectedTailles.length > 0 && (
+                                                        <div className="flex items-center gap-2 w-full mt-1">
+                                                            <span className="text-xs text-blue-600 font-semibold">{selectedTailles.length} taille(s) sélectionnée(s)</span>
+                                                            <button onClick={() => setSelectedTailles([])} className="text-xs text-gray-400 hover:text-red-500 underline">Tout décocher</button>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                vals.map(val => (
+                                                    <button key={val} onClick={() => handleSelectAttr(key, val)}
+                                                        className="px-4 py-2 bg-white border-2 border-blue-200 hover:border-blue-500 hover:bg-blue-50 rounded-xl text-sm font-semibold text-gray-700 transition">
+                                                        {val}
+                                                    </button>
+                                                ))
+                                            )}
                                         </div>
                                     )}
                                     {isSelected && (
@@ -2252,13 +2291,16 @@
                             <div>
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="font-bold text-gray-700">
-                                        {articlesMatch.length} commande(s) en attente de <span className="text-green-600">"{selectedProduct}"</span>
+                                        {selectedTailles.length > 0 
+                                            ? <>{getArticlesARecevoir().length} commande(s) · taille(s) <span className="text-blue-600">{selectedTailles.join(', ')}</span></>
+                                            : <>{articlesMatch.length} commande(s) en attente de <span className="text-green-600">"{selectedProduct}"</span></>
+                                        }
                                     </h3>
                                     <button
                                         onClick={handleReceptionTous}
                                         className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition"
                                     >
-                                        ✅ Tout marquer déposé
+                                        {selectedTailles.length > 0 ? `✅ Déposer taille(s) ${selectedTailles.join(', ')}` : '✅ Tout marquer déposé'}
                                     </button>
                                 </div>
 
