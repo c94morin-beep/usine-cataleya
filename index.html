@@ -760,6 +760,7 @@
                                         isAdmin={isAdmin}
                                         isOperateur={isOperateur}
                                         isSara={isSara}
+                                        isCommentaires={isCommentaires}
                                         canEditStatus={canEditStatus}
                                         canEditComment={canEditComment}
                                         userName={userName}
@@ -1287,12 +1288,12 @@
         }
 
         // ProductionTab
-        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, isOperateur, isSara, canEditStatus, canEditComment, userName, getCasierNum, openOrderRecap }) {
+        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, isOperateur, isSara, isCommentaires, canEditStatus, canEditComment, userName, getCasierNum, openOrderRecap }) {
             const statutsDisponibles = isSara 
-                ? [STATUTS.EN_ATTENTE, STATUTS.AVEC_COMMENTAIRE]
+                ? [STATUTS.EN_ATTENTE]
                 : isOperateur 
-                ? [STATUTS.EN_ATTENTE, STATUTS.RECU, STATUTS.RANGE, STATUTS.AVEC_COMMENTAIRE]
-                : Object.values(STATUTS);
+                ? [STATUTS.EN_ATTENTE, STATUTS.RECU, STATUTS.RANGE]
+                : [STATUTS.EN_ATTENTE, STATUTS.RECU, STATUTS.RANGE]; // Admin : sans "Avec commentaire" dans dropdown
             const [selectedImage, setSelectedImage] = React.useState(null);
             const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
             const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
