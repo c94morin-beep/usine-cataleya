@@ -2069,39 +2069,95 @@
 
         // CasiersTab
         function ReceptionTab({ orders, updateStatus, userName, openOrderRecap }) {
-            const [searchProduct, setSearchProduct] = React.useState('');
-            const [selectedProduct, setSelectedProduct] = React.useState(null);
+            const [searchBase, setSearchBase] = React.useState('');
+            const [selectedBase, setSelectedBase] = React.useState(null);
+            const [selectedAttrs, setSelectedAttrs] = React.useState({});
             const [showDropdown, setShowDropdown] = React.useState(false);
 
-            // Liste des produits encore "En attente"
+            // Parser un nom de produit en {base, attrs}
+            const parseProduct = (name) => {
+                const match = name.match(/^(.*?)(?:\s*\((.*)\))?$/);
+                const base = match[1].trim();
+                const attrsStr = match[2] || '';
+                const attrs = {};
+                if (attrsStr) {
+                    attrsStr.split(',').forEach(part => {
+                        part = part.trim();
+                        if (part.includes(':')) {
+                            const colonIdx = part.indexOf(':');
+                            let key = part.substring(0, colonIdx).trim();
+                            let val = part.substring(colonIdx + 1).trim();
+                            if (val.includes(':')) val = val.split(':').pop().trim();
+                            // Simplifier les clés
+                            if (key.toLowerCase().includes('taille')) key = 'Taille';
+                            if (key.toLowerCase() === 'option') key = 'Option';
+                            if (key.toLowerCase() === 'option2') key = 'Option 2';
+                            attrs[key] = val;
+                        }
+                    });
+                }
+                return { base, attrs };
+            };
+
             const produitsEnAttente = orders.filter(o => o.status === STATUTS.EN_ATTENTE);
-            
-            // Grouper par nom de produit
-            const produitsGroupes = {};
-            produitsEnAttente.forEach(o => {
-                if (!produitsGroupes[o.name]) produitsGroupes[o.name] = [];
-                produitsGroupes[o.name].push(o);
+
+            // Noms de base uniques
+            const basesUniques = [...new Set(produitsEnAttente.map(o => parseProduct(o.name).base))]
+                .filter(b => b.toLowerCase().includes(searchBase.toLowerCase()))
+                .sort((a, b) => a.localeCompare(b));
+
+            // Articles filtrés par base sélectionnée
+            const articlesDeBase = selectedBase 
+                ? produitsEnAttente.filter(o => parseProduct(o.name).base === selectedBase)
+                : [];
+
+            // Clés d'attributs disponibles pour les articles de base
+            const getAttrKeys = () => {
+                const keys = new Set();
+                articlesDeBase.forEach(o => {
+                    Object.keys(parseProduct(o.name).attrs).forEach(k => keys.add(k));
+                });
+                return [...keys];
+            };
+
+            // Articles filtrés par les attributs sélectionnés
+            const articlesMatch = articlesDeBase.filter(o => {
+                const { attrs } = parseProduct(o.name);
+                return Object.entries(selectedAttrs).every(([k, v]) => attrs[k] === v);
             });
 
-            // Filtrer selon recherche
-            const produitsFiltres = Object.entries(produitsGroupes)
-                .filter(([name]) => name.toLowerCase().includes(searchProduct.toLowerCase()))
-                .sort((a, b) => a[0].localeCompare(b[0]));
+            // Valeurs disponibles pour le prochain attribut non encore sélectionné
+            const attrKeys = getAttrKeys();
+            const nextAttrKey = attrKeys.find(k => !selectedAttrs[k]);
+            const nextAttrValues = nextAttrKey
+                ? [...new Set(articlesMatch.map(o => parseProduct(o.name).attrs[nextAttrKey]).filter(Boolean))].sort()
+                : [];
 
-            // Articles correspondant au produit sélectionné
-            const articlesMatch = selectedProduct ? produitsGroupes[selectedProduct] || [] : [];
+            // Est-ce que la sélection est complète (pas d'autres attributs à choisir) ?
+            const selectionComplete = selectedBase && (!nextAttrKey || articlesMatch.length === 1 || nextAttrValues.length === 0);
 
-            const handleReception = async (order) => {
+            const handleSelectAttr = (key, val) => {
+                setSelectedAttrs(prev => ({ ...prev, [key]: val }));
+            };
+
+            const resetSelection = () => {
+                setSearchBase('');
+                setSelectedBase(null);
+                setSelectedAttrs({});
+                setShowDropdown(false);
+            };
+
+            const handleReception = (order) => {
                 updateStatus(order.id, STATUTS.RECU, order.commentaires || '', userName);
             };
 
-            const handleReceptionTous = async () => {
-                if (!selectedProduct) return;
-                if (!window.confirm(`Marquer tous les articles "${selectedProduct}" comme déposés ?`)) return;
-                articlesMatch.forEach(o => {
-                    updateStatus(o.id, STATUTS.RECU, o.commentaires || '', userName);
-                });
+            const handleReceptionTous = () => {
+                if (!window.confirm(`Marquer ${articlesMatch.length} article(s) comme déposés ?`)) return;
+                articlesMatch.forEach(o => updateStatus(o.id, STATUTS.RECU, o.commentaires || '', userName));
             };
+
+            // Pour compat avec le reste du code
+            const selectedProduct = selectedBase;
 
             return (
                 <div className="space-y-6">
@@ -2109,37 +2165,90 @@
                         <h2 className="text-xl font-bold text-gray-800 mb-4">📥 Réception des articles</h2>
                         <p className="text-gray-500 text-sm mb-6">Sélectionnez un produit apporté pour identifier et mettre à jour les commandes correspondantes.</p>
 
-                        {/* Recherche produit */}
-                        <div className="relative mb-6">
-                            <input
-                                type="text"
-                                value={searchProduct}
-                                onChange={e => { setSearchProduct(e.target.value); setShowDropdown(true); setSelectedProduct(null); }}
-                                onFocus={() => setShowDropdown(true)}
-                                placeholder="🔍 Rechercher un produit..."
-                                className="w-full px-4 py-3 pr-10 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                            />
-                            {searchProduct && (
-                                <button onClick={() => { setSearchProduct(''); setSelectedProduct(null); setShowDropdown(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
-                            )}
-                            {showDropdown && produitsFiltres.length > 0 && !selectedProduct && (
-                                <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
-                                    {produitsFiltres.map(([name, articles]) => (
-                                        <div
-                                            key={name}
-                                            onClick={() => { setSelectedProduct(name); setSearchProduct(name); setShowDropdown(false); }}
-                                            className="px-4 py-3 hover:bg-green-50 cursor-pointer border-b border-gray-100 flex justify-between items-center"
-                                        >
-                                            <span className="text-sm font-medium text-gray-800">{name}</span>
-                                            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">{articles.length} en attente</span>
+                        {/* Étape 1 : Recherche nom de base */}
+                        <div className="relative mb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${selectedBase ? 'bg-green-500' : 'bg-blue-500'}`}>1</span>
+                                <span className="text-sm font-semibold text-gray-700">Nom du produit</span>
+                                {selectedBase && <span className="text-sm font-bold text-green-600">{selectedBase}</span>}
+                            </div>
+                            {!selectedBase ? (
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={searchBase}
+                                        onChange={e => { setSearchBase(e.target.value); setShowDropdown(true); }}
+                                        onFocus={() => setShowDropdown(true)}
+                                        placeholder="🔍 Ex: Basma, Ava, Jasmine..."
+                                        className="w-full px-4 py-3 pr-10 border-2 border-blue-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        autoFocus
+                                    />
+                                    {showDropdown && basesUniques.length > 0 && (
+                                        <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
+                                            {basesUniques.map(base => {
+                                                const count = produitsEnAttente.filter(o => parseProduct(o.name).base === base).length;
+                                                return (
+                                                    <div key={base} onClick={() => { setSelectedBase(base); setShowDropdown(false); setSelectedAttrs({}); }}
+                                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 flex justify-between items-center">
+                                                        <span className="text-sm font-medium text-gray-800">{base}</span>
+                                                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">{count} en attente</span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
+                            ) : (
+                                <button onClick={resetSelection} className="text-xs text-gray-400 hover:text-red-500 underline">Changer de produit</button>
                             )}
                         </div>
 
+                        {/* Étapes suivantes : attributs en cascade */}
+                        {selectedBase && attrKeys.map((key, idx) => {
+                            const vals = [...new Set(articlesDeBase
+                                .filter(o => Object.entries(selectedAttrs).filter(([k]) => k !== key).every(([k,v]) => parseProduct(o.name).attrs[k] === v))
+                                .map(o => parseProduct(o.name).attrs[key]).filter(Boolean))].sort();
+                            if (vals.length === 0) return null;
+                            const isSelected = !!selectedAttrs[key];
+                            const isPending = !isSelected && Object.keys(selectedAttrs).length === idx;
+                            return (
+                                <div key={key} className={`mb-4 transition-all ${!isPending && !isSelected ? 'opacity-40' : ''}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${isSelected ? 'bg-green-500' : 'bg-blue-500'}`}>{idx + 2}</span>
+                                        <span className="text-sm font-semibold text-gray-700">{key}</span>
+                                        {isSelected && <span className="text-sm font-bold text-green-600">{selectedAttrs[key]}</span>}
+                                    </div>
+                                    {(!isSelected) && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {vals.map(val => (
+                                                <button key={val} onClick={() => handleSelectAttr(key, val)}
+                                                    className="px-4 py-2 bg-white border-2 border-blue-200 hover:border-blue-500 hover:bg-blue-50 rounded-xl text-sm font-semibold text-gray-700 transition">
+                                                    {val}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {isSelected && (
+                                        <button onClick={() => { const a = {...selectedAttrs}; delete a[key]; setSelectedAttrs(a); }} className="text-xs text-gray-400 hover:text-red-500 underline">Changer</button>
+                                    )}
+                                </div>
+                            );
+                        })}
+
                         {/* Résultats */}
-                        {selectedProduct && articlesMatch.length > 0 && (
+                        {selectedProduct && articlesMatch.length > 0 && (() => {
+                            // Séparer : commandes où c'est le DERNIER article en attente vs les autres
+                            const urgentes = articlesMatch.filter(o => {
+                                const tousArticles = orders.filter(a => a.reference === o.reference);
+                                const enAttente = tousArticles.filter(a => a.status === STATUTS.EN_ATTENTE);
+                                return enAttente.length === 1; // cet article est le seul restant
+                            });
+                            const normales = articlesMatch.filter(o => {
+                                const tousArticles = orders.filter(a => a.reference === o.reference);
+                                const enAttente = tousArticles.filter(a => a.status === STATUTS.EN_ATTENTE);
+                                return enAttente.length > 1;
+                            });
+                            return (
                             <div>
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="font-bold text-gray-700">
@@ -2152,12 +2261,45 @@
                                         ✅ Tout marquer déposé
                                     </button>
                                 </div>
-                                <div className="space-y-3">
-                                    {articlesMatch.sort((a,b) => a.reference - b.reference).map(order => (
-                                        <div key={order.id} className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl p-4">
-                                            <div>
-                                                <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline">
-                                                    #{order.reference}
+
+                                {/* Commandes URGENTES - dernier article manquant */}
+                                {urgentes.length > 0 && (
+                                    <div className="mb-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-sm font-bold text-green-700 uppercase tracking-wide">🎯 Commandes prêtes à clôturer</span>
+                                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{urgentes.length}</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {urgentes.sort((a,b) => a.reference - b.reference).map(order => {
+                                                const tousArticles = orders.filter(a => a.reference === order.reference);
+                                                return (
+                                                    <div key={order.id} className="flex items-center justify-between bg-green-50 border-2 border-green-400 rounded-xl p-4 shadow-sm">
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline text-lg">#{order.reference}</button>
+                                                                <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">Dernière pièce !</span>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600 mt-0.5">{order.client}</p>
+                                                            <p className="text-xs text-green-600 mt-0.5">✅ {tousArticles.length - 1} autre(s) article(s) déjà prêt(s)</p>
+                                                        </div>
+                                                        <button onClick={() => handleReception(order)} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition">✅ Déposé</button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Commandes normales */}
+                                {normales.length > 0 && (
+                                    <div>
+                                        {urgentes.length > 0 && <p className="text-xs text-gray-400 uppercase font-semibold mb-2 tracking-wide">Autres commandes</p>}
+                                        <div className="space-y-2">
+                                            {normales.sort((a,b) => a.reference - b.reference).map(order => (
+                                                <div key={order.id} className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl p-4">
+                                                    <div>
+                                                        <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline">
+                                                            #{order.reference}
                                                 </button>
                                                 <p className="text-sm text-gray-600">{order.client || '—'}</p>
                                                 <p className="text-xs text-gray-400">{order.transporteur || '—'}</p>
@@ -2169,10 +2311,13 @@
                                                 ✅ Déposé
                                             </button>
                                         </div>
-                                    ))}
-                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        )}
+                            );
+                        })()}
 
                         {selectedProduct && articlesMatch.length === 0 && (
                             <div className="text-center py-10 text-gray-400">
@@ -2181,7 +2326,7 @@
                             </div>
                         )}
 
-                        {!selectedProduct && searchProduct === '' && (
+                        {!selectedBase && searchBase === '' && (
                             <div className="text-center py-10 text-gray-300">
                                 <p className="text-5xl mb-3">📦</p>
                                 <p>Recherchez un produit pour commencer</p>
