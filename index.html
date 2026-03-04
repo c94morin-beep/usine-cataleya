@@ -27,6 +27,12 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
+        window.db = db;
+        window.firebaseRef = ref;
+        window.firebaseOnValue = onValue;
+        window.firebaseSet = set;
+        window.firebaseUpdate = update;
+        window.firebaseRemove = remove;
         window.firebaseSignIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
         window.firebaseSignOut = () => signOut(auth);
         window.firebaseOnAuthStateChanged = (cb) => onAuthStateChanged(auth, cb);
@@ -732,6 +738,9 @@
                                     <TabButton active={activeTab === 'casiers'} onClick={() => setActiveTab('casiers')} icon="💡" label="Casiers" />
                                 )}
                                 {/* Réception — Admin + Sara */}
+                                {(isAdmin || isOperateur || isSara || isCommentaires) && (
+                                    <TabButton active={activeTab === 'listecoupe'} onClick={() => setActiveTab('listecoupe')} icon="✂️" label="Listes Coupe" />
+                                )}
                                 {(isAdmin || isSara) && (
                                     <TabButton active={activeTab === 'reception'} onClick={() => setActiveTab('reception')} icon="📥" label="Réception" />
                                 )}
@@ -779,6 +788,9 @@
                                 )}
                                 {activeTab === 'casiers' && (
                                     <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
+                                )}
+                                {activeTab === 'listecoupe' && (
+                                    <ListeCoupeTab isAdmin={isAdmin} userName={userName} />
                                 )}
                                 {activeTab === 'reception' && (
                                     <ReceptionTab orders={getAllOrders()} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} />
@@ -2691,9 +2703,370 @@
             );
         }
 
+        // ===================== LISTE DE COUPE TAB =====================
+        function ListeCoupeTab({ isAdmin, userName }) {
+            const db = window.db;
+            const [listes, setListes] = React.useState([]);
+            const [activeListe, setActiveListe] = React.useState(null);
+            const [activeListeNum, setActiveListeNum] = React.useState(null);
+            const [showImport, setShowImport] = React.useState(false);
+            const [importName, setImportName] = React.useState('');
+            const [importData, setImportData] = React.useState(null);
+            const [importing, setImporting] = React.useState(false);
+            const [listeRows, setListeRows] = React.useState({});
+            const [commentEdit, setCommentEdit] = React.useState({});
+            const [search, setSearch] = React.useState('');
+            const [zoomPhoto, setZoomPhoto] = React.useState(null);
+
+            // Charger la liste des listes de coupe
+            React.useEffect(() => {
+                const r = window.firebaseRef(db, 'listescoupe');
+                const unsub = window.firebaseOnValue(r, snap => {
+                    const val = snap.val() || {};
+                    const arr = Object.entries(val).map(([id, v]) => ({ id, ...v }))
+                        .sort((a, b) => b.createdAt - a.createdAt);
+                    setListes(arr);
+                    if (!activeListe && arr.length > 0) setActiveListe(arr[0].id);
+                });
+                return () => unsub();
+            }, []);
+
+            // Charger les lignes de la liste active
+            React.useEffect(() => {
+                if (!activeListe) return;
+                const r = window.firebaseRef(db, 'listescoupe/' + activeListe + '/lignes');
+                const unsub = window.firebaseOnValue(r, snap => {
+                    setListeRows(snap.val() || {});
+                });
+                return () => unsub();
+            }, [activeListe]);
+
+            // Parse CSV
+            const parseCSV = (text) => {
+                const lines = text.split('\n').filter(l => l.trim());
+                const sections = {};
+                let currentSection = null;
+                let headers = [];
+                lines.forEach(line => {
+                    const cells = line.split(';').map(c => c.replace(/^"|"$/g, '').trim());
+                    if (cells[0].startsWith('===')) {
+                        currentSection = cells[0].replace(/===/g, '').trim();
+                        sections[currentSection] = { headers: [], rows: [] };
+                        headers = [];
+                    } else if (currentSection && headers.length === 0 && cells[0] === 'Produit') {
+                        headers = cells;
+                        sections[currentSection].headers = headers;
+                    } else if (currentSection && headers.length > 0 && cells[0]) {
+                        sections[currentSection].rows.push(cells);
+                    }
+                });
+                return sections;
+            };
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const text = ev.target.result;
+                    const parsed = parseCSV(text);
+                    setImportData(parsed);
+                    setImportName('Coupe ' + new Date().toLocaleDateString('fr-FR'));
+                };
+                reader.readAsText(file, 'utf-8');
+            };
+
+            const [importProgress, setImportProgress] = React.useState(0);
+
+            const handleImport = async () => {
+                if (!importData || !importName.trim()) return;
+                setImporting(true);
+                setImportProgress(0);
+                try {
+                    const id = 'lc_' + Date.now();
+
+                    // 1. Créer l'entrée principale sans les lignes
+                    await window.firebaseSet(window.firebaseRef(db, 'listescoupe/' + id), {
+                        name: importName,
+                        createdAt: Date.now(),
+                        createdBy: userName
+                    });
+
+                    // 2. Préparer toutes les lignes
+                    const allRows = [];
+                    let idx = 0;
+                    Object.entries(importData).forEach(([section, data]) => {
+                        const hStr = data.headers.join('||');
+                        data.rows.forEach((row) => {
+                            allRows.push({
+                                key: 'r' + (idx++),
+                                data: { section, h: hStr, c: row.join('||'), done: false, comment: '', by: '', at: 0 }
+                            });
+                        });
+                    });
+
+                    // 3. Écrire par batch de 100
+                    const BATCH = 100;
+                    for (let i = 0; i < allRows.length; i += BATCH) {
+                        const batch = allRows.slice(i, i + BATCH);
+                        const updates = {};
+                        batch.forEach(r => { updates['listescoupe/' + id + '/lignes/' + r.key] = r.data; });
+                        await window.firebaseUpdate(window.firebaseRef(db, '/'), updates);
+                        setImportProgress(Math.round((i + batch.length) / allRows.length * 100));
+                    }
+
+                    setActiveListe(id);
+                    setShowImport(false);
+                    setImportData(null);
+                } catch(e) {
+                    alert('Erreur import: ' + e.message);
+                }
+                setImporting(false);
+                setImportProgress(0);
+            };
+
+            const toggleDone = async (rowKey, current) => {
+                await window.firebaseUpdate(window.firebaseRef(db, 'listescoupe/' + activeListe + '/lignes/' + rowKey), {
+                    done: !current, by: userName, at: Date.now()
+                });
+            };
+
+            const saveComment = async (rowKey, val) => {
+                await window.firebaseUpdate(window.firebaseRef(db, 'listescoupe/' + activeListe + '/lignes/' + rowKey), {
+                    comment: val, by: userName, at: Date.now()
+                });
+                setCommentEdit(p => { const n = {...p}; delete n[rowKey]; return n; });
+            };
+
+            const deleteList = async (id) => {
+                if (!confirm('Supprimer cette liste ?')) return;
+                await window.firebaseRemove(window.firebaseRef(db, 'listescoupe/' + id));
+                setActiveListe(null);
+            };
+
+            // Grouper les lignes par section puis par numéro de liste
+            const SECTION_ORDER = [
+                'Sans déclinaison', 'Taille personnalisée (50-62)',
+                'Taille + Largeur', 'Taille + Largeur + Option',
+                'Manteaux (Taille 1/2/3)', 'Enfants (2-14 ans)'
+            ];
+
+            const rowsBySection = {};
+            Object.entries(listeRows).forEach(([key, row]) => {
+                if (!rowsBySection[row.section]) rowsBySection[row.section] = [];
+                rowsBySection[row.section].push({ key, ...row });
+            });
+
+            // Stats globales
+            const totalRows = Object.keys(listeRows).length;
+            const doneRows = Object.values(listeRows).filter(r => r.done).length;
+            const pct = totalRows > 0 ? Math.round(doneRows / totalRows * 100) : 0;
+
+            const activeListeInfo = listes.find(l => l.id === activeListe);
+            const listNums = activeListeInfo ? Object.keys(rowsBySection) : [];
+            const displaySections = activeListeNum 
+                ? [activeListeNum]
+                : (SECTION_ORDER.filter(s => rowsBySection[s]) );
+
+            return (
+                <div className="p-3">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-4 flex-wrap">
+                        <h2 className="text-lg font-bold text-gray-800">✂️ Listes de Coupe</h2>
+                        {isAdmin && (
+                            <button onClick={() => setShowImport(true)}
+                                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700">
+                                📥 Importer CSV
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Sélection liste */}
+                    {listes.length > 0 && (
+                        <div className="flex gap-2 flex-wrap mb-4">
+                            {listes.map(l => (
+                                <button key={l.id}
+                                    onClick={() => { setActiveListe(l.id); setActiveListeNum(null); }}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${activeListe === l.id ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'}`}>
+                                    {l.name}
+                                    {isAdmin && <span onClick={e => { e.stopPropagation(); deleteList(l.id); }} className="ml-2 text-red-400 hover:text-red-600">✕</span>}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {activeListe && totalRows > 0 && (
+                        <>
+                            {/* Barre de progression */}
+                            <div className="bg-white rounded-xl p-3 mb-4 shadow-sm border border-gray-100">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-sm font-semibold text-gray-700">Avancement global</span>
+                                    <span className="text-sm font-bold text-green-700">{doneRows}/{totalRows} articles coupés ({pct}%)</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-3">
+                                    <div className="bg-green-500 h-3 rounded-full transition-all" style={{width: pct + '%'}}></div>
+                                </div>
+                            </div>
+
+                            {/* Barre de recherche */}
+                            <div className="relative mb-3">
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="🔍 Rechercher un produit..."
+                                    className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-green-500"
+                                />
+                                {search && <button onClick={() => setSearch('')} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600 text-sm">✕</button>}
+                            </div>
+
+                            {/* Onglets sections */}
+                            <div className="flex gap-2 flex-wrap mb-3">
+                                <button onClick={() => setActiveListeNum(null)}
+                                    className={`px-3 py-1 rounded-lg text-xs font-semibold border ${!activeListeNum ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300'}`}>
+                                    Toutes
+                                </button>
+                                {SECTION_ORDER.filter(s => rowsBySection[s]).map(s => {
+                                    const sRows = rowsBySection[s] || [];
+                                    const sDone = sRows.filter(r => r.done).length;
+                                    return (
+                                        <button key={s} onClick={() => setActiveListeNum(s)}
+                                            className={`px-3 py-1 rounded-lg text-xs font-semibold border ${activeListeNum === s ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300'}`}>
+                                            {s} ({sDone}/{sRows.length})
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Tables par section */}
+                            {displaySections.map(section => {
+                                const rows = (rowsBySection[section] || [])
+                                    .map(r => ({...r, headers: r.h ? r.h.split('||') : (r.headers || []), cells: r.c ? r.c.split('||') : (r.cells || [])}))
+                                    .filter(r => !search || (r.cells[0]||'').toLowerCase().includes(search.toLowerCase()))
+                                    .sort((a,b) => {
+                                        const nc = (a.cells[0]||'').localeCompare(b.cells[0]||'', 'fr');
+                                        return nc !== 0 ? nc : 0;
+                                    });
+                                if (rows.length === 0) return null;
+                                const secDone = rows.filter(r => r.done).length;
+                                return (
+                                    <div key={section} className="mb-6">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <h3 className="font-bold text-gray-700 text-sm">✂️ {section}</h3>
+                                            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">{secDone}/{rows.length}</span>
+                                        </div>
+                                        <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-200">
+                                            <table className="w-full text-xs border-collapse">
+                                                <thead>
+                                                    <tr className="bg-green-600 text-white">
+                                                        <th className="p-2 text-left w-6">✓</th>
+                                                        {rows[0] && rows[0].headers.map((h, i) => (
+                                                            <th key={i} className="p-2 text-center whitespace-nowrap">{h}</th>
+                                                        ))}
+                                                        <th className="p-2 text-center">Commentaire</th>
+                                                        <th className="p-2 text-center text-xs opacity-70">Par</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {rows.map((row) => (
+                                                        <tr key={row.key}
+                                                            className={`border-b border-gray-100 transition ${row.done ? 'bg-green-50 opacity-60' : 'bg-white hover:bg-gray-50'}`}>
+                                                            <td className="p-2 text-center">
+                                                                <button onClick={() => toggleDone(row.key, row.done)}
+                                                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold transition ${row.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-gray-300 hover:border-green-400'}`}>
+                                                                    {row.done ? '✓' : ''}
+                                                                </button>
+                                                            </td>
+                                                            {row.cells.map((cell, ci) => (
+                                                                <td key={ci} className={`p-2 text-center ${ci === 0 ? 'text-left font-semibold text-gray-800' : ''} ${!isNaN(cell) && cell !== '' && parseInt(cell) > 0 ? 'font-bold text-green-700 text-sm' : 'text-gray-400'}`}>
+                                                                    {ci === 1 && cell ? <img src={cell} className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80 transition" onClick={() => setZoomPhoto(cell)} onError={e => e.target.style.display='none'} /> : ci === 0 ? <span className={row.done ? 'line-through' : ''}>{cell}</span> : (isNaN(cell) || cell === '' ? cell : (parseInt(cell) || <span className="text-gray-200">0</span>))}
+                                                                </td>
+                                                            ))}
+                                                            <td className="p-2 min-w-24">
+                                                                {commentEdit[row.key] !== undefined ? (
+                                                                    <div className="flex gap-1">
+                                                                        <input autoFocus value={commentEdit[row.key]}
+                                                                            onChange={e => setCommentEdit(p => ({...p, [row.key]: e.target.value}))}
+                                                                            onKeyDown={e => { if (e.key === 'Enter') saveComment(row.key, commentEdit[row.key]); if (e.key === 'Escape') setCommentEdit(p => { const n={...p}; delete n[row.key]; return n; }); }}
+                                                                            className="border rounded px-1 py-0.5 text-xs w-full" />
+                                                                        <button onClick={() => saveComment(row.key, commentEdit[row.key])} className="text-green-600 font-bold text-xs">✓</button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span onClick={() => setCommentEdit(p => ({...p, [row.key]: row.comment || ''}))}
+                                                                        className="cursor-pointer text-gray-500 hover:text-gray-800 italic text-xs block min-h-5">
+                                                                        {row.comment || <span className="text-gray-200">+</span>}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-1 text-center text-gray-400" style={{fontSize:'10px'}}>
+                                                                {row.by || ''}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </>
+                    )}
+
+                    {activeListe && totalRows === 0 && (
+                        <div className="text-center text-gray-400 py-12">Aucune donnée dans cette liste.</div>
+                    )}
+                    {!activeListe && listes.length === 0 && (
+                        <div className="text-center text-gray-400 py-12">Aucune liste de coupe. {isAdmin ? 'Importez un CSV pour commencer.' : ''}</div>
+                    )}
+
+                    {/* Modal Import */}
+                    {showImport && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+                                <h3 className="text-lg font-bold mb-4">📥 Importer une liste de coupe</h3>
+                                <div className="mb-3">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Nom de la liste</label>
+                                    <input value={importName} onChange={e => setImportName(e.target.value)}
+                                        className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Ex: Coupe Mars 2026" />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Fichier CSV (export liste de coupe)</label>
+                                    <input type="file" accept=".csv" onChange={handleFileChange}
+                                        className="w-full border rounded-lg px-3 py-2 text-sm" />
+                                    {importData && (
+                                        <div className="mt-2 text-xs text-green-700 bg-green-50 rounded p-2">
+                                            ✅ {Object.keys(importData).length} section(s) détectée(s) : {Object.entries(importData).map(([s, d]) => `${s} (${d.rows.length})`).join(', ')}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                    <button onClick={() => { setShowImport(false); setImportData(null); }}
+                                        className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Annuler</button>
+                                    <button onClick={handleImport} disabled={!importData || !importName.trim() || importing}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
+                                        {importing ? (importProgress > 0 ? '⏳ ' + importProgress + '%...' : '⏳ Préparation...') : '✅ Importer'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                {/* Zoom photo popup */}
+                {zoomPhoto && (
+                    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50" onClick={() => setZoomPhoto(null)}>
+                        <div className="relative max-w-lg w-full mx-4">
+                            <img src={zoomPhoto} className="w-full rounded-2xl shadow-2xl" />
+                            <button onClick={() => setZoomPhoto(null)} className="absolute top-3 right-3 bg-white bg-opacity-80 rounded-full w-8 h-8 flex items-center justify-center text-gray-700 font-bold hover:bg-opacity-100">✕</button>
+                        </div>
+                    </div>
+                )}
+                </div>
+            );
+        }
+
         // Render
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v2.4 — 04/03/26</div>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v2.6 — 04/03/26</div>
 </body>
 </html>
