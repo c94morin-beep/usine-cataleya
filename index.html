@@ -2845,6 +2845,15 @@
                 });
             };
 
+            const toggleCell = async (rowKey, cellIdx, current) => {
+                const path = 'listescoupe/' + activeListe + '/lignes/' + rowKey + '/cells_done/' + cellIdx;
+                if (current) {
+                    await window.firebaseRemove(window.firebaseRef(db, path));
+                } else {
+                    await window.firebaseSet(window.firebaseRef(db, path), true);
+                }
+            };
+
             const saveComment = async (rowKey, val) => {
                 try {
                     const path = 'listescoupe/' + activeListe + '/lignes/' + rowKey + '/comments/' + userName;
@@ -2884,7 +2893,13 @@
             // Stats globales
             const totalRows = Object.keys(listeRows).length;
             const doneRows = Object.values(listeRows).filter(r => r.done).length;
-            const pct = totalRows > 0 ? Math.round(doneRows / totalRows * 100) : 0;
+            // Calcul basé sur les cellules validées
+            const allCells = Object.values(listeRows).reduce((acc, r) => {
+                const parsed = r.c ? r.c.split('||') : (r.cells || []);
+                return acc + parsed.slice(2, -1).filter(c => !isNaN(c) && parseInt(c) > 0).length;
+            }, 0);
+            const doneCells = Object.values(listeRows).reduce((acc, r) => acc + (r.cells_done ? Object.keys(r.cells_done).length : 0), 0);
+            const pct = allCells > 0 ? Math.round(doneCells / allCells * 100) : 0;
 
             const activeListeInfo = listes.find(l => l.id === activeListe);
             const listNums = activeListeInfo ? Object.keys(rowsBySection) : [];
@@ -2925,7 +2940,7 @@
                             <div className="bg-white rounded-xl p-3 mb-4 shadow-sm border border-gray-100">
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="text-sm font-semibold text-gray-700">Avancement global</span>
-                                    <span className="text-sm font-bold text-green-700">{doneRows}/{totalRows} articles coupés ({pct}%)</span>
+                                    <span className="text-sm font-bold text-green-700">{doneCells}/{allCells} tailles coupées ({pct}%)</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-3">
                                     <div className="bg-green-500 h-3 rounded-full transition-all" style={{width: pct + '%'}}></div>
@@ -2972,18 +2987,24 @@
                                         return nc !== 0 ? nc : 0;
                                     });
                                 if (rows.length === 0) return null;
-                                const secDone = rows.filter(r => r.done).length;
+                                // Compter les cellules validées
+                                const secTotalCells = rows.reduce((acc, r) => {
+                                    return acc + r.cells.slice(2, -1).filter(c => !isNaN(c) && parseInt(c) > 0).length;
+                                }, 0);
+                                const secDoneCells = rows.reduce((acc, r) => {
+                                    return acc + (r.cells_done ? Object.keys(r.cells_done).length : 0);
+                                }, 0);
                                 return (
                                     <div key={section} className="mb-6">
                                         <div className="flex items-center gap-2 mb-2">
                                             <h3 className="font-bold text-gray-700 text-sm">✂️ {section}</h3>
-                                            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">{secDone}/{rows.length}</span>
+                                            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">{secDoneCells}/{secTotalCells} tailles</span>
                                         </div>
                                         <div style={{overflowX:"auto",overflowY:"auto",maxHeight:"55vh",borderRadius:"12px",boxShadow:"0 1px 4px rgba(0,0,0,0.1)",border:"1px solid #e5e7eb"}}>
                                             <table className="w-full text-xs" style={{borderCollapse:"collapse"}}>
                                                 <thead>
                                                     <tr className="bg-green-600 text-white">
-                                                        <th style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"left",whiteSpace:"nowrap",zIndex:10}}>✓</th>
+
                                                         {rows[0] && rows[0].headers.slice(0,-1).map((h, hi) => (
                                                             <th key={hi} style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>{h}</th>
                                                         ))}
@@ -2992,20 +3013,39 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {rows.map((row) => (
+                                                    {rows.map((row) => {
+                                                        // Vérifier si toutes les cellules numériques sont validées
+                                                        const numCells = row.cells.slice(2,-1).map((c,i) => ({val:parseInt(c)||0, idx:i+2})).filter(c => c.val > 0);
+                                                        const allCellsDone = numCells.length > 0 && numCells.every(c => row.cells_done && row.cells_done[c.idx]);
+                                                        return (
                                                         <tr key={row.key}
-                                                            className={`border-b border-gray-100 transition ${row.done ? 'bg-green-50 opacity-60' : 'bg-white hover:bg-gray-50'}`}>
-                                                            <td className="p-2 text-center" style={{border:'1px solid #e0e0e0'}}>
-                                                                <button onClick={() => toggleDone(row.key, row.done)}
-                                                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold transition ${row.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-gray-300 hover:border-green-400'}`}>
-                                                                    {row.done ? '✓' : ''}
-                                                                </button>
-                                                            </td>
-                                                            {row.cells.slice(0,-1).map((cell, ci) => (
-                                                                <td key={ci} className={`p-2 text-center ${ci === 0 ? 'text-left font-semibold text-gray-800' : ''} ${!isNaN(cell) && cell !== '' && parseInt(cell) > 0 ? 'font-bold text-green-700 text-sm' : 'text-gray-400'}`} style={{border:'1px solid #e0e0e0'}}>
-                                                                    {ci === 1 && cell ? <img src={cell} className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80 transition" onClick={() => setZoomPhoto(cell)} onError={e => e.target.style.display='none'} /> : ci === 0 ? <span className={row.done ? 'line-through' : ''}>{cell}</span> : (isNaN(cell) || cell === '' ? cell : (parseInt(cell) || <span className="text-gray-200">0</span>))}
+                                                            className="border-b border-gray-100 transition"
+                                                            style={{background: allCellsDone ? '#fff7ed' : 'white', opacity: allCellsDone ? 0.75 : 1}}>
+
+                                                            {row.cells.slice(0,-1).map((cell, ci) => {
+                                                                const isNum = ci > 1 && !isNaN(cell) && cell !== '' && parseInt(cell) > 0;
+                                                                const isCellDone = row.cells_done && row.cells_done[ci];
+                                                                return (
+                                                                <td key={ci}
+                                                                    onClick={isNum ? () => toggleCell(row.key, ci, isCellDone) : undefined}
+                                                                    style={{border:'1px solid #e0e0e0', cursor: isNum ? 'pointer' : 'default',
+                                                                        background: isCellDone ? '#dcfce7' : 'transparent',
+                                                                        padding:'8px', textAlign: ci === 0 ? 'left' : 'center'}}>
+                                                                    {ci === 1 && cell
+                                                                        ? <img src={cell} className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80 transition" onClick={(e) => { e.stopPropagation(); setZoomPhoto(cell); }} onError={e => e.target.style.display='none'} />
+                                                                        : ci === 0
+                                                                            ? <span className="font-semibold text-gray-800">{cell}</span>
+                                                                            : isNaN(cell) || cell === ''
+                                                                                ? <span className="text-gray-500 text-xs">{cell}</span>
+                                                                                : parseInt(cell) > 0
+                                                                                    ? <span style={{fontWeight:'bold', fontSize:'15px',
+                                                                                        color: isCellDone ? '#15803d' : '#16a34a',
+                                                                                        textDecoration: isCellDone ? 'line-through' : 'none'}}>{cell}</span>
+                                                                                    : <span style={{color:'#d1d5db'}}>0</span>
+                                                                    }
                                                                 </td>
-                                                            ))}
+                                                                );
+                                                            })}
                                                             <td style={{border:'1px solid #e0e0e0',padding:'4px 6px',cursor:'pointer',minWidth:'120px'}}
                                                                 onClick={() => openCommentPopup(row.key, row)}>
                                                                 {row.comments && Object.keys(row.comments).length > 0 ? (
@@ -3026,7 +3066,8 @@
                                                                 )}
                                                             </td>
                                                         </tr>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>
@@ -3138,6 +3179,6 @@
         // Render
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v2.9 — 04/03/26</div>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.0 — 04/03/26</div>
 </body>
 </html>
