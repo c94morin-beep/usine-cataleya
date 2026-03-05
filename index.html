@@ -417,11 +417,7 @@
                     }
                 }
 
-                // ⚡ LED AUTOMATION - DÉSACTIVÉ EN ATTENDANT LE HARDWARE
-                // Décommenter quand les ESP32 sont installés :
-                /*
-                // Allumer la LED automatiquement quand article reçu
-                // Notifier Achraf si article ou commande complète reçue
+                // Notifier Achraf quand un article passe en Reçu
                 if (newStatus === STATUTS.RECU) {
                     const notifId = 'notif_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
                     window.firebaseSet(window.firebaseRef(window.db, 'notifications_achraf/' + notifId), {
@@ -432,6 +428,10 @@
                         by: userName || 'Sara'
                     });
                 }
+
+                // ⚡ LED AUTOMATION - DÉSACTIVÉ EN ATTENDANT LE HARDWARE
+                // Décommenter quand les ESP32 sont installés :
+                /*
                 if (newStatus === STATUTS.RECU) {
                     const allOrders2 = updatedLists.flatMap(l => l.orders);
                     const thisOrder2 = allOrders2.find(o => o.id === orderId);
