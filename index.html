@@ -29,6 +29,7 @@
         const db = getDatabase(app);
         window.db = db;
         window.firebaseRef = ref;
+        window.firebaseGet = get;
         window.firebaseOnValue = onValue;
         window.firebaseSet = set;
         window.firebaseUpdate = update;
@@ -109,6 +110,51 @@
             // Auth
             const [user, setUser] = useState(null);
             const [userRole, setUserRole] = useState(null);
+            const [showBackupReminder, setShowBackupReminder] = useState(false);
+
+            // Rappel sauvegarde hebdomadaire — admin seulement
+            React.useEffect(() => {
+                if (userRole !== 'admin') return;
+                const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+                const lastBackup = parseInt(localStorage.getItem('lastBackupReminder') || '0');
+                if (Date.now() - lastBackup > WEEK_MS) {
+                    const t = setTimeout(() => setShowBackupReminder(true), 3000);
+                    return () => clearTimeout(t);
+                }
+            }, [userRole]);
+
+            const dismissBackupReminder = () => {
+                localStorage.setItem('lastBackupReminder', Date.now().toString());
+                setShowBackupReminder(false);
+            };
+
+            const exportBackup = async () => {
+                try {
+                    const [listsSnap, casiersSnap, listesCoupeSnap] = await Promise.all([
+                        window.firebaseRef ? window.firebaseGet(window.firebaseRef(window.db, 'lists')) : Promise.resolve(null),
+                        window.firebaseRef ? window.firebaseGet(window.firebaseRef(window.db, 'casiers')) : Promise.resolve(null),
+                        window.firebaseRef ? window.firebaseGet(window.firebaseRef(window.db, 'listescoupe')) : Promise.resolve(null),
+                    ]);
+                    const backup = {
+                        exportedAt: new Date().toISOString(),
+                        lists: listsSnap ? listsSnap.val() : null,
+                        casiers: casiersSnap ? casiersSnap.val() : null,
+                        listescoupe: listesCoupeSnap ? listesCoupeSnap.val() : null,
+                    };
+                    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'cataleya-backup-' + new Date().toISOString().slice(0,10) + '.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    localStorage.setItem('lastBackupReminder', Date.now().toString());
+                    setShowBackupReminder(false);
+                    alert('✅ Sauvegarde téléchargée !');
+                } catch(e) {
+                    alert('Erreur sauvegarde: ' + e.message);
+                }
+            };
             const [authLoading, setAuthLoading] = useState(true);
 
             useEffect(() => {
@@ -454,6 +500,7 @@
             if (!user) return <LoginPage />;
             const isAdmin = userRole === 'admin';
             const isOperateur = userRole === 'operateur';
+
             const isCommentaires = userRole === 'commentaires';
             const isSara = userRole === 'livreur';
             const canEditStatus = isAdmin || isOperateur;
@@ -697,6 +744,7 @@
                                 ))}
 
                                 {isAdmin && <button onClick={() => setShowImportModal(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition whitespace-nowrap">➕ Nouvelle liste</button>}
+                                {isAdmin && <button onClick={exportBackup} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition whitespace-nowrap" title="Sauvegarder toutes les données">💾 Sauvegarder</button>}
                             </div>
                         </div>
                     </nav>
@@ -2978,102 +3026,16 @@
                             </div>
 
                             {/* Tables par section */}
-                            {displaySections.map(section => {
-                                const rows = (rowsBySection[section] || [])
-                                    .map(r => ({...r, headers: r.h ? r.h.split('||') : (r.headers || []), cells: r.c ? r.c.split('||') : (r.cells || [])}))
-                                    .filter(r => !search || (r.cells[0]||'').toLowerCase().includes(search.toLowerCase()))
-                                    .sort((a,b) => {
-                                        const nc = (a.cells[0]||'').localeCompare(b.cells[0]||'', 'fr');
-                                        return nc !== 0 ? nc : 0;
-                                    });
-                                if (rows.length === 0) return null;
-                                // Compter les cellules validées
-                                const secTotalCells = rows.reduce((acc, r) => {
-                                    return acc + r.cells.slice(2, -1).filter(c => !isNaN(c) && parseInt(c) > 0).length;
-                                }, 0);
-                                const secDoneCells = rows.reduce((acc, r) => {
-                                    return acc + (r.cells_done ? Object.keys(r.cells_done).length : 0);
-                                }, 0);
-                                return (
-                                    <div key={section} className="mb-6">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <h3 className="font-bold text-gray-700 text-sm">✂️ {section}</h3>
-                                            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">{secDoneCells}/{secTotalCells} tailles</span>
-                                        </div>
-                                        <div style={{overflowX:"auto",overflowY:"auto",maxHeight:"55vh",borderRadius:"12px",boxShadow:"0 1px 4px rgba(0,0,0,0.1)",border:"1px solid #e5e7eb"}}>
-                                            <table className="w-full text-xs" style={{borderCollapse:"collapse"}}>
-                                                <thead>
-                                                    <tr className="bg-green-600 text-white">
-
-                                                        {rows[0] && rows[0].headers.slice(0,-1).map((h, hi) => (
-                                                            <th key={hi} style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>{h}</th>
-                                                        ))}
-                                                        <th style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",minWidth:"150px",zIndex:10}}>Commentaire</th>
-                                                        <th style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>Qui ?</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {rows.map((row) => {
-                                                        // Vérifier si toutes les cellules numériques sont validées
-                                                        const numCells = row.cells.slice(2,-1).map((c,i) => ({val:parseInt(c)||0, idx:i+2})).filter(c => c.val > 0);
-                                                        const allCellsDone = numCells.length > 0 && numCells.every(c => row.cells_done && row.cells_done[c.idx]);
-                                                        return (
-                                                        <tr key={row.key}
-                                                            className="border-b border-gray-100 transition"
-                                                            style={{background: allCellsDone ? '#fff7ed' : 'white', opacity: allCellsDone ? 0.75 : 1}}>
-
-                                                            {row.cells.slice(0,-1).map((cell, ci) => {
-                                                                const isNum = ci > 1 && !isNaN(cell) && cell !== '' && parseInt(cell) > 0;
-                                                                const isCellDone = row.cells_done && row.cells_done[ci];
-                                                                return (
-                                                                <td key={ci}
-                                                                    onClick={isNum ? () => toggleCell(row.key, ci, isCellDone) : undefined}
-                                                                    style={{border:'1px solid #e0e0e0', cursor: isNum ? 'pointer' : 'default',
-                                                                        background: isCellDone ? '#dcfce7' : 'transparent',
-                                                                        padding:'8px', textAlign: ci === 0 ? 'left' : 'center'}}>
-                                                                    {ci === 1 && cell
-                                                                        ? <img src={cell} className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80 transition" onClick={(e) => { e.stopPropagation(); setZoomPhoto(cell); }} onError={e => e.target.style.display='none'} />
-                                                                        : ci === 0
-                                                                            ? <span className="font-semibold text-gray-800">{cell}</span>
-                                                                            : isNaN(cell) || cell === ''
-                                                                                ? <span className="text-gray-500 text-xs">{cell}</span>
-                                                                                : parseInt(cell) > 0
-                                                                                    ? <span style={{fontWeight:'bold', fontSize:'15px',
-                                                                                        color: isCellDone ? '#15803d' : '#16a34a',
-                                                                                        textDecoration: isCellDone ? 'line-through' : 'none'}}>{cell}</span>
-                                                                                    : <span style={{color:'#d1d5db'}}>0</span>
-                                                                    }
-                                                                </td>
-                                                                );
-                                                            })}
-                                                            <td style={{border:'1px solid #e0e0e0',padding:'4px 6px',cursor:'pointer',minWidth:'120px'}}
-                                                                onClick={() => openCommentPopup(row.key, row)}>
-                                                                {row.comments && Object.keys(row.comments).length > 0 ? (
-                                                                    <div className="flex flex-col gap-1">
-                                                                        {Object.entries(row.comments).map(([user, c]) => {
-                                                                            const col = getColor(user);
-                                                                            return (
-                                                                                <div key={user} style={{background:col.bg,border:'1px solid '+col.border,borderRadius:'6px',padding:'2px 5px',display:'flex',alignItems:'center',gap:'3px'}}>
-                                                                                    <span style={{fontSize:'10px',fontWeight:'bold'}}>{col.icon}</span>
-                                                                                    <span style={{fontSize:'10px',color:col.text,fontWeight:'bold'}}> — </span>
-                                                                                    <span style={{fontSize:'10px',color:col.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'80px'}}>{c.text}</span>
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                ) : (
-                                                                    <span style={{color:'#d1d5db',fontSize:'11px'}}>+ ajouter</span>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            <SectionTables
+                                displaySections={displaySections}
+                                rowsBySection={rowsBySection}
+                                search={search}
+                                toggleCell={toggleCell}
+                                setZoomPhoto={setZoomPhoto}
+                                openCommentPopup={openCommentPopup}
+                                getColor={getColor}
+                                activeListe={activeListe}
+                            />
                         </>
                     )}
 
@@ -3176,9 +3138,116 @@
             );
         }
 
+        // ── SectionTables component ──
+        function SectionTables({ displaySections, rowsBySection, search, toggleCell, setZoomPhoto, openCommentPopup, getColor, activeListe }) {
+            // Build global color map across all sections
+            const globalNameColorMap = {};
+            let colorIdx = 0;
+            displaySections.forEach(sec => {
+                (rowsBySection[sec] || [])
+                    .map(r => ({ cells: r.c ? r.c.split('||') : (r.cells || []) }))
+                    .sort((a, b) => (a.cells[0] || '').localeCompare(b.cells[0] || '', 'fr'))
+                    .forEach(r => {
+                        const name = r.cells[0] || '';
+                        if (!(name in globalNameColorMap)) globalNameColorMap[name] = colorIdx++;
+                    });
+            });
+
+            return (
+                <React.Fragment>
+                    {displaySections.map(section => {
+                        const rows = (rowsBySection[section] || [])
+                            .map(r => ({ ...r, headers: r.h ? r.h.split('||') : (r.headers || []), cells: r.c ? r.c.split('||') : (r.cells || []) }))
+                            .filter(r => !search || (r.cells[0] || '').toLowerCase().includes(search.toLowerCase()))
+                            .sort((a, b) => (a.cells[0] || '').localeCompare(b.cells[0] || '', 'fr'));
+                        if (!rows.length) return null;
+
+                        const secTotalCells = rows.reduce((acc, r) => acc + r.cells.slice(2, -1).filter(c => !isNaN(c) && parseInt(c) > 0).length, 0);
+                        const secDoneCells = rows.reduce((acc, r) => acc + (r.cells_done ? Object.keys(r.cells_done).length : 0), 0);
+
+                        return (
+                            <div key={section} className="mb-6">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <h3 className="font-bold text-gray-700 text-sm">✂️ {section}</h3>
+                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">{secDoneCells}/{secTotalCells} tailles</span>
+                                </div>
+                                <div style={{overflowX:"auto",overflowY:"auto",maxHeight:"55vh",borderRadius:"12px",boxShadow:"0 1px 4px rgba(0,0,0,0.1)",border:"1px solid #e5e7eb"}}>
+                                    <table className="w-full text-xs" style={{borderCollapse:"collapse"}}>
+                                        <thead>
+                                            <tr className="bg-green-600 text-white">
+                                                {rows[0] && rows[0].headers.slice(0,-1).map((h, hi) => (
+                                                    <th key={hi} style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>{h}</th>
+                                                ))}
+                                                <th style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",minWidth:"150px",zIndex:10}}>Commentaire</th>
+                                                <th style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>Qui ?</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {rows.map(row => {
+                                                const numCells = row.cells.slice(2,-1).map((c,i) => ({val:parseInt(c)||0, idx:i+2})).filter(c => c.val > 0);
+                                                const allCellsDone = numCells.length > 0 && numCells.every(c => row.cells_done && row.cells_done[c.idx]);
+                                                const isOdd = globalNameColorMap[row.cells[0] || ''] % 2 === 1;
+                                                const baseBg = isOdd ? '#f0f7ff' : 'white';
+                                                return (
+                                                    <tr key={row.key} className="border-b border-gray-100 transition"
+                                                        style={{background: allCellsDone ? '#fff7ed' : baseBg, opacity: allCellsDone ? 0.75 : 1}}>
+                                                        {row.cells.slice(0,-1).map((cell, ci) => {
+                                                            const isNum = ci > 1 && !isNaN(cell) && cell !== '' && parseInt(cell) > 0;
+                                                            const isCellDone = row.cells_done && row.cells_done[ci];
+                                                            return (
+                                                                <td key={ci}
+                                                                    onClick={isNum ? () => toggleCell(row.key, ci, isCellDone) : undefined}
+                                                                    style={{border:'1px solid #e0e0e0', cursor: isNum ? 'pointer' : 'default',
+                                                                        background: isCellDone ? '#dcfce7' : 'transparent',
+                                                                        padding:'8px', textAlign: ci === 0 ? 'left' : 'center'}}>
+                                                                    {ci === 1 && cell
+                                                                        ? <img src={cell} className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80 transition" onClick={e => { e.stopPropagation(); setZoomPhoto(cell); }} onError={e => e.target.style.display='none'} />
+                                                                        : ci === 0
+                                                                            ? <span className="font-semibold text-gray-800">{cell}</span>
+                                                                            : isNaN(cell) || cell === ''
+                                                                                ? <span className="text-gray-500 text-xs">{cell}</span>
+                                                                                : parseInt(cell) > 0
+                                                                                    ? <span style={{fontWeight:'bold',fontSize:'15px',color:isCellDone?'#15803d':'#16a34a',textDecoration:isCellDone?'line-through':'none'}}>{cell}</span>
+                                                                                    : <span style={{color:'#d1d5db'}}>0</span>
+                                                                    }
+                                                                </td>
+                                                            );
+                                                        })}
+                                                        <td style={{border:'1px solid #e0e0e0',padding:'4px 6px',cursor:'pointer',minWidth:'120px'}}
+                                                            onClick={() => openCommentPopup(row.key, row)}>
+                                                            {row.comments && Object.keys(row.comments).length > 0 ? (
+                                                                <div className="flex flex-col gap-1">
+                                                                    {Object.entries(row.comments).map(([user, c]) => {
+                                                                        const col = getColor(user);
+                                                                        return (
+                                                                            <div key={user} style={{background:col.bg,border:'1px solid '+col.border,borderRadius:'6px',padding:'2px 5px',display:'flex',alignItems:'center',gap:'3px'}}>
+                                                                                <span style={{fontSize:'10px',fontWeight:'bold'}}>{col.icon}</span>
+                                                                                <span style={{fontSize:'10px',color:col.text,fontWeight:'bold'}}> — </span>
+                                                                                <span style={{fontSize:'10px',color:col.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'80px'}}>{c.text}</span>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            ) : (
+                                                                <span style={{color:'#d1d5db',fontSize:'11px'}}>+ ajouter</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </React.Fragment>
+            );
+        }
+
         // Render
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.0 — 04/03/26</div>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.1 — 05/03/26</div>
 </body>
 </html>
