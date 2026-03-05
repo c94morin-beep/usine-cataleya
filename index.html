@@ -110,7 +110,24 @@
             // Auth
             const [user, setUser] = useState(null);
             const [userRole, setUserRole] = useState(null);
+            const [notifications, setNotifications] = useState([]);
+            const [showNotifPanel, setShowNotifPanel] = useState(false);
+            const [lastSeenNotif, setLastSeenNotif] = useState(() => parseInt(localStorage.getItem('lastSeenNotif') || '0'));
             const [showBackupReminder, setShowBackupReminder] = useState(false);
+
+            // Notifications pour Achraf — écouter les articles passant en Reçu
+            React.useEffect(() => {
+                if (userRole !== 'operateur') return;
+                const r = window.firebaseRef(window.db, 'notifications_achraf');
+                const unsub = window.firebaseOnValue(r, snap => {
+                    const val = snap.val() || {};
+                    const arr = Object.entries(val)
+                        .map(([id, v]) => ({ id, ...v }))
+                        .sort((a, b) => b.at - a.at);
+                    setNotifications(arr);
+                });
+                return () => unsub();
+            }, [userRole]);
 
             // Rappel sauvegarde hebdomadaire — admin seulement
             React.useEffect(() => {
@@ -122,6 +139,25 @@
                     return () => clearTimeout(t);
                 }
             }, [userRole]);
+
+            const markNotifsRead = () => {
+                const now = Date.now();
+                localStorage.setItem('lastSeenNotif', now.toString());
+                setLastSeenNotif(now);
+                // Mark all as read in Firebase
+                notifications.forEach(n => {
+                    if (!n.read) {
+                        window.firebaseUpdate(window.firebaseRef(window.db, 'notifications_achraf/' + n.id), { read: true });
+                    }
+                });
+                setShowNotifPanel(false);
+            };
+
+            const clearNotifs = async () => {
+                if (!window.confirm('Effacer toutes les notifications ?')) return;
+                await window.firebaseRemove(window.firebaseRef(window.db, 'notifications_achraf'));
+                setShowNotifPanel(false);
+            };
 
             const dismissBackupReminder = () => {
                 localStorage.setItem('lastBackupReminder', Date.now().toString());
@@ -385,6 +421,17 @@
                 // Décommenter quand les ESP32 sont installés :
                 /*
                 // Allumer la LED automatiquement quand article reçu
+                // Notifier Achraf si article ou commande complète reçue
+                if (newStatus === STATUTS.RECU) {
+                    const notifId = 'notif_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+                    window.firebaseSet(window.firebaseRef(window.db, 'notifications_achraf/' + notifId), {
+                        type: 'article',
+                        orderId,
+                        at: Date.now(),
+                        read: false,
+                        by: userName || 'Sara'
+                    });
+                }
                 if (newStatus === STATUTS.RECU) {
                     const allOrders2 = updatedLists.flatMap(l => l.orders);
                     const thisOrder2 = allOrders2.find(o => o.id === orderId);
@@ -703,6 +750,56 @@
                                         {isAdmin ? '🔑 Admin' : isOperateur ? '⚙️ Achraf' : isCommentaires ? '💬 Fatima' : isSara ? '🚗 Sara' : '👁 Lecture'}
                                     </span>
                                 </div>
+                                {isOperateur && (
+                                    <div className="relative">
+                                        <button onClick={() => { setShowNotifPanel(p => !p); markNotifsRead(); }}
+                                            className="relative px-2 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition">
+                                            🔔
+                                            {notifications.filter(n => !n.read).length > 0 && (
+                                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-5 h-5 flex items-center justify-center px-1">
+                                                    {notifications.filter(n => !n.read).length}
+                                                </span>
+                                            )}
+                                        </button>
+                                        {showNotifPanel && (
+                                            <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                                                <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
+                                                    <span className="font-bold text-gray-800 text-sm">🔔 Notifications</span>
+                                                    <button onClick={clearNotifs} className="text-xs text-red-400 hover:text-red-600">Tout effacer</button>
+                                                </div>
+                                                <div className="max-h-72 overflow-y-auto">
+                                                    {notifications.length === 0 ? (
+                                                        <p className="text-center text-gray-400 py-6 text-sm">Aucune notification</p>
+                                                    ) : notifications.slice(0,20).map(n => {
+                                                        const order = getAllOrders().find(o => o.id === n.orderId);
+                                                        const timeAgo = (() => {
+                                                            const diff = Date.now() - n.at;
+                                                            if (diff < 60000) return "À l'instant";
+                                                            if (diff < 3600000) return Math.floor(diff/60000) + ' min';
+                                                            if (diff < 86400000) return Math.floor(diff/3600000) + 'h';
+                                                            return new Date(n.at).toLocaleDateString('fr-FR');
+                                                        })();
+                                                        return (
+                                                            <div key={n.id} className={`px-4 py-3 border-b border-gray-100 flex items-start gap-3 ${n.read ? 'bg-white' : 'bg-blue-50'}`}>
+                                                                <span className="text-lg mt-0.5">📬</span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-semibold text-gray-800">
+                                                                        {order ? `${order.nom_produit || order.reference}` : `Commande #${n.orderId}`}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-500">
+                                                                        Article reçu par {n.by}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-400 mt-0.5">{timeAgo}</p>
+                                                                </div>
+                                                                {!n.read && <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 <button onClick={() => window.firebaseSignOut()} className="px-2 md:px-3 py-1 md:py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs md:text-sm font-semibold transition">
                                     Déconnexion
                                 </button>
