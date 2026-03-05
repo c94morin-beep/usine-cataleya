@@ -547,10 +547,11 @@
             if (!user) return <LoginPage />;
             const isAdmin = userRole === 'admin';
             const isOperateur = userRole === 'operateur';
-
+            const isLecteur = !userRole || userRole === 'lecteur' || (!['admin','operateur','commentaires','livreur'].includes(userRole));
             const isCommentaires = userRole === 'commentaires';
             const isSara = userRole === 'livreur';
             const canEditStatus = isAdmin || isOperateur;
+            const canViewAll = isAdmin || isLecteur;
             const canEditComment = isAdmin || isCommentaires || isSara;
             // Nom affiché de l'utilisateur pour les commentaires
             const userName = isAdmin ? 'Admin' : isOperateur ? 'Achraf' : isCommentaires ? 'Fatima' : isSara ? 'Sara' : 'Lecteur';
@@ -859,34 +860,34 @@
                         <div className="container mx-auto px-6">
                             <div className="flex gap-1 overflow-x-auto">
                                 {/* Dashboard — Admin + Achraf + Sara + Fatima */}
-                                {(isAdmin || isOperateur || isSara || isCommentaires) && (
+                                {(isAdmin || isOperateur || isSara || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon="📊" label="Dashboard" />
                                 )}
                                 {/* Suivi Production — tous sauf Lecture */}
-                                {(isAdmin || isOperateur || isSara || isCommentaires) && (
+                                {(isAdmin || isOperateur || isSara || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'production'} onClick={() => setActiveTab('production')} icon="✂️" label="Suivi Production" />
                                 )}
                                 {/* Par Commande — Admin seulement */}
-                                {isAdmin && (
+                                {(isAdmin || isLecteur) && (
                                     <TabButton active={activeTab === 'orders'} onClick={() => setActiveTab('orders')} icon="🔍" label="Par Commande" />
                                 )}
                                 {/* Multi-Commandes — Admin + Achraf */}
-                                {(isAdmin || isOperateur) && (
+                                {(isAdmin || isOperateur || isLecteur) && (
                                     <TabButton active={activeTab === 'multiorders'} onClick={() => setActiveTab('multiorders')} icon="👯" label="Multi-Commandes" />
                                 )}
                                 {/* Prêt à expédier — Admin + Achraf */}
-                                {(isAdmin || isOperateur) && (
+                                {(isAdmin || isOperateur || isLecteur) && (
                                     <TabButton active={activeTab === 'ready'} onClick={() => setActiveTab('ready')} icon="🎯" label="Prêt à expédier" />
                                 )}
                                 {/* Casiers — Admin seulement */}
-                                {isAdmin && (
+                                {(isAdmin || isLecteur) && (
                                     <TabButton active={activeTab === 'casiers'} onClick={() => setActiveTab('casiers')} icon="💡" label="Casiers" />
                                 )}
                                 {/* Réception — Admin + Sara */}
-                                {(isAdmin || isSara || isCommentaires) && (
+                                {(isAdmin || isSara || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'listecoupe'} onClick={() => setActiveTab('listecoupe')} icon="✂️" label="Listes Coupe" />
                                 )}
-                                {(isAdmin || isCommentaires) && (
+                                {(isAdmin || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'sav'} onClick={() => setActiveTab('sav')} icon="🔧" label="SAV" />
                                 )}
                                 {(isAdmin || isSara) && (
@@ -903,7 +904,7 @@
                         ) : (
                             <>
                                 {activeTab === 'dashboard' && (
-                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} getCasierNum={getCasierNum} isSara={isSara} isCommentaires={isCommentaires} isAdmin={isAdmin} setActiveTab={setActiveTab} />
+                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} getCasierNum={getCasierNum} isSara={isSara} isCommentaires={isCommentaires} isAdmin={isAdmin} isLecteur={isLecteur} setActiveTab={setActiveTab} />
                                 )}
                                 {activeTab === 'production' && (
                                     <ProductionTab
@@ -1054,7 +1055,7 @@
         }
 
         // Dashboard
-        function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum, isSara, isCommentaires, isAdmin, setActiveTab }) {
+        function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum, isSara, isCommentaires, isAdmin, isLecteur, setActiveTab }) {
             const [showSAVModal, setShowSAVModal] = useState(false);
             const [savArticles, setSavArticles] = useState([]);
             const [showTerminesModal, setShowTerminesModal] = useState(false);
@@ -1113,6 +1114,9 @@
                             </div>
                         </div>
                     </div>
+
+                    {/* Top Produits — Admin + Lecture */}
+                    {(isAdmin || isLecteur) && <TopProduitsCard orders={orders} />}
 
                     {showSAVModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowSAVModal(false)}>
@@ -3423,6 +3427,70 @@
                         );
                     })}
                 </React.Fragment>
+            );
+        }
+
+        // ===================== TOP PRODUITS =====================
+        function TopProduitsCard({ orders }) {
+            const [vue, setVue] = React.useState('modele');
+
+            const cleanName = (raw) => (raw || '').replace(/\s*\(.*?\)/g, '').trim();
+            const getModele = (raw) => { const w = cleanName(raw).split(' '); return w.slice(0,-1).join(' ') || cleanName(raw); };
+            const getCouleur = (raw) => cleanName(raw);
+
+            const buildCounts = () => {
+                const counts = {};
+                orders.forEach(o => {
+                    if (!o.name) return;
+                    const key = vue === 'modele' ? getModele(o.name) : getCouleur(o.name);
+                    if (!key) return;
+                    counts[key] = (counts[key] || 0) + 1;
+                });
+                return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+            };
+
+            const sorted = buildCounts();
+            const max = sorted[0]?.[1] || 1;
+
+            return (
+                <div className="bg-white rounded-xl shadow p-5">
+                    <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                        <h3 className="text-lg font-semibold text-gray-800">&#128202; Produits les plus command&#233;s</h3>
+                        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+                            <button onClick={() => setVue('modele')}
+                                className={`px-4 py-1.5 font-semibold transition ${vue === 'modele' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                                Par mod&#232;le
+                            </button>
+                            <button onClick={() => setVue('couleur')}
+                                className={`px-4 py-1.5 font-semibold transition ${vue === 'couleur' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                                Par couleur
+                            </button>
+                        </div>
+                    </div>
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-gray-100">
+                                <th className="text-left py-2 text-gray-500 font-semibold">Produits</th>
+                                <th className="text-right py-2 text-gray-500 font-semibold w-28">Quantit&#233;s vendues</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sorted.map(([name, qty], i) => (
+                                <tr key={name} className={`border-b border-gray-50 hover:bg-gray-50 transition ${i === 0 ? 'bg-blue-50' : ''}`}>
+                                    <td className="py-2.5 pr-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-32 flex-shrink-0 bg-gray-100 rounded-full h-1.5">
+                                                <div className="bg-blue-500 h-1.5 rounded-full" style={{width: `${Math.round(qty/max*100)}%`}}></div>
+                                            </div>
+                                            <span className="text-gray-700">{name}</span>
+                                        </div>
+                                    </td>
+                                    <td className="py-2.5 text-right font-bold text-blue-600">{qty}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             );
         }
 
