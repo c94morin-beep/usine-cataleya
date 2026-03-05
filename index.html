@@ -150,7 +150,6 @@
                         window.firebaseUpdate(window.firebaseRef(window.db, 'notifications_achraf/' + n.id), { read: true });
                     }
                 });
-                setShowNotifPanel(false);
             };
 
             const clearNotifs = async () => {
@@ -752,7 +751,7 @@
                                 </div>
                                 {isOperateur && (
                                     <div className="relative">
-                                        <button onClick={() => { setShowNotifPanel(p => !p); markNotifsRead(); }}
+                                        <button onClick={() => { setShowNotifPanel(p => { if (!p) markNotifsRead(); return !p; }); }}
                                             className="relative px-2 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition">
                                             🔔
                                             {notifications.filter(n => !n.read).length > 0 && (
@@ -771,7 +770,7 @@
                                                     {notifications.length === 0 ? (
                                                         <p className="text-center text-gray-400 py-6 text-sm">Aucune notification</p>
                                                     ) : notifications.slice(0,20).map(n => {
-                                                        const order = getAllOrders().find(o => o.id === n.orderId);
+                                                        const order = lists.flatMap(l => l.orders || []).find(o => o.id === n.orderId);
                                                         const timeAgo = (() => {
                                                             const diff = Date.now() - n.at;
                                                             if (diff < 60000) return "À l'instant";
