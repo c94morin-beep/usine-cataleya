@@ -904,7 +904,7 @@
                         ) : (
                             <>
                                 {activeTab === 'dashboard' && (
-                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} getCasierNum={getCasierNum} isSara={isSara} isCommentaires={isCommentaires} isAdmin={isAdmin} isLecteur={isLecteur} setActiveTab={setActiveTab} />
+                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} getCasierNum={getCasierNum} isSara={isSara} isCommentaires={isCommentaires} isAdmin={isAdmin} isLecteur={isLecteur} setActiveTab={setActiveTab} updateStatus={updateStatus} canEditStatus={canEditStatus} />
                                 )}
                                 {activeTab === 'production' && (
                                     <ProductionTab
@@ -939,7 +939,7 @@
                                     <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
                                 )}
                                 {activeTab === 'listecoupe' && (
-                                    <ListeCoupeTab isAdmin={isAdmin} userName={userName} />
+                                    <ListeCoupeTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} />
                                 )}
                                 {activeTab === 'sav' && (
                                     <SAVTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} />
@@ -1055,7 +1055,7 @@
         }
 
         // Dashboard
-        function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum, isSara, isCommentaires, isAdmin, isLecteur, setActiveTab }) {
+        function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum, isSara, isCommentaires, isAdmin, isLecteur, setActiveTab, updateStatus, canEditStatus }) {
             const [showSAVModal, setShowSAVModal] = useState(false);
             const [savArticles, setSavArticles] = useState([]);
             const [showTerminesModal, setShowTerminesModal] = useState(false);
@@ -1232,9 +1232,12 @@
                                                 {byArticleRecus.map(([name, arts], index) => (
                                                     <div key={name} className={`py-2 px-3 ${index % 2 === 0 ? 'bg-orange-50' : 'bg-white'}`}>
                                                         <p className="text-sm font-semibold text-orange-800">{name} <span className="text-xs text-orange-400 font-normal">({arts.length}x)</span></p>
-                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                        <div className="flex flex-col gap-1 mt-1">
                                                             {arts.map((art, i) => (
-                                                                <button key={i} onClick={() => { setShowRecusModal(false); openOrderRecap(art.reference); }} className="text-xs text-blue-600 hover:underline">#{art.reference}{getCasierNum(art.reference) ? ` (Box ${getCasierNum(art.reference)})` : ''}</button>
+                                                                <div key={i} className="flex items-center gap-2">
+                                                                    <button onClick={() => { setShowRecusModal(false); openOrderRecap(art.reference); }} className="text-xs text-blue-600 hover:underline">#{art.reference}{getCasierNum(art.reference) ? ` (Box ${getCasierNum(art.reference)})` : ''}</button>
+                                                                    {canEditStatus && <button onClick={() => updateStatus(art.id, STATUTS.RANGE, art.commentaires)} className="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-1.5 py-0.5 rounded font-semibold">→ Rangé</button>}
+                                                                </div>
                                                             ))}
                                                         </div>
                                                     </div>
@@ -1258,7 +1261,10 @@
                                                                 </div>
                                                             </div>
                                                             {items.filter(o => o.status === STATUTS.RECU).map((art, ai) => (
-                                                                <p key={ai} className="text-xs text-orange-600 mt-1 pl-1">• {art.name}</p>
+                                                                <div key={ai} className="flex items-center justify-between mt-1 pl-1 gap-2">
+                                                                    <p className="text-xs text-orange-600">• {art.name}</p>
+                                                                    {canEditStatus && <button onClick={() => updateStatus(art.id, STATUTS.RANGE, art.commentaires)} className="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-1.5 py-0.5 rounded font-semibold whitespace-nowrap">→ Rangé</button>}
+                                                                </div>
                                                             ))}
                                                         </div>
                                                     );
@@ -1444,8 +1450,8 @@
                                                         </div>
                                                         {commandesAvecCommentaire[ref].map((o, i) => (
                                                             <div key={i} className="px-4 py-2 border-t border-purple-50">
-                                                                <p className="text-sm text-gray-700 truncate">{o.name}</p>
-                                                                <p className="text-sm italic text-purple-600 mt-0.5">💬 {o.commentaires}{o.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-400">— {o.commentAuthor}</span>}</p>
+                                                                <p className="text-sm text-gray-700" style={{wordBreak:'break-word',whiteSpace:'normal'}}>{o.name}</p>
+                                                                <p className="text-sm italic text-purple-600 mt-0.5" style={{wordBreak:'break-word',whiteSpace:'pre-wrap'}}>💬 {o.commentaires}{o.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-400">— {o.commentAuthor}</span>}</p>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1582,6 +1588,21 @@
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                                 />
+                                {searchTerm.trim() !== '' && (() => {
+                                    const matchedOrders = orders.filter(o => o.name && o.name.toLowerCase().includes(searchTerm.toLowerCase()));
+                                    const total = matchedOrders.length;
+                                    const refs = new Set(matchedOrders.map(o => o.reference));
+                                    return (
+                                        <div className="mt-1.5 flex gap-2 flex-wrap">
+                                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
+                                                {total} article{total > 1 ? 's' : ''}
+                                            </span>
+                                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">
+                                                {refs.size} commande{refs.size > 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold mb-2">📊 Statut</label>
@@ -2937,7 +2958,8 @@
         }
 
         // ===================== LISTE DE COUPE TAB =====================
-        function ListeCoupeTab({ isAdmin, userName }) {
+        function ListeCoupeTab({ isAdmin, isSara, isCommentaires, userName }) {
+            const canEditListe = isAdmin || isSara || isCommentaires;
             const db = window.db;
             const [listes, setListes] = React.useState([]);
             const [activeListe, setActiveListe] = React.useState(null);
@@ -2949,6 +2971,11 @@
             const [listeRows, setListeRows] = React.useState({});
             const [commentPopup, setCommentPopup] = React.useState(null);
             const [commentInput, setCommentInput] = React.useState('');
+            const [cellPopup, setCellPopup] = React.useState(null); // {rowKey, cellIdx, cellLabel, currentDone, currentComment}
+            const [cellCommentInput, setCellCommentInput] = React.useState('');
+            const [showPdfModal, setShowPdfModal] = React.useState(false);
+            const [pdfListeId, setPdfListeId] = React.useState(null);
+            const [pdfSection, setPdfSection] = React.useState('all');
 
             const USER_COLORS = {
                 'Admin':  { bg: '#fef9c3', border: '#facc15', text: '#92400e', icon: 'A' },
@@ -2956,6 +2983,209 @@
                 'Sara':   { bg: '#fce7f3', border: '#f472b6', text: '#9d174d', icon: 'S' },
             };
             const getColor = (name) => USER_COLORS[name] || { bg: '#f3f4f6', border: '#9ca3af', text: '#374151', icon: name ? name[0].toUpperCase() : '?' };
+
+            const exportPDF = async (listeId, pdfSection='all') => {
+                const liste = listes.find(l => l.id === listeId);
+                if (!liste) return;
+
+                // Toujours charger depuis Firebase pour avoir les données fraîches
+                const snap = await window.firebaseGet(window.firebaseRef(db, 'listescoupe/' + listeId + '/lignes'));
+                const rows = snap.val() || {};
+
+                const SECTION_ORDER = ['Sans déclinaison','Taille personnalisée (50-62)','Taille + Largeur','Taille + Largeur + Option','Manteaux (Taille 1/2/3)','Enfants (2-14 ans)'];
+                const bySection = {};
+                Object.entries(rows).forEach(([key, row]) => {
+                    if (!bySection[row.section]) bySection[row.section] = [];
+                    const cells = row.c ? row.c.split('||') : [];
+                    const headers = row.h ? row.h.split('||') : [];
+                    bySection[row.section].push({ key, ...row, cells, headers });
+                });
+
+                const dateStr = new Date().toLocaleDateString('fr-FR');
+                const timeStr = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+
+                let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+                <title>Liste de coupe — ${liste.name}</title>
+                <style>
+                    @page { size: A4 landscape; margin: 8mm; }
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+                    body { font-family: Arial, sans-serif; color: #111; }
+                    .no-print { position: fixed; top: 10px; right: 10px; background: #16a34a; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+                    .section-wrap { page-break-before: always; break-before: page; }
+                    .section-wrap:first-child { page-break-before: avoid; break-before: avoid; }
+                    .section-title { font-size: 11px; background: #16a34a; color: white; padding: 5px 10px; margin-bottom: 0; }
+                    .page-header-mini { font-size: 8px; color: #666; display: flex; justify-content: space-between; padding: 2px 4px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+
+                    .section-title { font-size: 11px; background: #16a34a; color: white; padding: 5px 10px; margin-bottom: 0; }
+                    .page-header-mini { display: flex; justify-content: space-between; font-size: 8px; color: #666; padding: 2px 4px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+
+                    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                    thead th { background: #f0fdf4; border: 1px solid #ccc; padding: 4px; text-align: center; font-size: 9px; font-weight: bold; white-space: nowrap; }
+                    thead th.col-produit { text-align: left; width: 200px; }
+                    thead th.col-img { width: 150px; }
+                    thead th.col-num { width: 42px; }
+                    thead th.col-comment { text-align: left; }
+
+                    td { border: 1px solid #e5e7eb; padding: 2px 4px; text-align: center; vertical-align: middle; }
+                    td.col-produit { text-align: left; font-weight: 600; font-size: 11px; line-height: 1.4; width: 200px; }
+                    td.col-img { padding: 2px; width: 150px; height: 110px; }
+                    td.col-img img { width: 144px; height: 106px; object-fit: cover; border-radius: 4px; display: block; margin: auto; }
+                    td.col-num { font-size: 15px; font-weight: bold; color: #16a34a; width: 42px; }
+                    td.col-num.done { color: #9ca3af; text-decoration: line-through; }
+                    td.col-num.zero { color: #d1d5db; font-weight: normal; font-size: 11px; }
+                    td.col-option { font-size: 9px; color: #6b7280; width: 42px; }
+                    td.col-comment { text-align: left; padding: 3px 5px; font-size: 9px; }
+                    .comment-badge { display: inline-block; padding: 2px 5px; border-radius: 3px; font-size: 8px; margin: 1px; line-height: 1.5; }
+                    tr.row-done td { background: #fff7ed; opacity: 0.7; }
+                    tr.row-alt:not(.row-done) td { background: #f3f4f6; }
+
+                    @media print {
+                        .no-print { display: none !important; }
+                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    }
+                </style></head><body>
+                <button class="no-print" id="btn-print">🖨️ Imprimer</button>
+                <div class="page-header">
+                    <h1>✂️ Liste de coupe — ${liste.name}</h1>
+                    <div class="meta">Exporté le ${dateStr} à ${timeStr}</div>
+                </div>`;
+
+                const renderRow = (row, colorIdx=0) => {
+                    const numCells = row.cells.slice(2,-1).map((c,i)=>({val:parseInt(c)||0,idx:i+2})).filter(c=>c.val>0);
+                    const allDone = numCells.length > 0 && numCells.every(c => row.cells_done && row.cells_done[c.idx]);
+                    const altClass = colorIdx % 2 === 0 ? 'row-alt' : '';
+                    let r = `<tr class="${allDone?'row-done':altClass}">`;
+                    row.cells.slice(0,-1).forEach((cell, ci) => {
+                        if (ci === 0) r += `<td class="col-produit">${cell}</td>`;
+                        else if (ci === 1) r += `<td class="col-img">${cell ? `<img src="${cell}" onerror="this.style.display='none'">` : ''}</td>`;
+                        else {
+                            const val = parseInt(cell) || 0;
+                            const isDone = row.cells_done && row.cells_done[ci];
+                            if (isNaN(cell) || cell === '') r += `<td class="col-option">${cell}</td>`;
+                            else if (val > 0) r += `<td class="col-num${isDone?' done':''}">${cell}</td>`;
+                            else r += `<td class="col-num zero">0</td>`;
+                        }
+                    });
+                    const comments = row.comments || {};
+                    const commentHtml = Object.entries(comments).map(([user, c]) => {
+                        const colors = {'Admin':'#fef9c3','Fatima':'#dcfce7','Sara':'#fce7f3'};
+                        return `<span class="comment-badge" style="background:${colors[user]||'#f3f4f6'}">${user[0]}: ${c.text}</span>`;
+                    }).join('');
+                    r += `<td class="col-comment">${commentHtml || '<span style="color:#d1d5db">—</span>'}</td>`;
+                    r += '</tr>';
+                    return r;
+                };
+
+                const renderTheadRow = (headers) => {
+                    let h = '<thead><tr>';
+                    headers.forEach((hdr, hi) => {
+                        if (hi === 0) h += `<th class="col-produit">${hdr}</th>`;
+                        else if (hi === 1) h += `<th class="col-img">${hdr}</th>`;
+                        else h += `<th class="col-num">${hdr}</th>`;
+                    });
+                    h += `<th class="col-comment">Commentaires</th></tr></thead>`;
+                    return h;
+                };
+
+                const sectionsToRender = pdfSection === 'all'
+                    ? SECTION_ORDER
+                    : [pdfSection];
+
+                sectionsToRender.forEach(section => {
+                    const sectionRows = (bySection[section] || []).sort((a,b) => (a.cells[0]||'').localeCompare(b.cells[0]||'','fr'));
+                    if (!sectionRows.length) return;
+                    const headers = sectionRows[0].headers.slice(0,-1);
+
+                    html += `<div class="section-wrap">`;
+                    html += `<div class="section-title">${section}</div>`;
+                    html += `<div class="page-header-mini"><span>${liste.name}</span><span>${dateStr}</span></div>`;
+                    html += `<table>${renderTheadRow(headers)}`;
+                    let lastProduit = null;
+                    let colorIdx = 0;
+                    let groupRows = [];
+                    const flushGroup = () => {
+                        if (!groupRows.length) return;
+                        html += `<tbody class="product-group">`;
+                        groupRows.forEach(r => { html += renderRow(r, colorIdx); });
+                        html += `</tbody>`;
+                        groupRows = [];
+                    };
+                    sectionRows.forEach(row => {
+                        const produit = row.cells[0] || '';
+                        if (produit !== lastProduit) {
+                            flushGroup();
+                            colorIdx++;
+                            lastProduit = produit;
+                        }
+                        groupRows.push(row);
+                    });
+                    flushGroup();
+                    html += '</table></div>';
+                });
+
+                html += `
+                <script>
+                    window.onload = function() {
+                        document.getElementById('btn-print').onclick = function() { window.print(); };
+                    };
+                <\/script>
+                </body></html>`;
+                const blob = new Blob([html], {type: 'text/html'});
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+                setShowPdfModal(false);
+            };
+
+            const exportXLSX = async (listeId) => {
+                const liste = listes.find(l => l.id === listeId);
+                if (!liste) return;
+                const snap = await window.firebaseGet(window.firebaseRef(db, 'listescoupe/' + listeId + '/lignes'));
+                const rows = snap.val() || {};
+
+                const SECTION_ORDER = ['Sans déclinaison','Taille personnalisée (50-62)','Taille + Largeur','Taille + Largeur + Option','Manteaux (Taille 1/2/3)','Enfants (2-14 ans)'];
+                const bySection = {};
+                Object.entries(rows).forEach(([key, row]) => {
+                    if (!bySection[row.section]) bySection[row.section] = [];
+                    const cells = row.c ? row.c.split('||') : [];
+                    const headers = row.h ? row.h.split('||') : [];
+                    bySection[row.section].push({ key, ...row, cells, headers });
+                });
+
+                const wb = window.XLSX.utils.book_new();
+
+                SECTION_ORDER.forEach(section => {
+                    const sectionRows = (bySection[section] || []).sort((a,b) => (a.cells[0]||'').localeCompare(b.cells[0]||'','fr'));
+                    if (!sectionRows.length) return;
+
+                    const headers = sectionRows[0].headers.slice(0,-1);
+                    const sheetData = [
+                        [...headers, 'Commentaires']
+                    ];
+
+                    sectionRows.forEach(row => {
+                        const cells = row.cells.slice(0,-1);
+                        const rowData = cells.map((cell, ci) => {
+                            if (ci === 0) return cell || ''; // nom produit
+                            if (ci === 1) return cell || ''; // URL image
+                            // Seulement les cellules purement numériques → nombre
+                            const trimmed = (cell || '').trim();
+                            return /^\d+$/.test(trimmed) ? parseInt(trimmed) : trimmed;
+                        });
+                        const comments = row.comments || {};
+                        const commentText = Object.entries(comments).map(([user, c]) => `${user}: ${c.text}`).join(' | ');
+                        sheetData.push([...rowData, commentText]);
+                    });
+
+                    const ws = window.XLSX.utils.aoa_to_sheet(sheetData);
+                    // Style header row
+                    const sheetName = section.substring(0, 31);
+                    window.XLSX.utils.book_append_sheet(wb, ws, sheetName);
+                });
+
+                window.XLSX.writeFile(wb, `ListeCoupe_${liste.name}_${new Date().toLocaleDateString('fr-FR').replace(/\//g,'-')}.xlsx`);
+                setShowPdfModal(false);
+            };
 
             const openCommentPopup = (rowKey, row) => {
                 const myComment = row.comments && row.comments[userName] ? row.comments[userName].text : '';
@@ -3087,6 +3317,15 @@
                 }
             };
 
+            const saveCellComment = async (rowKey, cellIdx, val) => {
+                const path = 'listescoupe/' + activeListe + '/lignes/' + rowKey + '/cell_comments/' + cellIdx + '/' + userName;
+                if (!val.trim()) {
+                    await window.firebaseRemove(window.firebaseRef(db, path));
+                } else {
+                    await window.firebaseSet(window.firebaseRef(db, path), { text: val.trim(), at: Date.now() });
+                }
+            };
+
             const saveComment = async (rowKey, val) => {
                 try {
                     const path = 'listescoupe/' + activeListe + '/lignes/' + rowKey + '/comments/' + userName;
@@ -3149,6 +3388,12 @@
                             <button onClick={() => setShowImport(true)}
                                 className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700">
                                 📥 Importer CSV
+                            </button>
+                        )}
+                        {listes.length > 0 && (
+                            <button onClick={() => { setPdfListeId(activeListe || listes[0]?.id); setShowPdfModal(true); }}
+                                className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700">
+                                📤 Exporter
                             </button>
                         )}
                     </div>
@@ -3220,6 +3465,10 @@
                                 openCommentPopup={openCommentPopup}
                                 getColor={getColor}
                                 activeListe={activeListe}
+                                canEditListe={canEditListe}
+                                setCellPopup={setCellPopup}
+                                setCellCommentInput={setCellCommentInput}
+                                userName={userName}
                             />
                         </>
                     )}
@@ -3232,6 +3481,105 @@
                     )}
 
                     {/* Modal Import */}
+                    {/* Modal Cellule */}
+                    {cellPopup && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setCellPopup(null)}>
+                            <div className="bg-white rounded-2xl shadow-2xl p-5 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="font-bold text-gray-800">
+                                        {cellPopup.cellLabel} — {cellPopup.row.cells[0]}
+                                    </h3>
+                                    <button onClick={() => setCellPopup(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+                                </div>
+
+                                {/* Commentaires existants */}
+                                {cellPopup.row.cell_comments && cellPopup.row.cell_comments[cellPopup.cellIdx] && Object.keys(cellPopup.row.cell_comments[cellPopup.cellIdx]).length > 0 && (
+                                    <div className="mb-3 space-y-1">
+                                        {Object.entries(cellPopup.row.cell_comments[cellPopup.cellIdx]).map(([user, c]) => {
+                                            const col = getColor(user);
+                                            return (
+                                                <div key={user} style={{background:col.bg,border:'1px solid '+col.border,borderRadius:'8px',padding:'4px 8px'}}>
+                                                    <span style={{fontSize:'11px',fontWeight:'bold',color:col.text}}>{user}</span>
+                                                    <span style={{fontSize:'11px',color:col.text}}> : {c.text}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Mon commentaire */}
+                                <textarea
+                                    value={cellCommentInput}
+                                    onChange={e => setCellCommentInput(e.target.value)}
+                                    placeholder="Ajouter un commentaire sur cette cellule..."
+                                    className="w-full border rounded-lg px-3 py-2 text-sm mb-4 resize-none"
+                                    rows={3}
+                                    autoFocus
+                                />
+
+                                <div className="flex gap-2 flex-wrap">
+                                    <button onClick={async () => {
+                                        await toggleCell(cellPopup.rowKey, cellPopup.cellIdx, cellPopup.currentDone);
+                                        setCellPopup(null);
+                                    }} className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${cellPopup.currentDone ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
+                                        {cellPopup.currentDone ? '↩️ Dévalider' : '✅ Valider'}
+                                    </button>
+                                    {cellCommentInput.trim() !== '' && (
+                                        <button onClick={async () => {
+                                            await saveCellComment(cellPopup.rowKey, cellPopup.cellIdx, '');
+                                            setCellPopup(null);
+                                        }} className="py-2 px-3 bg-red-100 text-red-600 rounded-lg text-sm font-bold hover:bg-red-200">
+                                            🗑️
+                                        </button>
+                                    )}
+                                    <button onClick={async () => {
+                                        await saveCellComment(cellPopup.rowKey, cellPopup.cellIdx, cellCommentInput);
+                                        setCellPopup(null);
+                                    }} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700">
+                                        💬 Sauvegarder
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal PDF */}
+                    {showPdfModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+                                <h3 className="text-lg font-bold mb-4">📤 Exporter une liste</h3>
+                                <p className="text-sm text-gray-500 mb-1">Liste :</p>
+                                <div className="space-y-1 mb-3">
+                                    {listes.map(l => (
+                                        <label key={l.id} className={`flex items-center gap-3 p-2 rounded-xl border-2 cursor-pointer transition ${pdfListeId === l.id ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                            <input type="radio" name="pdf-liste" checked={pdfListeId === l.id} onChange={() => setPdfListeId(l.id)} className="accent-green-600" />
+                                            <span className="font-semibold text-sm">{l.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <p className="text-sm text-gray-500 mb-1">Section (PDF uniquement) :</p>
+                                <select value={pdfSection} onChange={e => setPdfSection(e.target.value)}
+                                    className="w-full border rounded-lg px-3 py-2 text-sm mb-4">
+                                    <option value="all">Toute la liste</option>
+                                    {['Sans déclinaison','Taille personnalisée (50-62)','Taille + Largeur','Taille + Largeur + Option','Manteaux (Taille 1/2/3)','Enfants (2-14 ans)'].map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                                <div className="flex gap-3 justify-end flex-wrap">
+                                    <button onClick={() => setShowPdfModal(false)} className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Annuler</button>
+                                    <button onClick={() => exportXLSX(pdfListeId)} disabled={!pdfListeId}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 disabled:opacity-50">
+                                        📊 XLSX
+                                    </button>
+                                    <button onClick={() => exportPDF(pdfListeId, pdfSection)} disabled={!pdfListeId}
+                                        className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 disabled:opacity-50">
+                                        🖨️ PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {showImport && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                             <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
@@ -3299,6 +3647,12 @@
                             <div className="flex gap-2 justify-end mt-3">
                                 <button onClick={() => { setCommentPopup(null); setCommentInput(''); }}
                                     className="px-3 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Annuler</button>
+                                {commentInput.trim() !== '' && (
+                                    <button onClick={async () => { await saveComment(commentPopup.rowKey, ''); setCommentInput(''); }}
+                                        className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-200">
+                                        🗑️ Supprimer
+                                    </button>
+                                )}
                                 {commentInput !== (commentPopup.row.comments && commentPopup.row.comments[userName] ? commentPopup.row.comments[userName].text : '') && (
                                     <button onClick={() => saveComment(commentPopup.rowKey, commentInput)}
                                         className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700">
@@ -3324,7 +3678,7 @@
         }
 
         // ── SectionTables component ──
-        function SectionTables({ displaySections, rowsBySection, search, toggleCell, setZoomPhoto, openCommentPopup, getColor, activeListe }) {
+        function SectionTables({ displaySections, rowsBySection, search, toggleCell, setZoomPhoto, openCommentPopup, getColor, activeListe, canEditListe, setCellPopup, setCellCommentInput, userName }) {
             // Build global color map across all sections
             const globalNameColorMap = {};
             let colorIdx = 0;
@@ -3381,10 +3735,15 @@
                                                             const isCellDone = row.cells_done && row.cells_done[ci];
                                                             return (
                                                                 <td key={ci}
-                                                                    onClick={isNum ? () => toggleCell(row.key, ci, isCellDone) : undefined}
-                                                                    style={{border:'1px solid #e0e0e0', cursor: isNum ? 'pointer' : 'default',
-                                                                        background: isCellDone ? '#dcfce7' : 'transparent',
-                                                                        padding:'8px', textAlign: ci === 0 ? 'left' : 'center'}}>
+                                                                    onClick={isNum && canEditListe ? () => {
+                                                                        const cellComment = row.cell_comments && row.cell_comments[ci];
+                                                                        const myComment = cellComment && cellComment[userName] ? cellComment[userName].text : '';
+                                                                        setCellCommentInput(myComment);
+                                                                        setCellPopup({ rowKey: row.key, cellIdx: ci, cellLabel: row.headers[ci] || ('Col '+(ci-1)), currentDone: isCellDone, row });
+                                                                    } : undefined}
+                                                                    style={{border:'1px solid #e0e0e0', cursor: isNum && canEditListe ? 'pointer' : 'default',
+                                                                        background: isCellDone ? '#dcfce7' : (isNum && row.cell_comments && row.cell_comments[ci] && Object.keys(row.cell_comments[ci]).length > 0) ? '#fecaca' : 'transparent',
+                                                                        padding:'6px 4px', textAlign: ci === 0 ? 'left' : 'center', position:'relative'}}>
                                                                     {ci === 1 && cell
                                                                         ? <img src={cell} className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80 transition" onClick={e => { e.stopPropagation(); setZoomPhoto(cell); }} onError={e => e.target.style.display='none'} />
                                                                         : ci === 0
@@ -3392,30 +3751,46 @@
                                                                             : isNaN(cell) || cell === ''
                                                                                 ? <span className="text-gray-500 text-xs">{cell}</span>
                                                                                 : parseInt(cell) > 0
-                                                                                    ? <span style={{fontWeight:'bold',fontSize:'15px',color:isCellDone?'#15803d':'#16a34a',textDecoration:isCellDone?'line-through':'none'}}>{cell}</span>
+                                                                                    ? <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'2px'}}>
+                                                                                        <span style={{fontWeight:'bold',fontSize:'15px',color:isCellDone?'#15803d':'#16a34a',textDecoration:isCellDone?'line-through':'none'}}>{cell}</span>
+
+                                                                                      </div>
                                                                                     : <span style={{color:'#d1d5db'}}>0</span>
                                                                     }
                                                                 </td>
                                                             );
                                                         })}
-                                                        <td style={{border:'1px solid #e0e0e0',padding:'4px 6px',cursor:'pointer',minWidth:'120px'}}
-                                                            onClick={() => openCommentPopup(row.key, row)}>
-                                                            {row.comments && Object.keys(row.comments).length > 0 ? (
-                                                                <div className="flex flex-col gap-1">
-                                                                    {Object.entries(row.comments).map(([user, c]) => {
+                                                        <td style={{border:'1px solid #e0e0e0',padding:'4px 6px',cursor:canEditListe?'pointer':'default',minWidth:'140px',verticalAlign:'top'}}
+                                                            onClick={canEditListe ? () => openCommentPopup(row.key, row) : undefined}>
+                                                            <div className="flex flex-col gap-1">
+                                                                {/* Commentaires de ligne */}
+                                                                {row.comments && Object.entries(row.comments).map(([user, c]) => {
+                                                                    const col = getColor(user);
+                                                                    return (
+                                                                        <div key={'row-'+user} style={{background:col.bg,border:'1px solid '+col.border,borderRadius:'6px',padding:'2px 6px'}}>
+                                                                            <span style={{fontSize:'10px',fontWeight:'bold',color:col.text}}>{col.icon} {user} : </span>
+                                                                            <span style={{fontSize:'10px',color:col.text,wordBreak:'break-word',whiteSpace:'pre-wrap'}}>{c.text}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                                {/* Commentaires de cellule */}
+                                                                {row.cell_comments && Object.entries(row.cell_comments).map(([ci, userComments]) => {
+                                                                    const cellLabel = row.headers && row.headers[parseInt(ci)] ? row.headers[parseInt(ci)] : 'Col '+ci;
+                                                                    return Object.entries(userComments).map(([user, c]) => {
                                                                         const col = getColor(user);
                                                                         return (
-                                                                            <div key={user} style={{background:col.bg,border:'1px solid '+col.border,borderRadius:'6px',padding:'2px 5px',display:'flex',alignItems:'center',gap:'3px'}}>
-                                                                                <span style={{fontSize:'10px',fontWeight:'bold'}}>{col.icon}</span>
-                                                                                <span style={{fontSize:'10px',color:col.text,fontWeight:'bold'}}> — </span>
-                                                                                <span style={{fontSize:'10px',color:col.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'80px'}}>{c.text}</span>
+                                                                            <div key={'cell-'+ci+'-'+user} style={{background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:'6px',padding:'2px 6px'}}>
+                                                                                <span style={{fontSize:'10px',fontWeight:'bold',color:'#b91c1c'}}>⚠️ [{cellLabel}] {user} : </span>
+                                                                                <span style={{fontSize:'10px',color:'#7f1d1d',wordBreak:'break-word',whiteSpace:'pre-wrap'}}>{c.text}</span>
                                                                             </div>
                                                                         );
-                                                                    })}
-                                                                </div>
-                                                            ) : (
-                                                                <span style={{color:'#d1d5db',fontSize:'11px'}}>+ ajouter</span>
-                                                            )}
+                                                                    });
+                                                                })}
+                                                                {/* Rien du tout */}
+                                                                {(!row.comments || Object.keys(row.comments).length === 0) && (!row.cell_comments || Object.keys(row.cell_comments).length === 0) && (
+                                                                    <span style={{color:'#d1d5db',fontSize:'11px'}}>{canEditListe ? '+ ajouter' : '—'}</span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 );
@@ -3432,17 +3807,56 @@
 
         // ===================== TOP PRODUITS =====================
         function TopProduitsCard({ orders }) {
-            const [vue, setVue] = React.useState('modele');
+            const [vue, setVue] = React.useState('produit');
 
             const cleanName = (raw) => (raw || '').replace(/\s*\(.*?\)/g, '').trim();
-            const getModele = (raw) => { const w = cleanName(raw).split(' '); return w.slice(0,-1).join(' ') || cleanName(raw); };
-            const getCouleur = (raw) => cleanName(raw);
+
+            const COULEURS = new Set([
+                'noir','noire','black','blanc','blanche','white','gris','grise','grey','gray',
+                'rouge','red','rose','pink','bleu','bleue','blue','vert','verte','green',
+                'jaune','yellow','orange','violet','purple','lilas','beige','marron','brown',
+                'camel','mocha','mokka','taupe','greige','ivoire','ecru','nude','creme','marine',
+                'navy','bordeaux','burgundy','kaki','khaki','ocre','sable','corail','coral',
+                'aubergine','terracotta','terracota','gold','dore','argent','silver','cognac',
+                'caramel','chocolat','miel','latte','cappuccino','espresso','praline','noisette',
+                'poudre','poudrée','poudré','emeraude','amande','grenat','cobalt',
+                'indigo','saphir','saphyr','sapphire','turquoise','teal','aqua','cyan','lavande',
+                'menthe','olive','anthracite','charbon','ebony','pearl','champagne','cuivre',
+                'copper','bronze','sienna','rouille','rust','blush','peach','abricot','citron',
+                'vanille','vanilla','cacao','stone','sand','clay','smoke','ash','coal','ivory',
+                'mist','sage','plum','cerise','framboise','magenta','fuchsia','fushia',
+                'nuit','roi','mate','satin','vif','doux','nacre','irise','brule','fume','velvet',
+                'glace','intense','profond','deep','dark','light','bright','soft','baby','dusty',
+                'pale','vivid','lime','mint','sky','forest','ocean','denim','electric','neon',
+                'fluo','pastel','naturel','naturelle','multicolore',
+            ].map(c => c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+
+            const norm = (w) => (w||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+            const isCouleur = (w) => COULEURS.has(norm(w));
+
+            const getModele = (raw) => {
+                const cleaned = cleanName(raw);
+                const words = cleaned.split(' ');
+                let end = words.length;
+                while (end > 1) {
+                    const w = words[end - 1];
+                    const prev = end >= 2 ? words[end - 2] : '';
+                    const pprev = end >= 3 ? words[end - 3] : '';
+                    if (isCouleur(w)) {
+                        if (prev === '&' && isCouleur(pprev)) end -= 3;
+                        else if (prev === '&') end -= 2;
+                        else if (isCouleur(prev)) end -= 2;
+                        else end -= 1;
+                    } else { break; }
+                }
+                return words.slice(0, end).join(' ') || cleaned;
+            };
 
             const buildCounts = () => {
                 const counts = {};
                 orders.forEach(o => {
                     if (!o.name) return;
-                    const key = vue === 'modele' ? getModele(o.name) : getCouleur(o.name);
+                    const key = vue === 'produit' ? cleanName(o.name) : getModele(o.name);
                     if (!key) return;
                     counts[key] = (counts[key] || 0) + 1;
                 });
@@ -3457,13 +3871,13 @@
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                         <h3 className="text-lg font-semibold text-gray-800">&#128202; Produits les plus command&#233;s</h3>
                         <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+                            <button onClick={() => setVue('produit')}
+                                className={`px-4 py-1.5 font-semibold transition ${vue === 'produit' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                                Par produit
+                            </button>
                             <button onClick={() => setVue('modele')}
                                 className={`px-4 py-1.5 font-semibold transition ${vue === 'modele' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
                                 Par mod&#232;le
-                            </button>
-                            <button onClick={() => setVue('couleur')}
-                                className={`px-4 py-1.5 font-semibold transition ${vue === 'couleur' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-                                Par couleur
                             </button>
                         </div>
                     </div>
