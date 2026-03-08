@@ -238,7 +238,17 @@
                 if (!user) return;
                 const init = () => {
                     const unsub = window.firebaseOnLists((data) => {
-                        setLists(Array.isArray(data) ? data : Object.values(data || {}));
+                        const raw = Array.isArray(data) ? data : Object.values(data || {});
+                        // Nettoyer les marqueurs '__clear__' utilisés pour vider les commentaires dans Firebase
+                        const cleaned = raw.map(list => ({
+                            ...list,
+                            orders: (list.orders || []).map(order => ({
+                                ...order,
+                                commentaires: order.commentaires === '__clear__' ? '' : order.commentaires,
+                                commentAuthor: order.commentAuthor === '__clear__' ? null : order.commentAuthor,
+                            }))
+                        }));
+                        setLists(cleaned);
                     });
                     return unsub;
                 };
@@ -381,11 +391,13 @@
 
             // Mettre à jour un statut
             const updateStatus = (orderId, newStatus, newCommentaires, author) => {
+                // Firebase supprime les champs vides (''), on utilise '__clear__' pour effacer un commentaire
+                const commentValue = newCommentaires === '' ? '__clear__' : newCommentaires;
                 const updatedLists = lists.map(list => ({
                     ...list,
                     orders: list.orders.map(order =>
                         order.id === orderId 
-                            ? { ...order, status: newStatus, commentaires: newCommentaires !== undefined ? newCommentaires : order.commentaires, commentAuthor: (newCommentaires && author) ? author : (newCommentaires === '' ? null : order.commentAuthor) } 
+                            ? { ...order, status: newStatus, commentaires: commentValue !== undefined ? commentValue : order.commentaires, commentAuthor: (commentValue && commentValue !== '__clear__' && author) ? author : (commentValue === '__clear__' ? '__clear__' : order.commentAuthor) } 
                             : order
                     )
                 }));
@@ -896,7 +908,7 @@
                                 )}
                                 {/* Suivi Production — tous sauf Lecture */}
                                 {(isAdmin || isOperateur || isSara || isCommentaires || isLecteur) && (
-                                    <TabButton active={activeTab === 'production'} onClick={() => setActiveTab('production')} icon="✂️" label="Suivi Production" />
+                                    <TabButton active={activeTab === 'production'} onClick={() => setActiveTab('production')} icon="🧵" label="Suivi Production" />
                                 )}
                                 {/* Par Commande — Admin seulement */}
                                 {(isAdmin || isLecteur) && (
@@ -1719,7 +1731,7 @@
                                 {order.commentaires ? (
                                     <div className="mt-3 flex items-center gap-2 bg-red-500 rounded-lg px-3 py-2">
                                         <p className="flex-1 text-sm italic text-white font-semibold">💬 {order.commentaires}{order.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-500">— {order.commentAuthor}</span>}</p>
-                                        {canEditComment && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-white hover:text-red-200">✕</button>}
+                                        {(canEditComment || isAdmin) && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-white hover:text-red-200">✕</button>}
                                     </div>
                                 ) : canEditComment ? (
                                     <input
@@ -1790,7 +1802,7 @@
                                             {order.commentaires ? (
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-sm italic text-white font-semibold">💬 {order.commentaires}{order.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-red-100">— {order.commentAuthor}</span>}</p>
-                                                    {canEditComment && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-white hover:text-red-200 ml-1">✕</button>}
+                                                    {(canEditComment || isAdmin) && <button onClick={() => updateStatus(order.id, order.status, '')} className="text-xs text-white hover:text-red-200 ml-1">✕</button>}
                                                 </div>
                                             ) : canEditComment ? (
                                                 <input type="text" defaultValue=""
