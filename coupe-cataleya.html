@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Usine Cataleya — Production</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --white: #ffffff;
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --border: #e8eaf0;
+    --text: #1a1d2e;
+    --text2: #6b7280;
+    --text3: #9ca3af;
+
+    /* Couleurs étapes */
+    --c-stock:     #3b82f6;
+    --c-cao:       #8b5cf6;
+    --c-coupe:     #f97316;
+    --c-etiq:      #14b8a6;
+    --c-dispatch:  #84cc16;
+    --c-ctrl1:     #f59e0b;
+    --c-defauts:   #ef4444;
+    --c-final:     #22c55e;
+    --c-admin:     #6366f1;
+
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── LOGIN ── */
+  #screen-login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+  }
+  .login-box {
+    background: var(--white);
+    border-radius: 24px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+  }
+  .login-logo {
+    font-size: 48px;
+    margin-bottom: 8px;
+  }
+  .login-title {
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .login-sub {
+    color: var(--text2);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+  .login-field {
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  .login-field label {
+    display: block;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .login-field input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .login-field input:focus { border-color: var(--c-admin); }
+  .btn-login {
+    width: 100%;
+    padding: 16px;
+    background: var(--c-admin);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 17px;
+    font-weight: 800;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn-login:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-login:active { transform: translateY(0); }
+  .login-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 12px;
+    display: none;
+  }
+
+  /* ── APP SHELL ── */
+  #screen-app { display: none; min-height: 100vh; flex-direction: column; }
+  #screen-app.visible { display: flex; }
+
+  /* Header */
+  .app-header {
+    background: var(--white);
+    border-bottom: 2px solid var(--border);
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-logo { font-size: 28px; }
+  .header-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--text);
+  }
+  .header-title span {
+    font-weight: 400;
+    color: var(--text2);
+    font-size: 14px;
+    display: block;
+    line-height: 1;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    padding: 6px 12px 6px 6px;
+    border-radius: 50px;
+    border: 2px solid var(--border);
+  }
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: white;
+  }
+  .user-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .btn-logout {
+    background: none;
+    border: 2px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .btn-logout:hover { border-color: #ef4444; color: #ef4444; }
+
+  /* Main content */
+  .app-main {
+    flex: 1;
+    padding: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Page header */
+  .page-header {
+    margin-bottom: 28px;
+  }
+  .page-eyebrow {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 4px;
+  }
+  .page-title {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .page-sub {
+    font-size: 15px;
+    color: var(--text2);
+    font-weight: 600;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 2px solid var(--border);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  /* Boutons génériques */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 800;
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--c-admin); color: white; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-success { background: var(--c-final); color: white; }
+  .btn-success:hover { opacity: 0.88; }
+  .btn-danger { background: #ef4444; color: white; }
+  .btn-danger:hover { opacity: 0.88; }
+  .btn-ghost { background: var(--bg); color: var(--text); border: 2px solid var(--border); }
+  .btn-ghost:hover { border-color: #9ca3af; }
+  .btn-big {
+    padding: 18px 28px;
+    font-size: 17px;
+    border-radius: var(--radius);
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Tâche / item de liste */
+  .task-item {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s;
+  }
+  .task-item:hover { border-color: #d1d5db; }
+  .task-item-left { flex: 1; min-width: 0; }
+  .task-item-icon {
+    font-size: 32px;
+    margin-bottom: 4px;
+  }
+  .task-item-name {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .task-item-meta {
+    font-size: 13px;
+    color: var(--text2);
+    font-weight: 600;
+  }
+  .task-item-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  /* Lot card — admin dashboard */
+  .lot-card {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .lot-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .lot-name {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--text);
+  }
+  .lot-pieces {
+    font-size: 13px;
+    color: var(--text2);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  /* Pipeline visuel */
+  .pipeline {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .pipeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 60px;
+  }
+  .pipeline-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    border: 3px solid var(--border);
+    background: var(--bg);
+    transition: all 0.2s;
+  }
+  .pipeline-dot.done {
+    background: #dcfce7;
+    border-color: #22c55e;
+  }
+  .pipeline-dot.current {
+    background: #fff;
+    border-width: 3px;
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(99,102,241,0.15); }
+    50% { box-shadow: 0 0 0 8px rgba(99,102,241,0.08); }
+  }
+  .pipeline-label {
+    font-size: 9px;
+    font-weight: 800;
+    text-align: center;
+    color: var(--text3);
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+  .pipeline-connector {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 16px;
+    flex-shrink: 0;
+    max-width: 20px;
+  }
+  .pipeline-connector.done { background: #22c55e; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text2);
+  }
+  .empty-state-icon { font-size: 56px; margin-bottom: 12px; }
+  .empty-state-title { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+  .empty-state-sub { font-size: 14px; font-weight: 600; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: white;
+    padding: 14px 24px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 700;
+    z-index: 999;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { background: #22c55e; }
+  #toast.error { background: #ef4444; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: var(--white);
+    border-radius: 24px;
+    padding: 32px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: var(--shadow-lg);
+    transform: scale(0.95);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal-box { transform: scale(1); }
+  .modal-title {
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+  .modal-sub {
+    font-size: 14px;
+    color: var(--text2);
+    font-weight: 600;
+    margin-bottom: 24px;
+  }
+  .form-field { margin-bottom: 16px; }
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-family: inherit;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s;
+    background: var(--white);
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--c-admin); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .modal-actions .btn { flex: 1; justify-content: center; }
+
+  /* Nav tabs (admin) */
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .nav-tab {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 800;
+    font-family: inherit;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .nav-tab.active {
+    background: var(--white);
+    color: var(--text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-icon { font-size: 28px; margin-bottom: 6px; }
+  .stat-num {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-label { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Coupe table */
+  .coupe-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .coupe-table th {
+    background: var(--bg);
+    padding: 10px 8px;
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text2);
+    border-bottom: 2px solid var(--border);
+    text-align: center;
+  }
+  .coupe-table th:first-child { text-align: left; }
+  .coupe-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    font-weight: 600;
+  }
+  .coupe-table td:first-child { text-align: left; font-weight: 700; }
+  .coupe-cell-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .coupe-cell-btn:hover { border-color: var(--c-coupe); background: #fff7ed; }
+  .coupe-cell-btn.done { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+
+  /* Section titre */
+  .section-title {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 12px;
+    margin-top: 24px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* Pièce detail card */
+  .piece-history {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 2px solid var(--border);
+  }
+  .history-item.done { background: #f0fdf4; border-color: #bbf7d0; }
+  .history-item.current { background: #eff6ff; border-color: #bfdbfe; }
+  .history-item.returned { background: #fff7ed; border-color: #fed7aa; }
+  .history-dot { font-size: 20px; width: 32px; text-align: center; }
+  .history-text { flex: 1; }
+  .history-stage { font-size: 14px; font-weight: 800; }
+  .history-time { font-size: 12px; color: var(--text2); font-weight: 600; }
+
+  /* Coming soon */
+  .coming-soon {
+    text-align: center;
+    padding: 80px 20px;
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 2px dashed var(--border);
+  }
+  .coming-soon-icon { font-size: 64px; margin-bottom: 16px; }
+  .coming-soon-title { font-size: 22px; font-weight: 900; margin-bottom: 8px; }
+  .coming-soon-sub { font-size: 15px; color: var(--text2); font-weight: 600; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .app-main { padding: 16px; }
+    .app-header { padding: 0 16px; }
+    .header-title span { display: none; }
+    .task-item { flex-direction: column; align-items: flex-start; }
+    .task-item-actions { width: 100%; }
+    .task-item-actions .btn { flex: 1; justify-content: center; }
+    .modal-box { padding: 24px 20px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ ÉCRAN LOGIN ══ -->
+<div id="screen-login">
+  <div class="login-box">
+    <div class="login-logo">🧵</div>
+    <div class="login-title">Usine Cataleya</div>
+    <div class="login-sub">Gestion de Production</div>
+
+    <div class="login-field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="poste@usine-cataleyaparis.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Mot de passe</label>
+      <input type="password" id="login-password" placeholder="••••••••">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Se connecter</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ══ ÉCRAN APP ══ -->
+<div id="screen-app">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="header-logo">🧵</div>
+      <div class="header-title">
+        Usine Cataleya
+        <span>Gestion de Production</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-badge">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-name">—</span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </header>
+
+  <!-- Contenu principal -->
+  <main class="app-main" id="app-main">
+    <div class="empty-state">
+      <div class="empty-state-icon">⏳</div>
+      <div class="empty-state-title">Chargement…</div>
+    </div>
+  </main>
+</div>
+
+<!-- ══ MODALS ══ -->
+
+<!-- Nouveau lot -->
+<div class="modal-overlay" id="modal-new-lot">
+  <div class="modal-box">
+    <div class="modal-title">➕ Nouveau Lot</div>
+    <div class="modal-sub">Créer un nouveau lot de production</div>
+    <div class="form-field">
+      <label class="form-label">Nom du lot</label>
+      <input class="form-input" id="new-lot-name" placeholder="Ex : LOT-MARS-001">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Nombre de pièces</label>
+      <input class="form-input" type="number" id="new-lot-qty" placeholder="Ex : 24" min="1">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Description (optionnel)</label>
+      <input class="form-input" id="new-lot-desc" placeholder="Ex : Abaya Sineme Noir S/M/L">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Liste de coupe (optionnel)</label>
+      <select class="form-select" id="new-lot-liste">
+        <option value="">— Aucune liste associée —</option>
+      </select>
+    </div>
+    <div class="form-field" style="margin-bottom:0">
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:14px;background:var(--bg);border-radius:var(--radius-sm);border:2px solid var(--border)">
+        <input type="checkbox" id="new-lot-stock-ok" style="width:20px;height:20px;cursor:pointer;accent-color:var(--c-final)">
+        <span style="font-weight:700;font-size:14px">🧵 Tissu déjà en stock — sauter l'étape Sara</span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-lot')">Annuler</button>
+      <button class="btn btn-primary" onclick="createLot()">✅ Créer le lot</button>
+    </div>
+  </div>
+</div>
+
+<!-- Renvoyer pièce -->
+<div class="modal-overlay" id="modal-return">
+  <div class="modal-box">
+    <div class="modal-title">↩️ Renvoyer une pièce</div>
+    <div class="modal-sub" id="modal-return-sub">—</div>
+    <div class="form-field">
+      <label class="form-label">Raison du renvoi</label>
+      <textarea class="form-textarea" id="return-reason" placeholder="Expliquez le problème…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-return')">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmReturn()">↩️ Confirmer le renvoi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Détail pièce -->
+<div class="modal-overlay" id="modal-piece-detail">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title" id="detail-title">—</div>
+    <div class="modal-sub" id="detail-sub">—</div>
+    <div class="piece-history" id="detail-history"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:none;padding:12px 20px" onclick="closeModal('modal-piece-detail')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// FIREBASE CONFIG
+// ══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDVpN0cbCqDYI2klKrWqZJAcYDX2ayx8F0",
+  authDomain: "usine-cataleya.firebaseapp.com",
+  databaseURL: "https://usine-cataleya-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "usine-cataleya",
+  storageBucket: "usine-cataleya.firebasestorage.app",
+  appId: "1:218489156781:web:92f657e50e63222a130224"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+// ══════════════════════════════════════════════
+// CONFIG MÉTIER
+// ══════════════════════════════════════════════
+const EMAIL_ROLE = {
+  'admin@usine-cataleyaparis.com':          'admin',
+  'sara@usine-cataleyaparis.com':           'sara',
+  'cao@usine-cataleyaparis.com':            'cao',
+  'coupe1@usine-cataleyaparis.com':         'coupe',
+  'coupe2@usine-cataleyaparis.com':         'coupe',
+  'coupe3@usine-cataleyaparis.com':         'coupe',
+  'etiquetage@usine-cataleyaparis.com':     'etiquetage',
+  'dispatche@usine-cataleyaparis.com':      'dispatche',
+  'controle1@usine-cataleyaparis.com':      'controle1',
+  'defauts@usine-cataleyaparis.com':        'defauts',
+  'controle.final@usine-cataleyaparis.com': 'final',
+};
+
+// Étapes du pipeline dans l'ordre
+const STAGES = [
+  { id:'stock',      label:'Stock Tissu',       short:'Stock',    person:'Sara',          icon:'🧵', color:'var(--c-stock)',    unit:'lot'   },
+  { id:'cao',        label:'CAO / Patrons',      short:'CAO',      person:'Tariq',         icon:'📐', color:'var(--c-cao)',      unit:'lot'   },
+  { id:'coupe1',     label:'Table Coupe 1',      short:'Coupe 1',  person:'Taha',          icon:'✂️', color:'var(--c-coupe)',   unit:'lot'   },
+  { id:'coupe2',     label:'Table Coupe 2',      short:'Coupe 2',  person:'Hamza',         icon:'✂️', color:'var(--c-coupe)',   unit:'lot'   },
+  { id:'coupe3',     label:'Table Coupe 3',      short:'Coupe 3',  person:'Souleymane',    icon:'✂️', color:'var(--c-coupe)',   unit:'lot'   },
+  { id:'etiquetage', label:'Étiquetage',         short:'Étiq.',    person:'Hassna',        icon:'🏷️', color:'var(--c-etiq)',    unit:'piece' },
+  { id:'dispatche',  label:'Dispatche',          short:'Dispatch', person:'Hanane',        icon:'📤', color:'var(--c-dispatch)', unit:'piece' },
+  { id:'controle1',  label:'Contrôle Chaîne',   short:'Ctrl 1',   person:'Imene',         icon:'🔍', color:'var(--c-ctrl1)',   unit:'piece' },
+  { id:'defauts',    label:'Contrôle Défauts',  short:'Défauts',  person:'Hassna 2',      icon:'🪡', color:'var(--c-defauts)', unit:'piece' },
+  { id:'final',      label:'Contrôle Final',    short:'Final',    person:'Sara & Mounia', icon:'✅', color:'var(--c-final)',   unit:'piece' },
+];
+
+const ROLE_STAGE = {
+  sara: 'stock', cao: 'cao',
+  coupe: null, // dynamique
+  etiquetage: 'etiquetage', dispatche: 'dispatche',
+  controle1: 'controle1', defauts: 'defauts', final: 'final'
+};
+
+const ROLE_INFO = {
+  admin:      { label:'Admin',          color:'var(--c-admin)',    avatar:'👑' },
+  fatima:     { label:'Fatima',         color:'#ec4899',           avatar:'👗' },
+  sara:       { label:'Sara',           color:'var(--c-stock)',    avatar:'🧵' },
+  cao:        { label:'CAO',            color:'var(--c-cao)',      avatar:'📐' },
+  coupe:      { label:'Table Coupe',    color:'var(--c-coupe)',    avatar:'✂️' },
+  etiquetage: { label:'Étiquetage',     color:'var(--c-etiq)',     avatar:'🏷️' },
+  dispatche:  { label:'Dispatche',      color:'var(--c-dispatch)', avatar:'📤' },
+  controle1:  { label:'Ctrl Chaîne',   color:'var(--c-ctrl1)',    avatar:'🔍' },
+  defauts:    { label:'Ctrl Défauts',  color:'var(--c-defauts)',  avatar:'🪡' },
+  final:      { label:'Ctrl Final',    color:'var(--c-final)',    avatar:'✅' },
+};
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let currentUser = null;
+let currentRole = null;
+let currentEmail = null;
+let currentCoupeStage = null;
+let allLots = {};
+let allListes = {};
+let returnContext = null;
+let adminTab = 'lots';
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    errEl.textContent = '❌ Email ou mot de passe incorrect.';
+    errEl.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  auth.signOut();
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    currentEmail = user.email;
+    currentRole = EMAIL_ROLE[user.email] || 'guest';
+    // Déterminer coupe1/2/3 selon email
+    if (currentRole === 'coupe') {
+      if (currentEmail.includes('coupe1')) currentCoupeStage = 'coupe1';
+      else if (currentEmail.includes('coupe2')) currentCoupeStage = 'coupe2';
+      else currentCoupeStage = 'coupe3';
+    }
+    setupUserBadge();
+    document.getElementById('screen-login').style.display = 'none';
+    document.getElementById('screen-app').classList.add('visible');
+    startListeners();
+  } else {
+    currentUser = null; currentRole = null;
+    document.getElementById('screen-login').style.display = 'flex';
+    document.getElementById('screen-app').classList.remove('visible');
+  }
+});
+
+function setupUserBadge() {
+  const info = ROLE_INFO[currentRole] || { label: currentRole, color:'#6b7280', avatar:'👤' };
+  const avatarEl = document.getElementById('user-avatar');
+  const nameEl   = document.getElementById('user-name');
+  avatarEl.textContent = info.avatar;
+  avatarEl.style.background = info.color;
+  nameEl.textContent = info.label;
+}
+
+// ══════════════════════════════════════════════
+// FIREBASE LISTENERS
+// ══════════════════════════════════════════════
+function startListeners() {
+  db.ref('production').on('value', snap => {
+    allLots = snap.val() || {};
+    render();
+  });
+  db.ref('listescoupe').on('value', snap => {
+    allListes = snap.val() || {};
+  });
+}
+
+// ══════════════════════════════════════════════
+// RENDU PRINCIPAL
+// ══════════════════════════════════════════════
+function render() {
+  const main = document.getElementById('app-main');
+  if (currentRole === 'admin') { renderAdmin(main); return; }
+  if (currentRole === 'sara') { renderSara(main); return; }
+  if (currentRole === 'cao') { renderCAO(main); return; }
+  if (currentRole === 'coupe') { renderCoupe(main); return; }
+
+  const stageId = ROLE_STAGE[currentRole];
+  if (stageId) {
+    const stageDef = STAGES.find(s => s.id === stageId);
+    const canReturn = ['controle1','defauts','final'].includes(currentRole);
+    renderPoste(stageId, stageDef, main, canReturn);
+    return;
+  }
+  main.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔒</div><div class="empty-state-title">Accès non autorisé</div></div>`;
+}
+
+// ══════════════════════════════════════════════
+// VUE ADMIN
+// ══════════════════════════════════════════════
+function renderAdmin(main) {
+  const lots = Object.entries(allLots);
+  const totalLots = lots.length;
+  const inProgress = lots.filter(([,l]) => getCurrentStage(l) !== 'final' && getCurrentStage(l) !== null).length;
+  const done = lots.filter(([,l]) => isLotDone(l)).length;
+  const totalPieces = lots.reduce((s,[,l]) => s + (l.pieces ? Object.keys(l.pieces).length : 0), 0);
+
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-eyebrow">Administration</div>
+      <div class="page-title">📊 Dashboard Production</div>
+      <div class="page-sub">Vue d'ensemble de tous les lots</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📦</div>
+        <div class="stat-num" style="color:var(--c-admin)">${totalLots}</div>
+        <div class="stat-label">Lots total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⚙️</div>
+        <div class="stat-num" style="color:var(--c-coupe)">${inProgress}</div>
+        <div class="stat-label">En cours</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-num" style="color:var(--c-final)">${done}</div>
+        <div class="stat-label">Terminés</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👗</div>
+        <div class="stat-num" style="color:var(--c-stock)">${totalPieces}</div>
+        <div class="stat-label">Pièces</div>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-tab ${adminTab==='lots'?'active':''}" onclick="setAdminTab('lots')">📦 Lots en cours</button>
+      <button class="nav-tab ${adminTab==='pipeline'?'active':''}" onclick="setAdminTab('pipeline')">🔄 Pipeline</button>
+      <button class="nav-tab ${adminTab==='produits'?'active':''}" onclick="setAdminTab('produits')">👗 Fiches Produits</button>
+      <button class="nav-tab ${adminTab==='listes'?'active':''}" onclick="setAdminTab('listes')">📋 Listes Coupe</button>
+      <button class="nav-tab ${adminTab==='patrons'?'active':''}" onclick="setAdminTab('patrons')">📐 Patrons</button>
+    </div>
+
+    <div id="admin-tab-content"></div>
+  `;
+  renderAdminTab();
+}
+
+function setAdminTab(tab) {
+  adminTab = tab;
+  renderAdmin(document.getElementById('app-main'));
+}
+
+function renderAdminTab() {
+  const el = document.getElementById('admin-tab-content');
+  if (adminTab === 'lots') renderAdminLots(el);
+  else if (adminTab === 'pipeline') renderAdminPipeline(el);
+  else if (adminTab === 'produits') renderComingSoon(el, '👗', 'Fiches Produits', 'Cette section permettra de gérer les fiches de chaque modèle (photos, matières, références…)');
+  else if (adminTab === 'patrons') renderComingSoon(el, '📐', 'Patrons de Couture', 'Cette section permettra d\'uploader et gérer les patrons pour chaque modèle.');
+}
+
+function renderAdminLots(el) {
+  const lots = Object.entries(allLots).sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0));
+  let html = `<button class="btn btn-primary" style="margin-bottom:20px" onclick="populateListeSelect();openModal('modal-new-lot')">➕ Nouveau Lot</button>`;
+
+  if (!lots.length) {
+    html += `<div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-title">Aucun lot</div><div class="empty-state-sub">Créez votre premier lot de production</div></div>`;
+    el.innerHTML = html; return;
+  }
+
+  html += lots.map(([lid, lot]) => {
+    const stage = getCurrentStage(lot);
+    const stageDef = STAGES.find(s => s.id === stage);
+    const pieces = lot.pieces ? Object.entries(lot.pieces) : [];
+    const done = pieces.filter(([,p]) => p.stage === 'final' || isLotDone(lot)).length;
+
+    return `
+      <div class="lot-card">
+        <div class="lot-card-header">
+          <div>
+            <div class="lot-name">${lot.name || lid}</div>
+            <div class="lot-pieces">${pieces.length} pièce${pieces.length>1?'s':''} · Créé ${ts(lot.createdAt)}</div>
+            ${lot.description ? `<div class="lot-pieces" style="margin-top:2px">📝 ${lot.description}</div>` : ''}
+          </div>
+          <div style="text-align:right">
+            ${stageDef ? `<span class="badge" style="background:${stageDef.color}22;color:${stageDef.color};font-size:13px;padding:6px 14px">${stageDef.icon} ${stageDef.label}</span>` : '<span class="badge" style="background:#dcfce7;color:#15803d">✅ Terminé</span>'}
+          </div>
+        </div>
+        ${renderPipelineHtml(lot)}
+        ${pieces.length > 0 ? `
+        <div style="margin-top:16px">
+          <div class="section-title">Pièces</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            ${pieces.map(([pid, p]) => {
+              const pStage = STAGES.find(s=>s.id===p.stage);
+              return `<span class="badge" style="background:${pStage?pStage.color+'22':'#f3f4f6'};color:${pStage?pStage.color:'#6b7280'};cursor:pointer;padding:6px 12px;font-size:12px" onclick="showPieceDetail('${lid}','${pid}')">${p.name||pid} ${p.returnReason?'⚠️':''}</span>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
+      </div>`;
+  }).join('');
+
+  el.innerHTML = html;
+}
+
+function renderAdminPipeline(el) {
+  let html = `<div class="section-title">Vue Pipeline — Où en est chaque étape</div>`;
+  STAGES.forEach(stage => {
+    const items = [];
+    Object.entries(allLots).forEach(([lid, lot]) => {
+      if (stage.unit === 'lot') {
+        if (getCurrentStage(lot) === stage.id) items.push({ name: lot.name, lot: lot });
+      } else {
+        if (lot.pieces) {
+          Object.entries(lot.pieces).forEach(([pid, p]) => {
+            if (p.stage === stage.id) items.push({ name: p.name || pid, lotName: lot.name });
+          });
+        }
+      }
+    });
+    html += `
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${items.length?'12px':'0'}">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:24px">${stage.icon}</span>
+            <div>
+              <div style="font-weight:800;font-size:16px">${stage.label}</div>
+              <div style="font-size:12px;color:var(--text2);font-weight:600">${stage.person}</div>
+            </div>
+          </div>
+          <span class="badge" style="background:${stage.color}22;color:${stage.color};font-size:14px;padding:6px 14px">${items.length} ${stage.unit==='lot'?'lot':'pièce'}${items.length>1?'s':''}</span>
+        </div>
+        ${items.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${items.map(i=>`<span class="badge" style="background:${stage.color}15;color:${stage.color};padding:5px 12px">${i.name}${i.lotName?` · ${i.lotName}`:''}</span>`).join('')}</div>` : ''}
+      </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderPipelineHtml(lot) {
+  const currentStage = getCurrentStage(lot);
+  const currentIdx = STAGES.findIndex(s => s.id === currentStage);
+
+  let html = '<div class="pipeline">';
+  STAGES.forEach((stage, idx) => {
+    const isDone = idx < currentIdx || isLotDone(lot);
+    const isCurrent = stage.id === currentStage;
+    let dotClass = isDone ? 'done' : (isCurrent ? 'current' : '');
+    let dotStyle = isCurrent ? `border-color:${stage.color}` : '';
+
+    html += `<div class="pipeline-step">
+      <div class="pipeline-dot ${dotClass}" style="${dotStyle}" title="${stage.label}">${isDone ? '✓' : stage.icon}</div>
+      <div class="pipeline-label">${stage.short}</div>
+    </div>`;
+    if (idx < STAGES.length - 1) {
+      html += `<div class="pipeline-connector ${isDone?'done':''}" style="align-self:start;margin-top:18px"></div>`;
+    }
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderAdminListes(el) {
+  const listes = Object.entries(allListes);
+  if (!listes.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">Aucune liste de coupe</div><div class="empty-state-sub">Créez des listes dans l'app Suivi de Production (index.html)</div></div>`;
+    return;
+  }
+
+  let html = `<div class="section-title">Listes de coupe disponibles — Cliquez "Activer" pour créer les lots automatiquement</div>`;
+  listes.forEach(([lid, liste]) => {
+    const lignes = Object.values(liste.lignes || {});
+    const lotsExistants = Object.values(allLots).filter(l => l.listeId === lid && !l.archived);
+
+    // Détecter les modèles uniques
+    const modeles = new Set();
+    lignes.forEach(row => {
+      const nom = (row.c || '').split('||')[0] || '';
+      if (nom) modeles.add(getModele(nom));
+    });
+
+    const dejaCrees = lotsExistants.length;
+    const total = modeles.size;
+    const restants = total - dejaCrees;
+
+    html += `
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:18px;font-weight:900">${liste.name || lid}</div>
+            <div style="font-size:13px;color:var(--text2);font-weight:600;margin-top:2px">${lignes.length} lignes · ${total} modèles détectés</div>
+            ${dejaCrees > 0 ? `<div style="font-size:12px;font-weight:700;color:var(--c-final);margin-top:4px">✅ ${dejaCrees} lot(s) déjà créé(s)</div>` : ''}
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            ${restants > 0
+              ? `<button class="btn btn-primary" onclick="activerListe('${lid}')">🚀 Activer — créer ${restants} lot(s)</button>`
+              : `<span class="badge" style="background:#dcfce7;color:#15803d;padding:8px 16px;font-size:13px">✅ Tous les lots créés</span>`}
+          </div>
+        </div>
+        ${total > 0 ? `
+        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
+          ${[...modeles].map(m => {
+            const lotExiste = lotsExistants.some(l => l.name === m);
+            return `<span class="badge" style="background:${lotExiste?'#dcfce7':'#f3f4f6'};color:${lotExiste?'#15803d':'#6b7280'};padding:5px 12px">${lotExiste?'✓ ':''} ${m}</span>`;
+          }).join('')}
+        </div>` : ''}
+      </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderComingSoon(el, icon, title, sub) {
+  el.innerHTML = `<div class="coming-soon">
+    <div class="coming-soon-icon">${icon}</div>
+    <div class="coming-soon-title">${title}</div>
+    <div class="coming-soon-sub">${sub}</div>
+    <div style="margin-top:16px;font-size:13px;color:var(--text3);font-weight:700">🚧 À venir</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// VUE SARA — Stock tissu
+// ══════════════════════════════════════════════
+function renderSara(main) {
+  const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'stock');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-eyebrow">Poste · Sara</div>
+      <div class="page-title">🧵 Vérification Stock Tissu</div>
+      <div class="page-sub">Vérifiez la présence des rouleaux pour chaque lot</div>
+    </div>
+    ${!lots.length ? `<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-title">Tout est à jour !</div><div class="empty-state-sub">Aucun lot en attente de vérification stock</div></div>` :
+    lots.map(([lid, lot]) => `
+      <div class="task-item">
+        <div>
+          <div class="task-item-icon">🧵</div>
+          <div class="task-item-name">${lot.name}</div>
+          <div class="task-item-meta">${lot.pieces ? Object.keys(lot.pieces).length : 0} pièces · ${lot.description || ''}</div>
+        </div>
+        <div class="task-item-actions">
+          <button class="btn btn-success btn-big" style="min-width:160px" onclick="validateLotStage('${lid}','stock','cao')">
+            ✅ Stock OK — Valider
+          </button>
+        </div>
+      </div>`).join('')}`;
+}
+
+// ══════════════════════════════════════════════
+// VUE CAO
+// ══════════════════════════════════════════════
+function renderCAO(main) {
+  const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'cao');
+  const listesOptions = Object.entries(allListes)
+    .map(([id, l]) => `<option value="${id}">${l.name || id}</option>`).join('');
+
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-eyebrow">Poste · CAO — Tariq</div>
+      <div class="page-title">📐 Assignation Tables de Coupe</div>
+      <div class="page-sub">Assignez chaque lot à une table de coupe et confirmez la liste de coupe</div>
+    </div>
+    ${!lots.length ? `<div class="empty-state"><div class="empty-state-icon">📐</div><div class="empty-state-title">Aucun lot à assigner</div><div class="empty-state-sub">En attente de lots validés au stock</div></div>` :
+    lots.map(([lid, lot]) => {
+      const listeCourante = lot.listeId ? (allListes[lot.listeId]?.name || lot.listeId) : null;
+      return `
+      <div class="task-item" style="flex-direction:column;align-items:flex-start;gap:16px">
+        <div>
+          <div class="task-item-icon">📐</div>
+          <div class="task-item-name">${lot.name}</div>
+          <div class="task-item-meta">${lot.description || '—'}</div>
+          ${listeCourante ? `<div style="margin-top:6px;padding:6px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-weight:700;color:#15803d">📋 Liste : ${listeCourante}</div>` : ''}
+        </div>
+        <div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label">Table de coupe</label>
+            <select class="form-select" id="cao-table-${lid}">
+              <option value="">— Choisir une table —</option>
+              <option value="coupe1">✂️ Table 1 — Taha</option>
+              <option value="coupe2">✂️ Table 2 — Hamza</option>
+              <option value="coupe3">✂️ Table 3 — Souleymane</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Liste de coupe ${listeCourante ? '(déjà choisie)' : '⚠️ obligatoire'}</label>
+            <select class="form-select" id="cao-liste-${lid}">
+              <option value="${lot.listeId || ''}">${listeCourante || '— Choisir une liste —'}</option>
+              ${listesOptions}
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-success btn-big" onclick="validateCAO('${lid}')">
+          ✅ Valider et envoyer à la table de coupe
+        </button>
+      </div>`;
+    }).join('')}`;
+}
+
+async function validateCAO(lotId) {
+  const table = document.getElementById(`cao-table-${lotId}`)?.value;
+  const liste = document.getElementById(`cao-liste-${lotId}`)?.value;
+  if (!table) { toast('⚠️ Choisissez une table de coupe', 'error'); return; }
+  if (!liste) { toast('⚠️ Choisissez une liste de coupe', 'error'); return; }
+  const updates = {
+    [`production/${lotId}/coupeAssign`]: table,
+    [`production/${lotId}/listeId`]: liste,
+  };
+  await db.ref().update(updates);
+  await validateLotStage(lotId, 'cao', table);
+}
+
+// ══════════════════════════════════════════════
+// VUE COUPE
+// ══════════════════════════════════════════════
+function renderCoupe(main) {
+  const stage = currentCoupeStage;
+  const stageDef = STAGES.find(s => s.id === stage);
+  // Un lot est "à ma table" si coupeAssign === mon stage ET currentStage === mon stage
+  const lots = Object.entries(allLots).filter(([,l]) =>
+    l.coupeAssign === stage && getCurrentStage(l) === stage
+  );
+
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-eyebrow">Poste · ${stageDef?.person || 'Coupe'}</div>
+      <div class="page-title">${stageDef?.icon} ${stageDef?.label}</div>
+      <div class="page-sub">Cochez les tailles au fur et à mesure de la coupe</div>
+    </div>
+    <div id="coupe-content"></div>`;
+
+  const coupeEl = document.getElementById('coupe-content');
+  if (!lots.length) {
+    coupeEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✂️</div><div class="empty-state-title">Aucun lot assigné</div><div class="empty-state-sub">En attente d'un lot du CAO</div></div>`;
+    return;
+  }
+
+  lots.forEach(([lid, lot]) => {
+    const listeId = lot.listeId;
+    const liste = listeId ? allListes[listeId] : null;
+    const lignes = liste ? Object.entries(liste.lignes || {}).sort((a,b) => (a[1].at||0)-(b[1].at||0)) : [];
+
+    let html = `
+      <div class="card" style="margin-bottom:20px">
+        <div style="font-size:20px;font-weight:900;margin-bottom:4px">${lot.name}</div>
+        <div style="font-size:13px;color:var(--text2);font-weight:600;margin-bottom:4px">${lot.description || ''}</div>
+        ${liste ? `<div style="font-size:12px;font-weight:700;color:var(--c-cao);margin-bottom:16px">📋 ${liste.name || listeId}</div>` : ''}`;
+
+    if (!lignes.length) {
+      html += `<div style="text-align:center;padding:24px;background:#fef9c3;border-radius:10px;color:#92400e;font-weight:700">⚠️ Aucune liste de coupe associée — demandez au CAO d'en assigner une</div>`;
+    } else {
+      // Lire les headers depuis le champ h de la première ligne
+      const firstRow = lignes[0]?.[1];
+      const headers = firstRow?.h ? firstRow.h.split('||') : (firstRow?.headers || []);
+      html += `<div style="overflow-x:auto"><table class="coupe-table"><thead><tr>`;
+      headers.forEach(h => { html += `<th>${h}</th>`; });
+      html += `</tr></thead><tbody>`;
+      lignes.forEach(([rowKey, row]) => {
+        // Lire les cells depuis le champ c (format pipe) ou cells (array)
+        const cells = row.c ? row.c.split('||') : (row.cells || []);
+        const isDone = row.done;
+        html += `<tr style="${isDone?'opacity:0.4;text-decoration:line-through':''}">`;
+        cells.forEach((cell, ci) => {
+          const isNum = ci > 1 && !isNaN(cell) && parseInt(cell) > 0 && headers[ci] !== 'Commentaire' && headers[ci] !== 'comment';
+          const cellDone = row.cells_done?.[ci];
+          if (isNum) {
+            html += `<td><button class="coupe-cell-btn ${cellDone?'done':''}" onclick="toggleCoupeCell('${lid}','${rowKey}',${ci},${!!cellDone})">${cellDone?'✓':cell}</button></td>`;
+          } else if (headers[ci] === 'Image' && cell?.startsWith('http')) {
+            html += `<td><img src="${cell}" style="width:36px;height:36px;object-fit:cover;border-radius:6px" onerror="this.style.display='none'"></td>`;
+          } else {
+            html += `<td>${cell||''}</td>`;
+          }
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+
+    // Compter les pièces qui seront générées
+    let pieceCount = 0;
+    if (liste?.lignes) pieceCount = parseLignesEnPieces(liste.lignes).length;
+
+    html += `
+      <div style="margin-top:16px">
+        ${pieceCount > 0 ? `<div style="text-align:center;margin-bottom:10px;padding:10px;background:#f0fdf4;border-radius:10px;font-size:14px;font-weight:800;color:#15803d">🔢 ${pieceCount} pièces individuelles seront générées automatiquement à la validation</div>` : ''}
+        <button class="btn btn-success btn-big" ${!liste?'disabled style="opacity:0.5;cursor:not-allowed"':''} onclick="validateLotStage('${lid}','${stage}','etiquetage')">
+          ✅ Coupe terminée — Envoyer à l'Étiquetage
+        </button>
+      </div>
+    </div>`;
+    coupeEl.innerHTML += html;
+  });
+}
+
+async function toggleCoupeCell(lotId, rowKey, cellIdx, current) {
+  const lot = allLots[lotId];
+  const listeId = lot?.coupeAssign_liste || lot?.listeId;
+  if (!listeId) return;
+  const path = `listescoupe/${listeId}/lignes/${rowKey}/cells_done/${cellIdx}`;
+  if (current) await db.ref(path).remove();
+  else await db.ref(path).set(true);
+}
+
+// ══════════════════════════════════════════════
+// VUE POSTE GÉNÉRIQUE (étiquetage, dispatche, ctrl1, défauts, final)
+// ══════════════════════════════════════════════
+function renderPoste(stageId, stageDef, main, canReturn) {
+  const prevStage = getPrevStage(stageId);
+  const nextStage = getNextStage(stageId);
+
+  const pieces = [];
+  Object.entries(allLots).forEach(([lid, lot]) => {
+    if (!lot.pieces) return;
+    Object.entries(lot.pieces).forEach(([pid, p]) => {
+      if (p.stage === stageId) pieces.push({ lotId:lid, pieceId:pid, lotName:lot.name, ...p });
+    });
+  });
+
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-eyebrow">Poste · ${stageDef?.person || ''}</div>
+      <div class="page-title">${stageDef?.icon} ${stageDef?.label}</div>
+      <div class="page-sub">${pieces.length} pièce${pieces.length>1?'s':''} en attente</div>
+    </div>
+    ${!pieces.length ? `<div class="empty-state"><div class="empty-state-icon">${stageDef?.icon}</div><div class="empty-state-title">Aucune pièce en attente</div><div class="empty-state-sub">Tout est traité ! En attente de l'étape précédente.</div></div>` :
+    pieces.map(p => `
+      <div class="task-item">
+        <div class="task-item-left">
+          <div class="task-item-icon">${stageDef?.icon}</div>
+          <div class="task-item-name">${p.name || p.pieceId}</div>
+          <div class="task-item-meta">Lot : ${p.lotName}</div>
+          ${p.returnReason ? `<div style="margin-top:6px;padding:6px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:12px;font-weight:700;color:#c2410c">⚠️ Renvoyé : ${p.returnReason}</div>` : ''}
+        </div>
+        <div class="task-item-actions">
+          ${canReturn && prevStage ? `<button class="btn btn-ghost" onclick="openReturn('${p.lotId}','${p.pieceId}','${(p.name||'').replace(/'/g,"\\'")}')">↩️ Renvoyer</button>` : ''}
+          ${nextStage
+            ? `<button class="btn btn-success" onclick="validatePiece('${p.lotId}','${p.pieceId}','${nextStage}')">✅ Valider</button>`
+            : `<button class="btn btn-success" style="background:var(--c-final)" onclick="finalizePiece('${p.lotId}','${p.pieceId}')">🎉 Terminer</button>`}
+        </div>
+      </div>`).join('')}`;
+}
+
+// ══════════════════════════════════════════════
+// FATIMA — Listes de coupe (lecture seule + commentaires)
+// ══════════════════════════════════════════════
+function renderFatima(main) {
+  const listes = Object.entries(allListes);
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-eyebrow">Poste · Fatima</div>
+      <div class="page-title">📋 Listes de Coupe</div>
+      <div class="page-sub">Consultez et annotez les listes de coupe</div>
+    </div>
+    ${!listes.length ? `<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">Aucune liste disponible</div></div>` :
+    listes.map(([lid, liste]) => `
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleFatimaListe('${lid}')">
+          <div>
+            <div style="font-size:18px;font-weight:800">${liste.name || lid}</div>
+            <div style="font-size:13px;color:var(--text2);font-weight:600">${Object.keys(liste.lignes||{}).length} lignes</div>
+          </div>
+          <span style="font-size:24px" id="fatima-arrow-${lid}">▶</span>
+        </div>
+        <div id="fatima-content-${lid}" style="display:none;margin-top:16px"></div>
+      </div>`).join('')}`;
+}
+
+function toggleFatimaListe(lid) {
+  const el = document.getElementById(`fatima-content-${lid}`);
+  const arrow = document.getElementById(`fatima-arrow-${lid}`);
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    arrow.textContent = '▼';
+    renderFatimaLignes(lid, allListes[lid]);
+  } else {
+    el.style.display = 'none';
+    arrow.textContent = '▶';
+  }
+}
+
+function renderFatimaLignes(lid, liste) {
+  const el = document.getElementById(`fatima-content-${lid}`);
+  const lignes = Object.entries(liste.lignes || {});
+  if (!lignes.length) { el.innerHTML = '<div style="color:var(--text2);font-size:14px">Aucune ligne.</div>'; return; }
+
+  const headers = lignes[0]?.[1]?.headers || [];
+  let html = `<div style="overflow-x:auto"><table class="coupe-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}<th>💬</th></tr></thead><tbody>`;
+  lignes.forEach(([rowKey, row]) => {
+    const cells = row.cells || [];
+    const comments = row.comments || {};
+    const hasComment = Object.keys(comments).length > 0;
+    html += `<tr>`;
+    cells.forEach(cell => { html += `<td>${cell}</td>`; });
+    html += `<td>
+      <button onclick="openFatimaComment('${lid}','${rowKey}','${(cells[0]||'').replace(/'/g,"\\'")}'))" style="border:none;background:${hasComment?'#fef3c7':'var(--bg)'};padding:6px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">
+        ${hasComment ? '💬' : '+ ajouter'}
+      </button>
+    </td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  el.innerHTML = html;
+}
+
+let fatimaCommentCtx = null;
+function openFatimaComment(listeId, rowKey, productName) {
+  fatimaCommentCtx = { listeId, rowKey };
+  const existingComments = allListes[listeId]?.lignes?.[rowKey]?.comments || {};
+  const myComment = existingComments[currentEmail] || '';
+  const modal = document.getElementById('modal-fatima-comment');
+  if (!modal) {
+    // Créer le modal dynamiquement
+    const div = document.createElement('div');
+    div.className = 'modal-overlay';
+    div.id = 'modal-fatima-comment';
+    div.innerHTML = `<div class="modal-box">
+      <div class="modal-title">💬 Commentaire</div>
+      <div class="modal-sub" id="fatima-comment-sub">—</div>
+      <div class="form-field">
+        <label class="form-label">Mon commentaire</label>
+        <textarea class="form-textarea" id="fatima-comment-input" placeholder="Votre remarque sur cette ligne…"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-fatima-comment')">Annuler</button>
+        <button class="btn btn-primary" onclick="saveFatimaComment()">💾 Sauvegarder</button>
+      </div>
+    </div>`;
+    document.body.appendChild(div);
+    div.addEventListener('click', e => { if(e.target===div) closeModal('modal-fatima-comment'); });
+  }
+  document.getElementById('fatima-comment-sub').textContent = productName;
+  document.getElementById('fatima-comment-input').value = myComment.text || myComment || '';
+  openModal('modal-fatima-comment');
+}
+
+async function saveFatimaComment() {
+  if (!fatimaCommentCtx) return;
+  const val = document.getElementById('fatima-comment-input').value.trim();
+  const path = `listescoupe/${fatimaCommentCtx.listeId}/lignes/${fatimaCommentCtx.rowKey}/comments/${currentEmail.replace(/\./g,'_')}`;
+  if (!val) await db.ref(path).remove();
+  else await db.ref(path).set({ text: val, at: Date.now() });
+  closeModal('modal-fatima-comment');
+  renderFatimaLignes(fatimaCommentCtx.listeId, allListes[fatimaCommentCtx.listeId]);
+  toast('💬 Commentaire sauvegardé', 'success');
+}
+
+function populateListeSelect() {
+  const sel = document.getElementById('new-lot-liste');
+  if (!sel) return;
+  const listes = Object.entries(allListes);
+  sel.innerHTML = '<option value="">— Aucune liste associée —</option>' +
+    listes.map(([id, l]) => `<option value="${id}">${l.name || id}</option>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// ACTIONS LOT / PIÈCE
+// ══════════════════════════════════════════════
+async function createLot() {
+  const name = document.getElementById('new-lot-name').value.trim();
+  const desc = document.getElementById('new-lot-desc').value.trim();
+  const listeId = document.getElementById('new-lot-liste').value;
+  const stockOk = document.getElementById('new-lot-stock-ok').checked;
+  if (!name) { toast('⚠️ Donnez un nom au lot', 'error'); return; }
+
+  const firstStage = stockOk ? 'cao' : 'stock';
+  const ref = db.ref('production').push();
+  const lot = {
+    name, description: desc || null, createdAt: Date.now(),
+    currentStage: firstStage,
+    listeId: listeId || null,
+    stages: stockOk ? { stock: { status:'done', doneAt:Date.now(), by:currentEmail, skipped:true } } : {},
+    pieces: {}
+  };
+  await ref.set(lot);
+  closeModal('modal-new-lot');
+  document.getElementById('new-lot-name').value = '';
+  document.getElementById('new-lot-desc').value = '';
+  document.getElementById('new-lot-liste').value = '';
+  document.getElementById('new-lot-stock-ok').checked = false;
+  toast(`✅ Lot créé${stockOk ? ' — étape Stock passée ✓' : ''}`, 'success');
+}
+
+// ── Parsing liste de coupe → pièces individuelles ──
+function parseLignesEnPieces(lignes) {
+  const IGNORE = new Set(['Produit','Image','Commentaire','comment','']);
+  const pieces = [];
+  Object.values(lignes).forEach(row => {
+    const h = (row.h || '').split('||');
+    const c = (row.c || '').split('||');
+    const nomProduit = c[0] || '';
+    if (!nomProduit) return;
+    // Trouver les colonnes taille/quantité (tout ce qui n'est pas ignoré)
+    h.forEach((header, idx) => {
+      if (IGNORE.has(header)) return;
+      const val = parseInt(c[idx]) || 0;
+      if (val <= 0) return;
+      // Générer val pièces pour cette taille
+      for (let i = 0; i < val; i++) {
+        pieces.push(`${nomProduit} ${header}`.trim());
+      }
+    });
+    // Cas "Sans déclinaison" : pas de taille, juste Qté
+    if (row.section === 'Sans déclinaison') {
+      const qteIdx = h.indexOf('Qté');
+      if (qteIdx >= 0) {
+        const qty = parseInt(c[qteIdx]) || 0;
+        for (let i = 0; i < qty; i++) {
+          pieces.push(nomProduit);
+        }
+      }
+    }
+  });
+  return pieces;
+}
+
+async function validateLotStage(lotId, stageId, nextStageId) {
+  const updates = {};
+  updates[`production/${lotId}/stages/${stageId}`] = { status:'done', doneAt:Date.now(), by:currentEmail };
+  updates[`production/${lotId}/currentStage`] = nextStageId;
+
+  const nextDef = STAGES.find(s => s.id === nextStageId);
+  const lot = allLots[lotId];
+
+  // Transition vers étiquetage = fin de coupe → éclater en pièces individuelles
+  if (nextStageId === 'etiquetage') {
+    const listeId = lot?.listeId;
+    const liste = listeId ? allListes[listeId] : null;
+    if (liste?.lignes) {
+      const noms = parseLignesEnPieces(liste.lignes);
+      if (noms.length > 0) {
+        // Supprimer les éventuelles pièces vides existantes
+        updates[`production/${lotId}/pieces`] = {};
+        const tempRef = db.ref(`production/${lotId}/pieces`);
+        noms.forEach(nom => {
+          const pKey = tempRef.push().key;
+          updates[`production/${lotId}/pieces/${pKey}`] = {
+            name: nom,
+            stage: 'etiquetage',
+            history: [{ stage:'etiquetage', status:'pending', at:Date.now() }]
+          };
+        });
+        toast(`✅ Coupe terminée — ${noms.length} pièces générées automatiquement`, 'success');
+      } else {
+        toast('✅ Coupe terminée — aucune pièce détectée dans la liste', 'success');
+      }
+    } else {
+      toast('✅ Coupe terminée — pas de liste associée', 'success');
+    }
+  } else {
+    toast('✅ Étape validée !', 'success');
+  }
+
+  await db.ref().update(updates);
+}
+
+async function validatePiece(lotId, pieceId, nextStage) {
+  const piece = allLots[lotId]?.pieces?.[pieceId];
+  if (!piece) return;
+  const history = [...(piece.history||[]), { stage:nextStage, status:'pending', at:Date.now(), by:currentEmail }];
+  await db.ref(`production/${lotId}/pieces/${pieceId}`).update({ stage:nextStage, history });
+  toast('✅ Pièce validée !', 'success');
+}
+
+async function finalizePiece(lotId, pieceId) {
+  const piece = allLots[lotId]?.pieces?.[pieceId];
+  if (!piece) return;
+  const history = [...(piece.history||[]), { stage:'done', status:'done', at:Date.now(), by:currentEmail }];
+  await db.ref(`production/${lotId}/pieces/${pieceId}`).update({ stage:'done', history });
+  toast('🎉 Pièce terminée !', 'success');
+}
+
+// Renvoyer pièce
+function openReturn(lotId, pieceId, pieceName) {
+  returnContext = { lotId, pieceId };
+  document.getElementById('modal-return-sub').textContent = `Pièce : ${pieceName}`;
+  document.getElementById('return-reason').value = '';
+  openModal('modal-return');
+}
+
+async function confirmReturn() {
+  const reason = document.getElementById('return-reason').value.trim();
+  if (!reason) { toast('⚠️ Précisez la raison du renvoi', 'error'); return; }
+  const { lotId, pieceId } = returnContext;
+  const piece = allLots[lotId]?.pieces?.[pieceId];
+  const prevStage = getPrevStage(piece.stage);
+  if (!prevStage) return;
+  const history = [...(piece.history||[]), { stage:prevStage, status:'returned', reason, at:Date.now(), by:currentEmail }];
+  await db.ref(`production/${lotId}/pieces/${pieceId}`).update({ stage:prevStage, history, returnReason:reason });
+  closeModal('modal-return');
+  toast('↩️ Pièce renvoyée', 'success');
+}
+
+// Détail pièce
+function showPieceDetail(lotId, pieceId) {
+  const lot = allLots[lotId];
+  const piece = lot?.pieces?.[pieceId];
+  if (!piece) return;
+  document.getElementById('detail-title').textContent = piece.name || pieceId;
+  document.getElementById('detail-sub').textContent = `Lot : ${lot.name}`;
+  const history = piece.history || [];
+  const histEl = document.getElementById('detail-history');
+  if (!history.length) { histEl.innerHTML = '<div style="color:var(--text2)">Aucun historique</div>'; }
+  else {
+    histEl.innerHTML = history.map(h => {
+      const stageDef = STAGES.find(s => s.id === h.stage) || { icon:'📦', label:h.stage };
+      const cls = h.status === 'done' ? 'done' : h.status === 'returned' ? 'returned' : 'current';
+      return `<div class="history-item ${cls}">
+        <div class="history-dot">${stageDef.icon}</div>
+        <div class="history-text">
+          <div class="history-stage">${stageDef.label}</div>
+          <div class="history-time">${ts(h.at)}${h.reason?` · ⚠️ ${h.reason}`:''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  openModal('modal-piece-detail');
+}
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function getCurrentStage(lot) {
+  if (lot.currentStage) return lot.currentStage;
+  // Fallback : déduire depuis les stages validés
+  for (let i = STAGES.length - 1; i >= 0; i--) {
+    if (lot.stages?.[STAGES[i].id]?.status === 'done') {
+      return i < STAGES.length - 1 ? STAGES[i+1].id : null;
+    }
+  }
+  return 'stock'; // début par défaut
+}
+
+function isLotDone(lot) {
+  return lot.stages?.[STAGES[STAGES.length-1].id]?.status === 'done' || lot.currentStage === 'done';
+}
+
+function getPrevStage(stageId) {
+  const idx = STAGES.findIndex(s => s.id === stageId);
+  return idx > 0 ? STAGES[idx-1].id : null;
+}
+
+function getNextStage(stageId) {
+  const idx = STAGES.findIndex(s => s.id === stageId);
+  return idx >= 0 && idx < STAGES.length - 1 ? STAGES[idx+1].id : null;
+}
+
+function ts(timestamp) {
+  if (!timestamp) return '—';
+  const d = new Date(timestamp);
+  return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+
+// ══════════════════════════════════════════════
+// EXTRACTION NOM DE MODÈLE (même logique que index.html)
+// ══════════════════════════════════════════════
+const COULEURS = new Set([
+  'noir','noire','black','blanc','blanche','white','gris','grise','grey','gray',
+  'rouge','red','rose','pink','bleu','bleue','blue','vert','verte','green',
+  'jaune','yellow','orange','violet','purple','lilas','beige','marron','brown',
+  'camel','mocha','mokka','taupe','greige','ivoire','ecru','nude','creme','marine',
+  'navy','bordeaux','burgundy','kaki','khaki','ocre','sable','corail','coral',
+  'aubergine','terracotta','terracota','gold','dore','argent','silver','cognac',
+  'caramel','chocolat','miel','latte','cappuccino','espresso','praline','noisette',
+  'poudre','poudree','poudre','emeraude','amande','grenat','cobalt',
+  'indigo','saphir','saphyr','sapphire','turquoise','teal','aqua','cyan','lavande',
+  'menthe','olive','anthracite','charbon','ebony','pearl','champagne','cuivre',
+  'copper','bronze','sienna','rouille','rust','blush','peach','abricot','citron',
+  'vanille','vanilla','cacao','stone','sand','clay','smoke','ash','coal','ivory',
+  'mist','sage','plum','cerise','framboise','magenta','fuchsia','fushia',
+  'nuit','roi','mate','satin','vif','doux','nacre','irise','brule','fume','velvet',
+  'glace','intense','profond','deep','dark','light','bright','soft','baby','dusty',
+  'pale','vivid','lime','mint','sky','forest','ocean','denim','electric','neon',
+  'fluo','pastel','naturel','naturelle','multicolore',
+].map(c => c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+
+const normMot = (w) => (w||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+const isCouleur = (w) => COULEURS.has(normMot(w));
+const cleanName = (raw) => (raw || '').replace(/\s*\(.*?\)/g, '').trim();
+
+function getModele(raw) {
+  const cleaned = cleanName(raw);
+  const words = cleaned.split(' ');
+  let end = words.length;
+  while (end > 1) {
+    const w = words[end - 1];
+    const prev = end >= 2 ? words[end - 2] : '';
+    const pprev = end >= 3 ? words[end - 3] : '';
+    if (isCouleur(w)) {
+      if (prev === '&' && isCouleur(pprev)) end -= 3;
+      else if (prev === '&') end -= 2;
+      else if (isCouleur(prev)) end -= 2;
+      else end -= 1;
+    } else { break; }
+  }
+  return words.slice(0, end).join(' ') || cleaned;
+}
+
+// ══════════════════════════════════════════════
+// ACTIVATION LISTE DE COUPE → CRÉATION AUTO DES LOTS
+// ══════════════════════════════════════════════
+async function activerListe(listeId) {
+  const liste = allListes[listeId];
+  if (!liste?.lignes) { toast('⚠️ Liste vide ou introuvable', 'error'); return; }
+
+  // Grouper les lignes par modèle
+  const groupes = {};
+  Object.entries(liste.lignes).forEach(([rowKey, row]) => {
+    const nomProduit = (row.c || '').split('||')[0] || (row.cells || [])[0] || '';
+    if (!nomProduit) return;
+    const modele = getModele(nomProduit);
+    if (!groupes[modele]) groupes[modele] = [];
+    groupes[modele].push(rowKey);
+  });
+
+  const modeles = Object.keys(groupes);
+  if (!modeles.length) { toast('⚠️ Aucun modèle détecté dans cette liste', 'error'); return; }
+
+  // Vérifier si des lots existent déjà pour cette liste
+  const lotsExistants = Object.values(allLots).filter(l => l.listeId === listeId && !l.archived);
+  if (lotsExistants.length > 0) {
+    if (!confirm(`⚠️ ${lotsExistants.length} lot(s) existent déjà pour cette liste. Créer quand même les lots manquants ?`)) return;
+  }
+
+  const updates = {};
+  let created = 0;
+  modeles.forEach(modele => {
+    // Ne pas recréer si existe déjà
+    const existe = Object.values(allLots).some(l => l.listeId === listeId && l.name === modele);
+    if (existe) return;
+    const ref = db.ref('production').push();
+    updates[`production/${ref.key}`] = {
+      name: modele,
+      description: `${liste.name} · ${groupes[modele].length} ligne(s)`,
+      listeId,
+      createdAt: Date.now(),
+      currentStage: 'stock',
+      autoCreated: true,
+      stages: {},
+      pieces: {}
+    };
+    created++;
+  });
+
+  if (!created) { toast('✅ Tous les lots existent déjà', 'success'); return; }
+  await db.ref().update(updates);
+  toast(`✅ ${created} lot(s) créé(s) automatiquement !`, 'success');
+}
+
+// ══════════════════════════════════════════════
+// MODAL / TOAST
+// ══════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id)?.classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id)?.classList.remove('open');
+}
+
+// Fermer modal en cliquant l'overlay
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); });
+});
+
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
+
+// Exposer pour les onclick inline
+window.validateLotStage = validateLotStage;
+window.validateCAO = validateCAO;
+window.validatePiece = validatePiece;
+window.finalizePiece = finalizePiece;
+window.openReturn = openReturn;
+window.confirmReturn = confirmReturn;
+window.showPieceDetail = showPieceDetail;
+window.toggleCoupeCell = toggleCoupeCell;
+window.toggleFatimaListe = toggleFatimaListe;
+window.openFatimaComment = openFatimaComment;
+window.saveFatimaComment = saveFatimaComment;
+window.setAdminTab = setAdminTab;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.createLot = createLot;
+window.activerListe = activerListe;
+</script>
+</body>
+</html>
