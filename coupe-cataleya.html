@@ -1030,6 +1030,7 @@ function renderAdminTab() {
   const el = document.getElementById('admin-tab-content');
   if (adminTab === 'lots') renderAdminLots(el);
   else if (adminTab === 'pipeline') renderAdminPipeline(el);
+  else if (adminTab === 'listes') renderAdminListes(el);
   else if (adminTab === 'produits') renderComingSoon(el, '👗', 'Fiches Produits', 'Cette section permettra de gérer les fiches de chaque modèle (photos, matières, références…)');
   else if (adminTab === 'patrons') renderComingSoon(el, '📐', 'Patrons de Couture', 'Cette section permettra d\'uploader et gérer les patrons pour chaque modèle.');
 }
