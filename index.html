@@ -89,6 +89,32 @@
         function App() {
             const [lists, setLists] = useState([]);
             const [activeListId, setActiveListId] = useState('global');
+
+            // Système de thèmes par liste
+            const LIST_THEMES = [
+                { // global
+                    id: 'global',
+                    gradient: 'from-green-600 to-emerald-600',
+                    headerSub: 'text-green-100',
+                    tabActive: 'bg-green-100 text-green-700 border-2 border-green-300',
+                    btnActive: 'bg-green-600 text-white border-green-600',
+                    label: '📂 GLOBAL',
+                    accent: '#16a34a'
+                },
+                { gradient: 'from-blue-600 to-indigo-600',       headerSub: 'text-blue-100',   tabActive: 'bg-blue-100 text-blue-700 border-2 border-blue-300',     btnActive: 'bg-blue-600 text-white border-blue-600',     accent: '#2563eb' },
+                { gradient: 'from-purple-600 to-violet-600',     headerSub: 'text-purple-100', tabActive: 'bg-purple-100 text-purple-700 border-2 border-purple-300', btnActive: 'bg-purple-600 text-white border-purple-600', accent: '#9333ea' },
+                { gradient: 'from-orange-500 to-amber-500',      headerSub: 'text-orange-100', tabActive: 'bg-orange-100 text-orange-700 border-2 border-orange-300', btnActive: 'bg-orange-500 text-white border-orange-500', accent: '#f97316' },
+                { gradient: 'from-rose-600 to-pink-600',         headerSub: 'text-rose-100',   tabActive: 'bg-rose-100 text-rose-700 border-2 border-rose-300',       btnActive: 'bg-rose-600 text-white border-rose-600',     accent: '#e11d48' },
+                { gradient: 'from-teal-600 to-cyan-600',         headerSub: 'text-teal-100',   tabActive: 'bg-teal-100 text-teal-700 border-2 border-teal-300',       btnActive: 'bg-teal-600 text-white border-teal-600',     accent: '#0d9488' },
+                { gradient: 'from-yellow-500 to-lime-500',       headerSub: 'text-yellow-100', tabActive: 'bg-yellow-100 text-yellow-700 border-2 border-yellow-300', btnActive: 'bg-yellow-500 text-white border-yellow-500', accent: '#eab308' },
+            ];
+            const getTheme = (listId) => {
+                if (listId === 'global') return LIST_THEMES[0];
+                const idx = lists.findIndex(l => l.id === listId);
+                return LIST_THEMES[idx + 1] || LIST_THEMES[((idx + 1) % (LIST_THEMES.length - 1)) + 1];
+            };
+            const activeTheme = getTheme(activeListId);
+            const activeListName = activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name || '';
             const [activeTab, setActiveTab] = useState('dashboard');
             React.useEffect(() => {
                 if (isSara) setActiveTab('dashboard');
@@ -738,11 +764,13 @@
                     )}
 
                     {/* Header */}
-                    <header className="bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg">
+                    <header className={`bg-gradient-to-r ${activeTheme.gradient} text-white shadow-lg transition-all duration-500`}>
                         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
                             <div>
-                                <h1 className="text-xl md:text-3xl font-bold">📦 Gestion Production</h1>
-                                <p className="text-green-100 text-xs md:text-sm hidden sm:block">Sousou Fashion - Suivi multi-listes</p>
+                                <h1 className="text-xl md:text-3xl font-bold">📦 Suivi de Production</h1>
+                                <p className={`${activeTheme.headerSub} text-xs md:text-sm hidden sm:block font-semibold`}>
+                                    {activeListId === 'global' ? 'CATALEYA · Toutes les listes' : `CATALEYA · "${activeListName}"`}
+                                </p>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="text-right">
@@ -817,7 +845,7 @@
                                     onClick={() => setActiveListId('global')}
                                     className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition ${
                                         activeListId === 'global'
-                                            ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                                            ? LIST_THEMES[0].tabActive
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                                 >
@@ -825,13 +853,15 @@
                                 </button>
 
                                 {/* Onglets des listes */}
-                                {lists.map(list => (
+                                {lists.map((list, idx) => {
+                                    const theme = LIST_THEMES[idx + 1] || LIST_THEMES[((idx + 1) % (LIST_THEMES.length - 1)) + 1];
+                                    return (
                                     <div key={list.id} className="flex items-center gap-1">
                                         <button
                                             onClick={() => setActiveListId(list.id)}
                                             className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition ${
                                                 activeListId === list.id
-                                                    ? 'bg-green-100 text-green-700 border-2 border-green-300'
+                                                    ? theme.tabActive
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                         >
@@ -839,7 +869,8 @@
                                         </button>
                                         {isAdmin && <button onClick={() => deleteList(list.id)} className="px-2 py-2 text-red-600 hover:bg-red-50 rounded" title="Supprimer cette liste">✕</button>}
                                     </div>
-                                ))}
+                                    );
+                                })}
 
                                 {isAdmin && <button onClick={() => setShowImportModal(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition whitespace-nowrap">➕ Nouvelle liste</button>}
                                 {isAdmin && <button onClick={exportBackup} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition whitespace-nowrap" title="Sauvegarder toutes les données">💾 Sauvegarder</button>}
@@ -939,7 +970,7 @@
                                     <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
                                 )}
                                 {activeTab === 'listecoupe' && (
-                                    <ListeCoupeTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} />
+                                    <ListeCoupeTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} activeTheme={activeTheme} listThemes={LIST_THEMES} activeListId={activeListId} parentLists={lists} />
                                 )}
                                 {activeTab === 'sav' && (
                                     <SAVTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} />
@@ -2958,7 +2989,7 @@
         }
 
         // ===================== LISTE DE COUPE TAB =====================
-        function ListeCoupeTab({ isAdmin, isSara, isCommentaires, userName }) {
+        function ListeCoupeTab({ isAdmin, isSara, isCommentaires, userName, activeTheme, listThemes, activeListId, parentLists }) {
             const canEditListe = isAdmin || isSara || isCommentaires;
             const db = window.db;
             const [listes, setListes] = React.useState([]);
@@ -2976,6 +3007,25 @@
             const [showPdfModal, setShowPdfModal] = React.useState(false);
             const [pdfListeId, setPdfListeId] = React.useState(null);
             const [pdfSection, setPdfSection] = React.useState('all');
+
+            // Couleur d'accent dynamique : suit l'index de la liste de coupe active (même palette que les onglets du haut)
+            const getCoupeAccent = (idx) => {
+                const themes = listThemes || [];
+                return (themes[idx + 1] && themes[idx + 1].accent) ? themes[idx + 1].accent : '#16a34a';
+            };
+            const activeCoupeIdx = listes.findIndex(l => l.id === activeListe);
+            const themeAccent = activeCoupeIdx >= 0 ? getCoupeAccent(activeCoupeIdx) : ((activeTheme && activeTheme.accent) ? activeTheme.accent : '#16a34a');
+            const themeAccentLight = themeAccent + '20';
+
+            // Synchronisation : quand la liste de suivi active change, sélectionner la liste de coupe au même index
+            React.useEffect(() => {
+                if (!activeListId || activeListId === 'global' || listes.length === 0 || !parentLists) return;
+                const parentIdx = parentLists.findIndex(l => l.id === activeListId);
+                if (parentIdx >= 0 && listes[parentIdx]) {
+                    setActiveListe(listes[parentIdx].id);
+                    setActiveListeNum(null);
+                }
+            }, [activeListId, listes]);
 
             const USER_COLORS = {
                 'Admin':  { bg: '#fef9c3', border: '#facc15', text: '#92400e', icon: 'A' },
@@ -3201,7 +3251,7 @@
                 const unsub = window.firebaseOnValue(r, snap => {
                     const val = snap.val() || {};
                     const arr = Object.entries(val).map(([id, v]) => ({ id, ...v }))
-                        .sort((a, b) => b.createdAt - a.createdAt);
+                        .sort((a, b) => a.createdAt - b.createdAt);
                     setListes(arr);
                     if (!activeListe && arr.length > 0) setActiveListe(arr[0].id);
                 });
@@ -3401,14 +3451,19 @@
                     {/* Sélection liste */}
                     {listes.length > 0 && (
                         <div className="flex gap-2 flex-wrap mb-4">
-                            {listes.map(l => (
+                            {listes.map((l, idx) => {
+                                const btnAccent = getCoupeAccent(idx);
+                                const isActive = activeListe === l.id;
+                                return (
                                 <button key={l.id}
                                     onClick={() => { setActiveListe(l.id); setActiveListeNum(null); }}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${activeListe === l.id ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'}`}>
+                                    style={isActive ? {background: btnAccent, color: 'white', borderColor: btnAccent} : {}}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${!isActive ? 'bg-white text-gray-700 border-gray-300 hover:border-gray-400' : ''}`}>
                                     {l.name}
                                     {isAdmin && <span onClick={e => { e.stopPropagation(); deleteList(l.id); }} className="ml-2 text-red-400 hover:text-red-600">✕</span>}
                                 </button>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
 
@@ -3418,10 +3473,10 @@
                             <div className="bg-white rounded-xl p-3 mb-4 shadow-sm border border-gray-100">
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="text-sm font-semibold text-gray-700">Avancement global</span>
-                                    <span className="text-sm font-bold text-green-700">{doneCells}/{allCells} tailles coupées ({pct}%)</span>
+                                    <span className="text-sm font-bold" style={{color: themeAccent}}>{doneCells}/{allCells} tailles coupées ({pct}%)</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-3">
-                                    <div className="bg-green-500 h-3 rounded-full transition-all" style={{width: pct + '%'}}></div>
+                                    <div className="h-3 rounded-full transition-all" style={{width: pct + '%', background: themeAccent}}></div>
                                 </div>
                             </div>
 
@@ -3440,7 +3495,8 @@
                             {/* Onglets sections */}
                             <div className="flex gap-2 flex-wrap mb-3">
                                 <button onClick={() => setActiveListeNum(null)}
-                                    className={`px-3 py-1 rounded-lg text-xs font-semibold border ${!activeListeNum ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300'}`}>
+                                    style={!activeListeNum ? {background: themeAccent, color: 'white', borderColor: themeAccent} : {}}
+                                    className={`px-3 py-1 rounded-lg text-xs font-semibold border ${!activeListeNum ? '' : 'bg-white text-gray-600 border-gray-300'}`}>
                                     Toutes
                                 </button>
                                 {SECTION_ORDER.filter(s => rowsBySection[s]).map(s => {
@@ -3448,7 +3504,8 @@
                                     const sDone = sRows.filter(r => r.done).length;
                                     return (
                                         <button key={s} onClick={() => setActiveListeNum(s)}
-                                            className={`px-3 py-1 rounded-lg text-xs font-semibold border ${activeListeNum === s ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300'}`}>
+                                            style={activeListeNum === s ? {background: themeAccent, color: 'white', borderColor: themeAccent} : {}}
+                                            className={`px-3 py-1 rounded-lg text-xs font-semibold border ${activeListeNum === s ? '' : 'bg-white text-gray-600 border-gray-300'}`}>
                                             {s} ({sDone}/{sRows.length})
                                         </button>
                                     );
@@ -3469,6 +3526,7 @@
                                 setCellPopup={setCellPopup}
                                 setCellCommentInput={setCellCommentInput}
                                 userName={userName}
+                                themeAccent={themeAccent}
                             />
                         </>
                     )}
@@ -3678,7 +3736,9 @@
         }
 
         // ── SectionTables component ──
-        function SectionTables({ displaySections, rowsBySection, search, toggleCell, setZoomPhoto, openCommentPopup, getColor, activeListe, canEditListe, setCellPopup, setCellCommentInput, userName }) {
+        function SectionTables({ displaySections, rowsBySection, search, toggleCell, setZoomPhoto, openCommentPopup, getColor, activeListe, canEditListe, setCellPopup, setCellCommentInput, userName, themeAccent }) {
+            const accent = themeAccent || '#16a34a';
+            const accentDark = accent; // used for border
             // Build global color map across all sections
             const globalNameColorMap = {};
             let colorIdx = 0;
@@ -3708,17 +3768,17 @@
                             <div key={section} className="mb-6">
                                 <div className="flex items-center gap-2 mb-2">
                                     <h3 className="font-bold text-gray-700 text-sm">✂️ {section}</h3>
-                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">{secDoneCells}/{secTotalCells} tailles</span>
+                                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{background: accent + '20', color: accent}}>{secDoneCells}/{secTotalCells} tailles</span>
                                 </div>
                                 <div style={{overflowX:"auto",overflowY:"auto",maxHeight:"55vh",borderRadius:"12px",boxShadow:"0 1px 4px rgba(0,0,0,0.1)",border:"1px solid #e5e7eb"}}>
                                     <table className="w-full text-xs" style={{borderCollapse:"collapse"}}>
                                         <thead>
-                                            <tr className="bg-green-600 text-white">
+                                            <tr style={{background: accent, color: 'white'}}>
                                                 {rows[0] && rows[0].headers.slice(0,-1).map((h, hi) => (
-                                                    <th key={hi} style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>{h}</th>
+                                                    <th key={hi} style={{position:"sticky",top:0,background:accent,border:`1px solid ${accent}cc`,padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>{h}</th>
                                                 ))}
-                                                <th style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",minWidth:"150px",zIndex:10}}>Commentaire</th>
-                                                <th style={{position:"sticky",top:0,background:"#16a34a",border:"1px solid #4a9a3c",padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>Qui ?</th>
+                                                <th style={{position:"sticky",top:0,background:accent,border:`1px solid ${accent}cc`,padding:"8px",textAlign:"center",whiteSpace:"nowrap",minWidth:"150px",zIndex:10}}>Commentaire</th>
+                                                <th style={{position:"sticky",top:0,background:accent,border:`1px solid ${accent}cc`,padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>Qui ?</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -3752,7 +3812,7 @@
                                                                                 ? <span className="text-gray-500 text-xs">{cell}</span>
                                                                                 : parseInt(cell) > 0
                                                                                     ? <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'2px'}}>
-                                                                                        <span style={{fontWeight:'bold',fontSize:'15px',color:isCellDone?'#15803d':'#16a34a',textDecoration:isCellDone?'line-through':'none'}}>{cell}</span>
+                                                                                        <span style={{fontWeight:'bold',fontSize:'15px',color:isCellDone?'#15803d':accent,textDecoration:isCellDone?'line-through':'none'}}>{cell}</span>
 
                                                                                       </div>
                                                                                     : <span style={{color:'#d1d5db'}}>0</span>
