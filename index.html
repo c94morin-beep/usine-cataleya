@@ -234,12 +234,16 @@
             }, []);
 
             // Charger les données depuis Firebase en temps réel
+            const ignoringFirebaseRef = React.useRef(false);
             useEffect(() => {
                 if (!user) return;
                 const init = () => {
                     const unsub = window.firebaseOnLists((data) => {
+                        if (ignoringFirebaseRef.current) { console.log('[Firebase] update ignoré (flag actif)'); return; }
                         const raw = Array.isArray(data) ? data : Object.values(data || {});
-                        // Nettoyer les marqueurs '__clear__' utilisés pour vider les commentaires dans Firebase
+                        // Log pour debug commentaires
+                        const sample = raw[0]?.orders?.slice(0,3).map(o => ({id:o.id, commentaires:o.commentaires}));
+                        console.log('[Firebase] setLists depuis Firebase, sample:', JSON.stringify(sample));
                         const cleaned = raw.map(list => ({
                             ...list,
                             orders: (list.orders || []).map(order => ({
@@ -260,14 +264,24 @@
                 }
             }, [user]);
 
+            // Nettoyer les undefined/null pour Firebase
+            const cleanForFirebase = (lists) => lists.map(list => ({
+                ...list,
+                orders: (list.orders || []).map(order => ({
+                    ...order,
+                    commentaires: (!order.commentaires || order.commentaires === '') ? '__clear__' : order.commentaires,
+                    commentAuthor: (!order.commentAuthor || order.commentAuthor === null) ? '__clear__' : order.commentAuthor,
+                }))
+            }));
+
             // Sauvegarder sur Firebase
             const saveLists = (newLists) => {
                 setLists(newLists);
                 const doSave = () => {
                     if (window.firebaseSaveLists) {
-                        console.log('Sauvegarde Firebase...', newLists.length, 'listes');
-                        window.firebaseSaveLists(newLists)
-                            .then(() => console.log('Firebase OK'))
+                        ignoringFirebaseRef.current = true;
+                        window.firebaseSaveLists(cleanForFirebase(newLists))
+                            .then(() => { setTimeout(() => { ignoringFirebaseRef.current = false; }, 2000); })
                             .catch(e => console.error('Firebase ERREUR:', e));
                     } else {
                         console.warn('firebaseSaveLists pas encore dispo, retry...');
@@ -399,15 +413,7 @@
                             : order
                     )
                 }));
-                // Pour Firebase : remplacer '' par '__clear__' car Firebase supprime les champs vides
-                const listsForFirebase = updatedLists.map(list => ({
-                    ...list,
-                    orders: (list.orders || []).map(order => ({
-                        ...order,
-                        commentaires: order.commentaires === '' ? '__clear__' : order.commentaires,
-                        commentAuthor: order.commentAuthor === null ? '__clear__' : order.commentAuthor,
-                    }))
-                }));
+                const listsForFirebase = cleanForFirebase(updatedLists);
                 setLists(updatedLists); // État local avec '' propre
                 const doSave = () => {
                     if (window.firebaseSaveLists) {
@@ -529,7 +535,20 @@
                         order.id === orderId ? { ...order, commentaires: newComment } : order
                     )
                 }));
-                saveLists(updatedLists);
+                const listsForFirebase = cleanForFirebase(updatedLists);
+                setLists(updatedLists);
+                ignoringFirebaseRef.current = true;
+                console.log('[updateComment] saving comment for orderId:', orderId, 'val:', newComment);
+                const doSave = () => {
+                    if (window.firebaseSaveLists) {
+                        window.firebaseSaveLists(listsForFirebase)
+                            .then(() => { console.log('[updateComment] Firebase save OK'); setTimeout(() => { ignoringFirebaseRef.current = false; }, 2000); })
+                            .catch(e => { console.error('Erreur commentaire Firebase:', e); ignoringFirebaseRef.current = false; });
+                    } else {
+                        setTimeout(doSave, 500);
+                    }
+                };
+                doSave();
             };
 
             const activeOrders = getActiveOrders();
@@ -3145,10 +3164,22 @@
                         }
                     });
                     const comments = row.comments || {};
-                    const commentHtml = Object.entries(comments).map(([user, c]) => {
-                        const colors = {'Admin':'#fef9c3','Fatima':'#dcfce7','Sara':'#fce7f3'};
-                        return `<span class="comment-badge" style="background:${colors[user]||'#f3f4f6'}">${user[0]}: ${c.text}</span>`;
+                    const cellComments = row.cell_comments || {};
+                    const colors = {'Admin':'#fef9c3','Fatima':'#dcfce7','Sara':'#fce7f3'};
+                    // Commentaires de ligne
+                    const lineHtml = Object.entries(comments).map(([user, c]) => {
+                        const txt = typeof c === 'object' ? c.text : c;
+                        return `<span class="comment-badge" style="background:${colors[user]||'#f3f4f6'}">${user[0]}: ${txt}</span>`;
                     }).join('');
+                    // Commentaires de cellule (tailles)
+                    const cellHtml = Object.entries(cellComments).map(([ci, userComments]) => {
+                        const header = row.headers && row.headers[parseInt(ci)] ? row.headers[parseInt(ci)] : 'Col'+ci;
+                        return Object.entries(userComments).map(([user, c]) => {
+                            const txt = typeof c === 'object' ? c.text : c;
+                            return `<span class="comment-badge" style="background:#fecaca">[${header}] ${user[0]}: ${txt}</span>`;
+                        }).join('');
+                    }).join('');
+                    const commentHtml = lineHtml + cellHtml;
                     r += `<td class="col-comment">${commentHtml || '<span style="color:#d1d5db">—</span>'}</td>`;
                     r += '</tr>';
                     return r;
@@ -3231,7 +3262,13 @@
 
                 const wb = window.XLSX.utils.book_new();
 
-                SECTION_ORDER.forEach(section => {
+                // Toutes les sections présentes dans cet ordre, puis les autres
+                const allSections = [
+                    ...SECTION_ORDER.filter(s => bySection[s]),
+                    ...Object.keys(bySection).filter(s => !SECTION_ORDER.includes(s))
+                ];
+
+                allSections.forEach(section => {
                     const sectionRows = (bySection[section] || []).sort((a,b) => (a.cells[0]||'').localeCompare(b.cells[0]||'','fr'));
                     if (!sectionRows.length) return;
 
@@ -3243,19 +3280,28 @@
                     sectionRows.forEach(row => {
                         const cells = row.cells.slice(0,-1);
                         const rowData = cells.map((cell, ci) => {
-                            if (ci === 0) return cell || ''; // nom produit
-                            if (ci === 1) return cell || ''; // URL image
-                            // Seulement les cellules purement numériques → nombre
+                            if (ci === 0) return cell || '';
+                            if (ci === 1) return cell || '';
                             const trimmed = (cell || '').trim();
                             return /^\d+$/.test(trimmed) ? parseInt(trimmed) : trimmed;
                         });
                         const comments = row.comments || {};
-                        const commentText = Object.entries(comments).map(([user, c]) => `${user}: ${c.text}`).join(' | ');
+                        const cellComments = row.cell_comments || {};
+                        const lineText = Object.entries(comments)
+                            .map(([user, c]) => `${user}: ${typeof c === 'object' ? c.text : c}`)
+                            .join(' | ');
+                        // Commentaires cellule avec nom de colonne
+                        const cellText = Object.entries(cellComments).map(([ci, userComments]) => {
+                            const header = row.headers && row.headers[parseInt(ci)] ? row.headers[parseInt(ci)] : 'Col'+ci;
+                            return Object.entries(userComments)
+                                .map(([user, c]) => `[${header}] ${user}: ${typeof c === 'object' ? c.text : c}`)
+                                .join(' | ');
+                        }).join(' | ');
+                        const commentText = [lineText, cellText].filter(Boolean).join(' | ');
                         sheetData.push([...rowData, commentText]);
                     });
 
                     const ws = window.XLSX.utils.aoa_to_sheet(sheetData);
-                    // Style header row
                     const sheetName = section.substring(0, 31);
                     window.XLSX.utils.book_append_sheet(wb, ws, sheetName);
                 });
