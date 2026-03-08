@@ -391,17 +391,32 @@
 
             // Mettre à jour un statut
             const updateStatus = (orderId, newStatus, newCommentaires, author) => {
-                // Firebase supprime les champs vides (''), on utilise '__clear__' pour effacer un commentaire
-                const commentValue = newCommentaires === '' ? '__clear__' : newCommentaires;
                 const updatedLists = lists.map(list => ({
                     ...list,
                     orders: list.orders.map(order =>
                         order.id === orderId 
-                            ? { ...order, status: newStatus, commentaires: commentValue !== undefined ? commentValue : order.commentaires, commentAuthor: (commentValue && commentValue !== '__clear__' && author) ? author : (commentValue === '__clear__' ? '__clear__' : order.commentAuthor) } 
+                            ? { ...order, status: newStatus, commentaires: newCommentaires !== undefined ? newCommentaires : order.commentaires, commentAuthor: (newCommentaires && author) ? author : (newCommentaires === '' ? null : order.commentAuthor) } 
                             : order
                     )
                 }));
-                saveLists(updatedLists);
+                // Pour Firebase : remplacer '' par '__clear__' car Firebase supprime les champs vides
+                const listsForFirebase = updatedLists.map(list => ({
+                    ...list,
+                    orders: (list.orders || []).map(order => ({
+                        ...order,
+                        commentaires: order.commentaires === '' ? '__clear__' : order.commentaires,
+                        commentAuthor: order.commentAuthor === null ? '__clear__' : order.commentAuthor,
+                    }))
+                }));
+                setLists(updatedLists); // État local avec '' propre
+                const doSave = () => {
+                    if (window.firebaseSaveLists) {
+                        window.firebaseSaveLists(listsForFirebase).catch(e => console.error('Firebase ERREUR:', e));
+                    } else {
+                        setTimeout(doSave, 500);
+                    }
+                };
+                doSave();
 
                 // Afficher la popup à chaque fois qu'un article est terminé
                 if (newStatus === STATUTS.RECU || newStatus === STATUTS.RANGE) {
