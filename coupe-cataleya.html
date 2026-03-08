@@ -1272,7 +1272,7 @@ async function validateCAO(lotId) {
   const table = document.getElementById(`cao-table-${lotId}`)?.value;
   if (!table) { toast('⚠️ Choisissez une table de coupe', 'error'); return; }
   const lot = allLots[lotId];
-  if (!lot?.listeId) { toast('⚠️ Ce lot n'a pas de liste de coupe associée', 'error'); return; }
+  if (!lot?.listeId) { toast('⚠️ Ce lot na pas de liste de coupe associee', 'error'); return; }
   await db.ref(`production/${lotId}/coupeAssign`).set(table);
   await validateLotStage(lotId, 'cao', table);
 }
