@@ -88,7 +88,7 @@
         // Composant principal
         function App() {
             const [lists, setLists] = useState([]);
-            const [activeListId, setActiveListId] = useState('global');
+            // activeListId géré via wrapper ci-dessous
 
             // Système de thèmes par liste
             const LIST_THEMES = [
@@ -115,7 +115,11 @@
             };
             const activeTheme = getTheme(activeListId);
             const activeListName = activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name || '';
-            const [activeTab, setActiveTab] = useState('dashboard');
+            const [activeTab, setActiveTabRaw] = useState(() => localStorage.getItem('cataleya_activeTab') || 'dashboard');
+            const setActiveTab = (tab) => { setActiveTabRaw(tab); localStorage.setItem('cataleya_activeTab', tab); };
+            const [activeListIdRaw, setActiveListIdRaw] = useState(() => localStorage.getItem('cataleya_activeListId') || 'global');
+            const setActiveListId = (id) => { setActiveListIdRaw(id); localStorage.setItem('cataleya_activeListId', id); };
+            const activeListId = activeListIdRaw;
             React.useEffect(() => {
                 if (isSara) setActiveTab('dashboard');
                 else if (isCommentaires) setActiveTab('production');
