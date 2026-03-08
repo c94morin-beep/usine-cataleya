@@ -3394,9 +3394,10 @@
                 }
             };
 
-            const saveCellComment = async (rowKey, cellIdx, val) => {
-                const path = 'listescoupe/' + activeListe + '/lignes/' + rowKey + '/cell_comments/' + cellIdx + '/' + userName;
-                if (!val.trim()) {
+            const saveCellComment = async (rowKey, cellIdx, val, targetUser) => {
+                const user = targetUser || userName;
+                const path = 'listescoupe/' + activeListe + '/lignes/' + rowKey + '/cell_comments/' + cellIdx + '/' + user;
+                if (!val || !val.trim()) {
                     await window.firebaseRemove(window.firebaseRef(db, path));
                 } else {
                     await window.firebaseSet(window.firebaseRef(db, path), { text: val.trim(), at: Date.now() });
@@ -3583,9 +3584,16 @@
                                         {Object.entries(cellPopup.row.cell_comments[cellPopup.cellIdx]).map(([user, c]) => {
                                             const col = getColor(user);
                                             return (
-                                                <div key={user} style={{background:col.bg,border:'1px solid '+col.border,borderRadius:'8px',padding:'4px 8px'}}>
-                                                    <span style={{fontSize:'11px',fontWeight:'bold',color:col.text}}>{user}</span>
-                                                    <span style={{fontSize:'11px',color:col.text}}> : {c.text}</span>
+                                                <div key={user} style={{background:col.bg,border:'1px solid '+col.border,borderRadius:'8px',padding:'4px 8px'}} className="flex items-center justify-between gap-2">
+                                                    <span style={{fontSize:'11px',color:col.text}}>
+                                                        <span style={{fontWeight:'bold'}}>{user}</span> : {c.text}
+                                                    </span>
+                                                    {(isAdmin || user === userName) && (
+                                                        <button onClick={async () => {
+                                                            await saveCellComment(cellPopup.rowKey, cellPopup.cellIdx, '', user);
+                                                            setCellPopup(null);
+                                                        }} className="text-red-400 hover:text-red-600 text-xs flex-shrink-0" title="Supprimer ce commentaire">🗑️</button>
+                                                    )}
                                                 </div>
                                             );
                                         })}
