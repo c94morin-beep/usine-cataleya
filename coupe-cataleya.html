@@ -1234,14 +1234,12 @@ function renderSara(main) {
 // ══════════════════════════════════════════════
 function renderCAO(main) {
   const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'cao');
-  const listesOptions = Object.entries(allListes)
-    .map(([id, l]) => `<option value="${id}">${l.name || id}</option>`).join('');
 
   main.innerHTML = `
     <div class="page-header">
       <div class="page-eyebrow">Poste · CAO — Tariq</div>
       <div class="page-title">📐 Assignation Tables de Coupe</div>
-      <div class="page-sub">Assignez chaque lot à une table de coupe et confirmez la liste de coupe</div>
+      <div class="page-sub">Choisissez la table de coupe pour chaque lot</div>
     </div>
     ${!lots.length ? `<div class="empty-state"><div class="empty-state-icon">📐</div><div class="empty-state-title">Aucun lot à assigner</div><div class="empty-state-sub">En attente de lots validés au stock</div></div>` :
     lots.map(([lid, lot]) => {
@@ -1252,28 +1250,19 @@ function renderCAO(main) {
           <div class="task-item-icon">📐</div>
           <div class="task-item-name">${lot.name}</div>
           <div class="task-item-meta">${lot.description || '—'}</div>
-          ${listeCourante ? `<div style="margin-top:6px;padding:6px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-weight:700;color:#15803d">📋 Liste : ${listeCourante}</div>` : ''}
+          ${listeCourante ? `<div style="margin-top:6px;padding:6px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-weight:700;color:#15803d">📋 ${listeCourante}</div>` : ''}
         </div>
-        <div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div>
-            <label class="form-label">Table de coupe</label>
-            <select class="form-select" id="cao-table-${lid}">
-              <option value="">— Choisir une table —</option>
-              <option value="coupe1">✂️ Table 1 — Taha</option>
-              <option value="coupe2">✂️ Table 2 — Hamza</option>
-              <option value="coupe3">✂️ Table 3 — Souleymane</option>
-            </select>
-          </div>
-          <div>
-            <label class="form-label">Liste de coupe ${listeCourante ? '(déjà choisie)' : '⚠️ obligatoire'}</label>
-            <select class="form-select" id="cao-liste-${lid}">
-              <option value="${lot.listeId || ''}">${listeCourante || '— Choisir une liste —'}</option>
-              ${listesOptions}
-            </select>
-          </div>
+        <div style="width:100%;max-width:360px">
+          <label class="form-label">Table de coupe</label>
+          <select class="form-select" id="cao-table-${lid}">
+            <option value="">— Choisir une table —</option>
+            <option value="coupe1">✂️ Table 1 — Taha</option>
+            <option value="coupe2">✂️ Table 2 — Hamza</option>
+            <option value="coupe3">✂️ Table 3 — Souleymane</option>
+          </select>
         </div>
         <button class="btn btn-success btn-big" onclick="validateCAO('${lid}')">
-          ✅ Valider et envoyer à la table de coupe
+          ✅ Envoyer à la table de coupe
         </button>
       </div>`;
     }).join('')}`;
@@ -1281,14 +1270,10 @@ function renderCAO(main) {
 
 async function validateCAO(lotId) {
   const table = document.getElementById(`cao-table-${lotId}`)?.value;
-  const liste = document.getElementById(`cao-liste-${lotId}`)?.value;
   if (!table) { toast('⚠️ Choisissez une table de coupe', 'error'); return; }
-  if (!liste) { toast('⚠️ Choisissez une liste de coupe', 'error'); return; }
-  const updates = {
-    [`production/${lotId}/coupeAssign`]: table,
-    [`production/${lotId}/listeId`]: liste,
-  };
-  await db.ref().update(updates);
+  const lot = allLots[lotId];
+  if (!lot?.listeId) { toast('⚠️ Ce lot n'a pas de liste de coupe associée', 'error'); return; }
+  await db.ref(`production/${lotId}/coupeAssign`).set(table);
   await validateLotStage(lotId, 'cao', table);
 }
 
@@ -1320,7 +1305,12 @@ function renderCoupe(main) {
   lots.forEach(([lid, lot]) => {
     const listeId = lot.listeId;
     const liste = listeId ? allListes[listeId] : null;
-    const lignes = liste ? Object.entries(liste.lignes || {}).sort((a,b) => (a[1].at||0)-(b[1].at||0)) : [];
+    // Filtrer uniquement les lignes qui correspondent au modèle de ce lot
+    const toutesLignes = liste ? Object.entries(liste.lignes || {}).sort((a,b) => (a[1].at||0)-(b[1].at||0)) : [];
+    const lignes = toutesLignes.filter(([,row]) => {
+      const nom = (row.c || '').split('||')[0] || '';
+      return getModele(nom) === lot.name;
+    });
 
     let html = `
       <div class="card" style="margin-bottom:20px">
@@ -1358,9 +1348,14 @@ function renderCoupe(main) {
       html += `</tbody></table></div>`;
     }
 
-    // Compter les pièces qui seront générées
+    // Compter uniquement les pièces de ce modèle
     let pieceCount = 0;
-    if (liste?.lignes) pieceCount = parseLignesEnPieces(liste.lignes).length;
+    if (liste?.lignes) {
+      const lignesDuModele = Object.fromEntries(
+        Object.entries(liste.lignes).filter(([,row]) => getModele((row.c||'').split('||')[0]||'') === lot.name)
+      );
+      pieceCount = parseLignesEnPieces(lignesDuModele).length;
+    }
 
     html += `
       <div style="margin-top:16px">
@@ -1607,7 +1602,11 @@ async function validateLotStage(lotId, stageId, nextStageId) {
     const listeId = lot?.listeId;
     const liste = listeId ? allListes[listeId] : null;
     if (liste?.lignes) {
-      const noms = parseLignesEnPieces(liste.lignes);
+      // Filtrer uniquement les lignes du modèle de ce lot
+      const lignesDuModele = Object.fromEntries(
+        Object.entries(liste.lignes).filter(([,row]) => getModele((row.c||'').split('||')[0]||'') === lot.name)
+      );
+      const noms = parseLignesEnPieces(lignesDuModele);
       if (noms.length > 0) {
         // Supprimer les éventuelles pièces vides existantes
         updates[`production/${lotId}/pieces`] = {};
