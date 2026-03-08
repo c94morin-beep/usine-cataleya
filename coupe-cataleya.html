@@ -1019,6 +1019,11 @@ function renderAdmin(main) {
 function setAdminTab(tab) {
   adminTab = tab;
   renderAdmin(document.getElementById('app-main'));
+  // Forcer le rendu de l'onglet après que le DOM soit prêt
+  setTimeout(() => {
+    const el = document.getElementById('admin-tab-content');
+    if (el) renderAdminTab();
+  }, 0);
 }
 
 function renderAdminTab() {
