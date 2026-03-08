@@ -927,13 +927,19 @@ function setupUserBadge() {
 // ══════════════════════════════════════════════
 // FIREBASE LISTENERS
 // ══════════════════════════════════════════════
+let lotsLoaded = false;
+let listesLoaded = false;
+
 function startListeners() {
   db.ref('production').on('value', snap => {
     allLots = snap.val() || {};
-    render();
+    lotsLoaded = true;
+    if (listesLoaded) render();
   });
   db.ref('listescoupe').on('value', snap => {
     allListes = snap.val() || {};
+    listesLoaded = true;
+    if (lotsLoaded) render();
   });
 }
 
