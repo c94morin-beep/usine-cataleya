@@ -1036,11 +1036,20 @@ function renderAdminTab() {
 }
 
 function renderAdminLots(el) {
-  const lots = Object.entries(allLots).sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0));
-  let html = `<button class="btn btn-primary" style="margin-bottom:20px" onclick="populateListeSelect();openModal('modal-new-lot')">➕ Nouveau Lot</button>`;
+  const search = (document.getElementById('lots-search')?.value || '').toLowerCase().trim();
+  let lots = Object.entries(allLots).sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'', 'fr'));
+  if (search) lots = lots.filter(([,l]) => (l.name||'').toLowerCase().includes(search));
+
+  let html = `
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <input id="lots-search" class="form-input" placeholder="🔍 Rechercher un lot…" style="flex:1;min-width:200px" oninput="renderAdminLots(document.getElementById('admin-tab-content'))" value="${search}">
+      <button class="btn btn-primary" onclick="populateListeSelect();openModal('modal-new-lot')">➕ Nouveau Lot</button>
+    </div>`;
 
   if (!lots.length) {
-    html += `<div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-title">Aucun lot</div><div class="empty-state-sub">Créez votre premier lot de production</div></div>`;
+    html += search
+      ? `<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-title">Aucun résultat</div><div class="empty-state-sub">Aucun lot ne correspond à "${search}"</div></div>`
+      : `<div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-title">Aucun lot</div><div class="empty-state-sub">Activez une liste de coupe pour créer les lots automatiquement</div></div>`;
     el.innerHTML = html; return;
   }
 
