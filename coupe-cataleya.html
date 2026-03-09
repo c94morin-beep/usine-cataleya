@@ -29,6 +29,7 @@
     --c-dispatch:  #84cc16;
     --c-ctrl1:     #f59e0b;
     --c-defauts:   #ef4444;
+    --c-atelier:   #f97316;
     --c-final:     #22c55e;
     --c-admin:     #6366f1;
 
@@ -725,6 +726,11 @@
 <!-- ══ MODALS ══ -->
 
 <!-- Nouveau lot -->
+<!-- Modal Zoom Photo -->
+<div class="modal-overlay" id="modal-zoom" onclick="closeModal('modal-zoom')" style="cursor:zoom-out;background:rgba(0,0,0,0.85)">
+  <img id="modal-zoom-img" src="" style="max-width:88vw;max-height:88vh;object-fit:contain;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5)" onclick="event.stopPropagation()">
+</div>
+
 <div class="modal-overlay" id="modal-new-lot">
   <div class="modal-box">
     <div class="modal-title">➕ Nouveau Lot</div>
@@ -822,6 +828,7 @@ const EMAIL_ROLE = {
   'controle1@usine-cataleyaparis.com':      'controle1',
   'defauts@usine-cataleyaparis.com':        'defauts',
   'controle.final@usine-cataleyaparis.com': 'final',
+  'abderrahim@usine-cataleyaparis.com':     'atelier',
 };
 
 // Étapes du pipeline dans l'ordre
@@ -835,6 +842,7 @@ const STAGES = [
   { id:'dispatche',  label:'Dispatche',          short:'Dispatch', person:'Hanane',        icon:'📤', color:'var(--c-dispatch)', unit:'piece' },
   { id:'controle1',  label:'Contrôle Chaîne',   short:'Ctrl 1',   person:'Imene',         icon:'🔍', color:'var(--c-ctrl1)',   unit:'piece' },
   { id:'defauts',    label:'Contrôle Défauts',  short:'Défauts',  person:'Hassna 2',      icon:'🪡', color:'var(--c-defauts)', unit:'piece' },
+  { id:'atelier',    label:'Chef Atelier',        short:'Atelier',  person:'Abderrahim',    icon:'🔧', color:'var(--c-atelier)', unit:'piece' },
   { id:'final',      label:'Contrôle Final',    short:'Final',    person:'Sara & Mounia', icon:'✅', color:'var(--c-final)',   unit:'piece' },
 ];
 
@@ -842,7 +850,7 @@ const ROLE_STAGE = {
   sara: 'stock', cao: 'cao',
   coupe: null, // dynamique
   etiquetage: 'etiquetage', dispatche: 'dispatche',
-  controle1: 'controle1', defauts: 'defauts', final: 'final'
+  controle1: 'controle1', defauts: 'defauts', atelier: 'atelier', final: 'final'
 };
 
 const ROLE_INFO = {
@@ -855,6 +863,7 @@ const ROLE_INFO = {
   dispatche:  { label:'Dispatche',      color:'var(--c-dispatch)', avatar:'📤' },
   controle1:  { label:'Ctrl Chaîne',   color:'var(--c-ctrl1)',    avatar:'🔍' },
   defauts:    { label:'Ctrl Défauts',  color:'var(--c-defauts)',  avatar:'🪡' },
+  atelier:    { label:'Chef Atelier',  color:'var(--c-atelier)', avatar:'🔧' },
   final:      { label:'Ctrl Final',    color:'var(--c-final)',    avatar:'✅' },
 };
 
@@ -957,7 +966,7 @@ function render() {
   const stageId = ROLE_STAGE[currentRole];
   if (stageId) {
     const stageDef = STAGES.find(s => s.id === stageId);
-    const canReturn = ['controle1','defauts','final'].includes(currentRole);
+    const canReturn = ['controle1','defauts','atelier','final'].includes(currentRole);
     renderPoste(stageId, stageDef, main, canReturn);
     return;
   }
@@ -1207,7 +1216,7 @@ function renderComingSoon(el, icon, title, sub) {
 // VUE SARA — Stock tissu
 // ══════════════════════════════════════════════
 function renderSara(main) {
-  const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'stock');
+  const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'stock').sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'','fr'));
   main.innerHTML = `
     <div class="page-header">
       <div class="page-eyebrow">Poste · Sara</div>
@@ -1234,39 +1243,87 @@ function renderSara(main) {
 // VUE CAO
 // ══════════════════════════════════════════════
 function renderCAO(main) {
-  const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'cao');
+  const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'cao').sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'','fr'));
 
   main.innerHTML = `
     <div class="page-header">
       <div class="page-eyebrow">Poste · CAO — Tariq</div>
       <div class="page-title">📐 Assignation Tables de Coupe</div>
-      <div class="page-sub">Choisissez la table de coupe pour chaque lot</div>
+      <div class="page-sub">${lots.length} lot(s) en attente d'assignation</div>
     </div>
-    ${!lots.length ? `<div class="empty-state"><div class="empty-state-icon">📐</div><div class="empty-state-title">Aucun lot à assigner</div><div class="empty-state-sub">En attente de lots validés au stock</div></div>` :
-    lots.map(([lid, lot]) => {
-      const listeCourante = lot.listeId ? (allListes[lot.listeId]?.name || lot.listeId) : null;
-      return `
-      <div class="task-item" style="flex-direction:column;align-items:flex-start;gap:16px">
-        <div>
-          <div class="task-item-icon">📐</div>
-          <div class="task-item-name">${lot.name}</div>
-          <div class="task-item-meta">${lot.description || '—'}</div>
-          ${listeCourante ? `<div style="margin-top:6px;padding:6px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-weight:700;color:#15803d">📋 ${listeCourante}</div>` : ''}
-        </div>
-        <div style="width:100%;max-width:360px">
-          <label class="form-label">Table de coupe</label>
-          <select class="form-select" id="cao-table-${lid}">
+    ${!lots.length ? `<div class="empty-state"><div class="empty-state-icon">📐</div><div class="empty-state-title">Aucun lot à assigner</div><div class="empty-state-sub">En attente de lots validés au stock</div></div>` : `
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer;user-select:none">
+          <input type="checkbox" id="cao-select-all" onchange="caoToggleAll(this.checked)" style="width:18px;height:18px;cursor:pointer">
+          Tout sélectionner
+        </label>
+        <span id="cao-selected-count" style="font-size:13px;color:var(--text2);font-weight:600"></span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px;max-width:360px">
+          <label class="form-label">Table pour les lots sélectionnés</label>
+          <select class="form-select" id="cao-table-bulk">
             <option value="">— Choisir une table —</option>
             <option value="coupe1">✂️ Table 1 — Taha</option>
             <option value="coupe2">✂️ Table 2 — Hamza</option>
             <option value="coupe3">✂️ Table 3 — Souleymane</option>
           </select>
         </div>
-        <button class="btn btn-success btn-big" onclick="validateCAO('${lid}')">
-          ✅ Envoyer à la table de coupe
+        <button class="btn btn-success" style="height:44px;padding:0 24px;font-size:15px" onclick="validateCAOBulk()">
+          ✅ Assigner les lots sélectionnés
         </button>
+      </div>
+    </div>
+    <div id="cao-lots-list">
+    ${lots.map(([lid, lot]) => {
+      const listeCourante = lot.listeId ? (allListes[lot.listeId]?.name || lot.listeId) : null;
+      return `
+      <div class="task-item" style="gap:12px;cursor:pointer" onclick="caoToggleLot('${lid}')">
+        <input type="checkbox" id="cao-check-${lid}" style="width:20px;height:20px;flex-shrink:0;cursor:pointer" onchange="caoUpdateCount()" onclick="event.stopPropagation()">
+        <div style="flex:1;min-width:0">
+          <div class="task-item-name">${lot.name}</div>
+          <div class="task-item-meta">${lot.description || listeCourante || '—'}</div>
+          ${listeCourante ? `<div style="margin-top:4px;display:inline-block;padding:3px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:700;color:#15803d">📋 ${listeCourante}</div>` : ''}
+        </div>
       </div>`;
-    }).join('')}`;
+    }).join('')}
+    </div>`}`;
+}
+
+function caoToggleLot(lid) {
+  const cb = document.getElementById(`cao-check-${lid}`);
+  if (cb) { cb.checked = !cb.checked; caoUpdateCount(); }
+}
+
+function caoToggleAll(checked) {
+  document.querySelectorAll('[id^="cao-check-"]').forEach(cb => cb.checked = checked);
+  caoUpdateCount();
+}
+
+function caoUpdateCount() {
+  const checked = document.querySelectorAll('[id^="cao-check-"]:checked').length;
+  const total = document.querySelectorAll('[id^="cao-check-"]').length;
+  const el = document.getElementById('cao-selected-count');
+  if (el) el.textContent = checked > 0 ? `${checked} lot(s) sélectionné(s)` : '';
+  const allCb = document.getElementById('cao-select-all');
+  if (allCb) allCb.checked = checked === total && total > 0;
+}
+
+async function validateCAOBulk() {
+  const table = document.getElementById('cao-table-bulk')?.value;
+  if (!table) { toast('⚠️ Choisissez une table de coupe', 'error'); return; }
+  const checked = [...document.querySelectorAll('[id^="cao-check-"]:checked')];
+  if (!checked.length) { toast('⚠️ Sélectionnez au moins un lot', 'error'); return; }
+  toast(`⏳ Assignation de ${checked.length} lot(s)...`, 'info');
+  for (const cb of checked) {
+    const lid = cb.id.replace('cao-check-', '');
+    const lot = allLots[lid];
+    if (!lot?.listeId) continue;
+    await db.ref(`production/${lid}/coupeAssign`).set(table);
+    await validateLotStage(lid, 'cao', table);
+  }
+  toast(`✅ ${checked.length} lot(s) assignés à la table !`, 'success');
 }
 
 async function validateCAO(lotId) {
@@ -1287,7 +1344,7 @@ function renderCoupe(main) {
   // Un lot est "à ma table" si coupeAssign === mon stage ET currentStage === mon stage
   const lots = Object.entries(allLots).filter(([,l]) =>
     l.coupeAssign === stage && getCurrentStage(l) === stage
-  );
+  ).sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'','fr'));
 
   main.innerHTML = `
     <div class="page-header">
@@ -1327,23 +1384,38 @@ function renderCoupe(main) {
       const headers = firstRow?.h ? firstRow.h.split('||') : (firstRow?.headers || []);
       html += `<div style="overflow-x:auto"><table class="coupe-table"><thead><tr>`;
       headers.forEach(h => { html += `<th>${h}</th>`; });
-      html += `</tr></thead><tbody>`;
+      html += `<th style="width:80px">Action</th></tr></thead><tbody>`;
       lignes.forEach(([rowKey, row]) => {
-        // Lire les cells depuis le champ c (format pipe) ou cells (array)
         const cells = row.c ? row.c.split('||') : (row.cells || []);
-        const isDone = row.done;
-        html += `<tr style="${isDone?'opacity:0.4;text-decoration:line-through':''}">`;
+        const isDone = row.done; // ligne validée manuellement
+        // Vérifier si toutes les cellules numériques de cette ligne sont cochées
+        const numCellsIdx = cells.map((c,ci) => ci).filter(ci =>
+          ci > 1 && !isNaN(cells[ci]) && parseInt(cells[ci]) > 0 &&
+          headers[ci] !== 'Commentaire' && headers[ci] !== 'comment'
+        );
+        const allCellsDone = numCellsIdx.length > 0 && numCellsIdx.every(ci => row.cells_done?.[ci]);
+        const rowGrised = isDone || allCellsDone;
+        html += `<tr style="${rowGrised ? 'opacity:0.35;background:#f3f4f6;' : ''}">`;
         cells.forEach((cell, ci) => {
           const isNum = ci > 1 && !isNaN(cell) && parseInt(cell) > 0 && headers[ci] !== 'Commentaire' && headers[ci] !== 'comment';
           const cellDone = row.cells_done?.[ci];
           if (isNum) {
-            html += `<td><button class="coupe-cell-btn ${cellDone?'done':''}" onclick="toggleCoupeCell('${lid}','${rowKey}',${ci},${!!cellDone})">${cellDone?'✓':cell}</button></td>`;
+            if (rowGrised) {
+              html += `<td><button class="coupe-cell-btn done" disabled>✓</button></td>`;
+            } else {
+              html += `<td><button class="coupe-cell-btn ${cellDone?'done':''}" onclick="toggleCoupeCell('${lid}','${rowKey}',${ci},${!!cellDone})">${cellDone?'✓':cell}</button></td>`;
+            }
           } else if (headers[ci] === 'Image' && cell?.startsWith('http')) {
-            html += `<td><img src="${cell}" style="width:36px;height:36px;object-fit:cover;border-radius:6px" onerror="this.style.display='none'"></td>`;
+            html += `<td><img src="${cell}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;cursor:zoom-in" onclick="openZoom('${cell}')" onerror="this.style.display='none'"></td>`;
           } else {
             html += `<td>${cell||''}</td>`;
           }
         });
+        // Bouton valider la ligne (si pas encore grisée)
+        html += `<td>${rowGrised
+          ? `<span style="font-size:11px;color:#9ca3af;font-weight:700">✓ Fait</span>`
+          : `<button class='btn btn-success' style='padding:4px 12px;font-size:12px' onclick='validateCoupeLigne("${lid}","${rowKey}")'>✅ Valider</button>`
+        }</td>`;
         html += `</tr>`;
       });
       html += `</tbody></table></div>`;
@@ -1358,16 +1430,33 @@ function renderCoupe(main) {
       pieceCount = parseLignesEnPieces(lignesDuModele).length;
     }
 
+    // Vérifier si toutes les lignes sont validées
+    const toutesValidees = lignes.length > 0 && lignes.every(([,row]) => {
+      if (row.done) return true;
+      const c = row.c ? row.c.split('||') : [];
+      const h = row.h ? row.h.split('||') : headers;
+      const nums = c.map((_,ci) => ci).filter(ci => ci > 1 && !isNaN(c[ci]) && parseInt(c[ci]) > 0 && h[ci] !== 'Commentaire' && h[ci] !== 'comment');
+      return nums.length > 0 && nums.every(ci => row.cells_done?.[ci]);
+    });
+
     html += `
       <div style="margin-top:16px">
-        ${pieceCount > 0 ? `<div style="text-align:center;margin-bottom:10px;padding:10px;background:#f0fdf4;border-radius:10px;font-size:14px;font-weight:800;color:#15803d">🔢 ${pieceCount} pièces individuelles seront générées automatiquement à la validation</div>` : ''}
-        <button class="btn btn-success btn-big" ${!liste?'disabled style="opacity:0.5;cursor:not-allowed"':''} onclick="validateLotStage('${lid}','${stage}','etiquetage')">
-          ✅ Coupe terminée — Envoyer à l'Étiquetage
+        ${pieceCount > 0 ? `<div style="text-align:center;margin-bottom:10px;padding:10px;background:#f0fdf4;border-radius:10px;font-size:14px;font-weight:800;color:#15803d">🔢 ${pieceCount} pièces seront générées à la validation</div>` : ''}
+        <button class="btn btn-success btn-big" style="${(!liste||!toutesValidees)?'opacity:0.4;cursor:not-allowed':''}" onclick="${toutesValidees?`validateLotStage('${lid}','${stage}','etiquetage')`:`toast('Validez toutes les lignes avant de terminer','error')`}">
+          ${toutesValidees ? '✅ Coupe terminée — Envoyer à l\'Étiquetage' : '⏳ Validez toutes les lignes pour terminer'}
         </button>
       </div>
     </div>`;
     coupeEl.innerHTML += html;
   });
+}
+
+async function validateCoupeLigne(lotId, rowKey) {
+  const lot = allLots[lotId];
+  const listeId = lot?.listeId;
+  if (!listeId) return;
+  await db.ref(`listescoupe/${listeId}/lignes/${rowKey}/done`).set(true);
+  toast('✅ Ligne validée', 'success');
 }
 
 async function toggleCoupeCell(lotId, rowKey, cellIdx, current) {
@@ -1404,7 +1493,7 @@ function renderPoste(stageId, stageDef, main, canReturn) {
     pieces.map(p => `
       <div class="task-item">
         <div class="task-item-left">
-          <div class="task-item-icon">${stageDef?.icon}</div>
+          ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:zoom-in" onclick="openZoom('${p.image}')" onerror="this.style.display='none'">` : `<div class="task-item-icon">${stageDef?.icon}</div>`}
           <div class="task-item-name">${p.name || p.pieceId}</div>
           <div class="task-item-meta">Lot : ${p.lotName}</div>
           ${p.returnReason ? `<div style="margin-top:6px;padding:6px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:12px;font-weight:700;color:#c2410c">⚠️ Renvoyé : ${p.returnReason}</div>` : ''}
@@ -1559,30 +1648,32 @@ async function createLot() {
 
 // ── Parsing liste de coupe → pièces individuelles ──
 function parseLignesEnPieces(lignes) {
-  const IGNORE = new Set(['Produit','Image','Commentaire','comment','']);
+  const IGNORE = new Set(['Produit','Image','Commentaire','comment','Qté','']);
   const pieces = [];
   Object.values(lignes).forEach(row => {
     const h = (row.h || '').split('||');
     const c = (row.c || '').split('||');
     const nomProduit = c[0] || '';
     if (!nomProduit) return;
-    // Trouver les colonnes taille/quantité (tout ce qui n'est pas ignoré)
+    // Récupérer l'image (colonne Image)
+    const imgIdx = h.indexOf('Image');
+    const image = (imgIdx >= 0 && c[imgIdx]?.startsWith('http')) ? c[imgIdx] : null;
+    // Trouver les colonnes taille/quantité
     h.forEach((header, idx) => {
       if (IGNORE.has(header)) return;
       const val = parseInt(c[idx]) || 0;
       if (val <= 0) return;
-      // Générer val pièces pour cette taille
       for (let i = 0; i < val; i++) {
-        pieces.push(`${nomProduit} ${header}`.trim());
+        pieces.push({ name: `${nomProduit} ${header}`.trim(), image });
       }
     });
-    // Cas "Sans déclinaison" : pas de taille, juste Qté
+    // Cas "Sans déclinaison"
     if (row.section === 'Sans déclinaison') {
       const qteIdx = h.indexOf('Qté');
       if (qteIdx >= 0) {
         const qty = parseInt(c[qteIdx]) || 0;
         for (let i = 0; i < qty; i++) {
-          pieces.push(nomProduit);
+          pieces.push({ name: nomProduit, image });
         }
       }
     }
@@ -1609,13 +1700,14 @@ async function validateLotStage(lotId, stageId, nextStageId) {
       );
       const noms = parseLignesEnPieces(lignesDuModele);
       if (noms.length > 0) {
-        // Supprimer les éventuelles pièces vides existantes
-        updates[`production/${lotId}/pieces`] = {};
+        // D'abord vider les pièces existantes, puis créer les nouvelles en deux étapes
+        await db.ref(`production/${lotId}/pieces`).remove();
         const tempRef = db.ref(`production/${lotId}/pieces`);
-        noms.forEach(nom => {
+        noms.forEach(piece => {
           const pKey = tempRef.push().key;
           updates[`production/${lotId}/pieces/${pKey}`] = {
-            name: nom,
+            name: piece.name,
+            image: piece.image || null,
             stage: 'etiquetage',
             history: [{ stage:'etiquetage', status:'pending', at:Date.now() }]
           };
@@ -1637,9 +1729,11 @@ async function validateLotStage(lotId, stageId, nextStageId) {
 async function validatePiece(lotId, pieceId, nextStage) {
   const piece = allLots[lotId]?.pieces?.[pieceId];
   if (!piece) return;
-  const history = [...(piece.history||[]), { stage:nextStage, status:'pending', at:Date.now(), by:currentEmail }];
-  await db.ref(`production/${lotId}/pieces/${pieceId}`).update({ stage:nextStage, history });
-  toast('✅ Pièce validée !', 'success');
+  // Abderrahim renvoie vers le contrôle d'origine (returnedFrom), sinon étape suivante normale
+  const targetStage = (piece.stage === 'atelier' && piece.returnedFrom) ? piece.returnedFrom : nextStage;
+  const history = [...(piece.history||[]), { stage:targetStage, status:'pending', at:Date.now(), by:currentEmail }];
+  await db.ref(`production/${lotId}/pieces/${pieceId}`).update({ stage:targetStage, history, returnReason:null, returnedFrom:null });
+  toast('✅ Pièce retouchée — renvoyée au contrôle !', 'success');
 }
 
 async function finalizePiece(lotId, pieceId) {
@@ -1663,10 +1757,17 @@ async function confirmReturn() {
   if (!reason) { toast('⚠️ Précisez la raison du renvoi', 'error'); return; }
   const { lotId, pieceId } = returnContext;
   const piece = allLots[lotId]?.pieces?.[pieceId];
-  const prevStage = getPrevStage(piece.stage);
-  if (!prevStage) return;
-  const history = [...(piece.history||[]), { stage:prevStage, status:'returned', reason, at:Date.now(), by:currentEmail }];
-  await db.ref(`production/${lotId}/pieces/${pieceId}`).update({ stage:prevStage, history, returnReason:reason });
+  // Les contrôles renvoient toujours vers Abderrahim (retouche)
+  const fromStage = piece.stage;
+  const returnStage = ['controle1','defauts','final'].includes(fromStage) ? 'atelier' : getPrevStage(fromStage);
+  if (!returnStage) return;
+  const history = [...(piece.history||[]), { stage:returnStage, status:'returned', reason, at:Date.now(), by:currentEmail }];
+  await db.ref(`production/${lotId}/pieces/${pieceId}`).update({
+    stage: returnStage,
+    history,
+    returnReason: reason,
+    returnedFrom: returnStage === 'atelier' ? fromStage : null
+  });
   closeModal('modal-return');
   toast('↩️ Pièce renvoyée', 'success');
 }
@@ -1831,6 +1932,11 @@ async function activerListe(listeId) {
 // ══════════════════════════════════════════════
 // MODAL / TOAST
 // ══════════════════════════════════════════════
+function openZoom(src) {
+  document.getElementById('modal-zoom-img').src = src;
+  openModal('modal-zoom');
+}
+
 function openModal(id) {
   document.getElementById(id)?.classList.add('open');
 }
