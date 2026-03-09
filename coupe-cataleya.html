@@ -985,12 +985,18 @@ function render() {
 function renderAdmin(main) {
   const lots = Object.entries(allLots);
   const totalLots = lots.length;
-  const inProgress = lots.filter(([,l]) => getCurrentStage(l) !== 'final' && getCurrentStage(l) !== null).length;
-  const done = lots.filter(([,l]) => isLotDone(l)).length;
-  // Compter les pièces par statut
+  // Pièces
   const totalPieces = lots.reduce((s,[,l]) => s + (l.pieces ? Object.keys(l.pieces).length : 0), 0);
   const piecesDone = lots.reduce((s,[,l]) => s + (l.pieces ? Object.values(l.pieces).filter(p => p.stage === 'done').length : 0), 0);
-  const piecesEnCours = totalPieces - piecesDone;
+  // Lots avec au moins une pièce non terminée = en cours
+  const lotsEnCours = lots.filter(([,l]) => {
+    if (!l.pieces || Object.keys(l.pieces).length === 0) return getCurrentStage(l) !== null;
+    return Object.values(l.pieces).some(p => p.stage !== 'done');
+  }).length;
+  const lotsTermines = totalLots - lotsEnCours;
+  // Légendes
+  const modelesExemples = lots.slice(0,3).map(([,l]) => l.name).join(', ');
+  const piecesExemples = lots.slice(0,2).flatMap(([,l]) => Object.values(l.pieces||{}).slice(0,2).map(p=>p.name)).filter(Boolean).slice(0,3).join(', ');
 
   main.innerHTML = `
     <div class="page-header">
@@ -1003,22 +1009,26 @@ function renderAdmin(main) {
       <div class="stat-card">
         <div class="stat-icon">📦</div>
         <div class="stat-num" style="color:var(--c-admin)">${totalLots}</div>
-        <div class="stat-label">Lots total</div>
+        <div class="stat-label">Modèles</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:4px;font-style:italic;line-height:1.3">${modelesExemples}${totalLots>3?'…':''}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">⚙️</div>
-        <div class="stat-num" style="color:var(--c-coupe)">${inProgress}</div>
-        <div class="stat-label">En cours</div>
+        <div class="stat-num" style="color:var(--c-coupe)">${lotsEnCours}</div>
+        <div class="stat-label">Modèles en cours</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:4px;font-style:italic;line-height:1.3">ex: Abaya Alice = 1 modèle</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">✅</div>
         <div class="stat-num" style="color:var(--c-final)">${piecesDone}</div>
-        <div class="stat-label">Pièces terminées</div>
+        <div class="stat-label">Articles terminés</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:4px;font-style:italic;line-height:1.3">${piecesExemples}${totalPieces>3?'…':''}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">👗</div>
         <div class="stat-num" style="color:var(--c-stock)">${totalPieces}</div>
-        <div class="stat-label">Pièces</div>
+        <div class="stat-label">Articles total</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:4px;font-style:italic;line-height:1.3">ex: Abaya Alice Bleu T52 = 1 article</div>
       </div>
     </div>
 
