@@ -1646,7 +1646,7 @@ function renderPoste(stageId, stageDef, main, canReturn, container, noHeader) {
         <div class="task-item-left">
           ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:zoom-in" onclick="openZoom('${p.image}')" onerror="this.style.display='none'">` : `<div class="task-item-icon">${stageDef?.icon}</div>`}
           <div class="task-item-name">${p.name || p.pieceId}</div>
-          <div class="task-item-meta">Lot : ${p.lotName}</div>
+          <div class="task-item-meta">Lot : ${p.lotName}${p.largeur ? ` · Largeur : ${p.largeur}` : ''}${p.option ? ` · Option : ${p.option}` : ''}</div>
           ${p.comment ? `<div style="margin-top:6px;padding:6px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:700;color:#1d4ed8">💬 ${p.comment}</div>` : ''}
           ${p.returnReason ? `<div style="margin-top:6px;padding:6px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:12px;font-weight:700;color:#c2410c">⚠️ Renvoyé : ${p.returnReason}</div>` : ''}
         </div>
@@ -1800,7 +1800,7 @@ async function createLot() {
 
 // ── Parsing liste de coupe → pièces individuelles ──
 function parseLignesEnPieces(lignes) {
-  const IGNORE = new Set(['Produit','Image','Commentaire','comment','Qté','']);
+  const IGNORE = new Set(['Produit','Image','Commentaire','comment','Qté','','Largeur','LARGEUR','Option','OPTION','largeur','option']);
   const pieces = [];
   Object.values(lignes).forEach(row => {
     const h = (row.h || '').split('||');
@@ -1831,8 +1831,7 @@ function parseLignesEnPieces(lignes) {
     // Trouver les colonnes taille/quantité
     h.forEach((header, idx) => {
       if (IGNORE.has(header)) return;
-      if (header === 'Largeur' || header === 'LARGEUR') return;
-      if (header === 'Option' || header === 'OPTION') return;
+      // Largeur et Option déjà dans IGNORE — skip si non numérique
       const val = parseInt(c[idx]) || 0;
       if (val <= 0) return;
       // Nom complet : "Produit Taille Largeur Option"
