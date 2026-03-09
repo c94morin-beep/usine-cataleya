@@ -877,6 +877,8 @@ let allLots = {};
 let allListes = {};
 let returnContext = null;
 let adminTab = 'lots';
+let saraSubView = null; // 'stock' | 'final' | null
+let searchQuery = '';
 
 // ══════════════════════════════════════════════
 // AUTH
@@ -958,7 +960,11 @@ function startListeners() {
 function render() {
   const main = document.getElementById('app-main');
   if (currentRole === 'admin') { renderAdmin(main); return; }
-  if (currentRole === 'sara') { renderSara(main); return; }
+  if (currentRole === 'sara') {
+    if (saraSubView === 'stock') { renderSaraStock(main); return; }
+    if (saraSubView === 'final') { renderSaraFinal(main); return; }
+    renderSara(main); return;
+  }
   if (currentRole === 'cao') { renderCAO(main); return; }
   if (currentRole === 'coupe') { renderCoupe(main); return; }
   if (currentRole === 'atelier') { renderAbderrahim(main); return; }
@@ -1293,6 +1299,7 @@ function renderAbderrahim(main) {
 }
 
 function renderSara(main) {
+  saraSubView = null;
   // Page de choix de poste pour Sara
   const stockCount = Object.values(allLots).filter(l => getCurrentStage(l) === 'stock').length;
   const finalPieces = Object.values(allLots).flatMap(l => Object.values(l.pieces||{})).filter(p => p.stage === 'final').length;
@@ -1329,6 +1336,7 @@ function renderSara(main) {
 }
 
 function renderSaraStock(main) {
+  saraSubView = 'stock';
   const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'stock').sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'','fr'));
   main.innerHTML = `
     <div class="page-header">
@@ -1347,7 +1355,7 @@ function renderSaraStock(main) {
           <div class="task-item-meta">${lot.description || ''}</div>
         </div>
         <div class="task-item-actions">
-          <button class="btn btn-success btn-big" style="min-width:160px" onclick="validateLotStage('${lid}','stock','cao').then(()=>renderSaraStock(document.getElementById('app-main')))">
+          <button class="btn btn-success btn-big" style="min-width:160px" onclick="validateLotStage('${lid}','stock','cao')">
             ✅ Stock OK — Valider
           </button>
         </div>
@@ -1355,6 +1363,7 @@ function renderSaraStock(main) {
 }
 
 function renderSaraFinal(main) {
+  saraSubView = 'final';
   const stageDef = STAGES.find(s => s.id === 'final');
   main.innerHTML = `
     <div class="page-header">
@@ -1739,14 +1748,24 @@ function renderPoste(stageId, stageDef, main, canReturn, container, noHeader) {
     });
   });
 
+  // Filtrer par recherche
+  const q = (searchQuery||'').toLowerCase().trim();
+  const filtered = q ? pieces.filter(p => (p.name||'').toLowerCase().includes(q) || (p.lotName||'').toLowerCase().includes(q)) : pieces;
+
   target.innerHTML = `
     ${noHeader ? '' : `<div class="page-header">
       <div class="page-eyebrow">Poste · ${stageDef?.person || ''}</div>
       <div class="page-title">${stageDef?.icon} ${stageDef?.label}</div>
       <div class="page-sub">${pieces.length} pièce${pieces.length>1?'s':''} en attente</div>
     </div>`}
-    ${!pieces.length ? `<div class="empty-state"><div class="empty-state-icon">${stageDef?.icon}</div><div class="empty-state-title">Aucune pièce en attente ✅</div><div class="empty-state-sub">Tout est traité !</div></div>` :
-    pieces.map(p => `
+    <div style="margin-bottom:14px">
+      <input type="text" placeholder="🔍 Rechercher un produit…" value="${searchQuery||''}"
+        oninput="searchQuery=this.value;render()"
+        style="width:100%;padding:10px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;font-weight:600;outline:none"
+        onfocus="this.style.borderColor='var(--c-stock)'" onblur="this.style.borderColor='#e5e7eb'">
+    </div>
+    ${!filtered.length ? `<div class="empty-state"><div class="empty-state-icon">${q?'🔍':stageDef?.icon}</div><div class="empty-state-title">${q?'Aucun résultat':'Aucune pièce en attente ✅'}</div><div class="empty-state-sub">${q?'Essayez un autre terme':'Tout est traité !'}</div></div>` :
+    filtered.map(p => `
       <div class="task-item">
         <div class="task-item-left">
           ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:zoom-in" onclick="openZoom('${p.image}')" onerror="this.style.display='none'">` : `<div class="task-item-icon">${stageDef?.icon}</div>`}
