@@ -1935,24 +1935,32 @@ function normalizeStr(s) {
 function orderMatchesPiece(orderName, pieceBase, pieceTaille, pieceLargeur, pieceOption) {
   const n = normalizeStr(orderName);
   const b = normalizeStr(pieceBase);
-  // Vérifie que tous les mots du base sont dans le nom de commande
+
+  // 1. Match du nom de base — tous les mots significatifs doivent être présents
   const words = b.split(' ').filter(w => w.length > 2);
+  if (words.length === 0) return false;
   const baseMatch = words.every(w => n.includes(w));
   if (!baseMatch) return false;
-  // Vérifie la taille si présente
+
+  // 2. Score attributs — on cherche le meilleur match, pas le parfait
+  // La taille peut être : "56", "t56", "taille 56", "taille personnalisee 56"
   if (pieceTaille) {
-    const taillePatterns = [pieceTaille, `t${pieceTaille}`, `taille ${pieceTaille}`];
+    const taillePatterns = [pieceTaille, `t${pieceTaille}`, `taille ${pieceTaille}`, `taille personnalisee ${pieceTaille}`];
     if (!taillePatterns.some(p => n.includes(normalizeStr(p)))) return false;
   }
-  // Vérifie la largeur si présente (ex: "M-L" → cherche "m l", "ml", "m-l")
+  // La largeur peut être : "m l", "ml", "xs s" etc. — on cherche les lettres séparément aussi
   if (pieceLargeur) {
-    const lNorm = normalizeStr(pieceLargeur);
-    if (!n.includes(lNorm)) return false;
+    const lNorm = normalizeStr(pieceLargeur); // ex: "m l" ou "xs s"
+    const lCompact = lNorm.replace(/\s/g,''); // ex: "ml" ou "xss"
+    if (!n.includes(lNorm) && !n.includes(lCompact)) return false;
   }
-  // Vérifie l'option si présente
+  // L'option : matching souple (60% des mots)
   if (pieceOption) {
-    const oNorm = normalizeStr(pieceOption);
-    if (!n.includes(oNorm)) return false;
+    const oWords = normalizeStr(pieceOption).split(' ').filter(w => w.length > 1);
+    if (oWords.length > 0) {
+      const oMatch = oWords.filter(w => n.includes(w)).length / oWords.length;
+      if (oMatch < 0.6) return false;
+    }
   }
   return true;
 }
@@ -1985,7 +1993,8 @@ async function assignPieceToOrder(pieceName, pieceLargeur, pieceOption) {
     toast(`📦 Assigné automatiquement → ${orderName.substring(0,40)}...`, 'success');
     return true;
   } else {
-    toast(`⚠️ Aucune commande en attente trouvée pour : ${pieceName}`, 'error');
+    console.warn(`[Cataleya] Pas de commande trouvée pour : "${pieceName}" (base: "${base}", taille: "${taille}", largeur: "${largeur}")`);
+    toast(`⚠️ Pas de commande trouvée pour : ${pieceName.substring(0,30)}`, 'error');
     return false;
   }
 }
