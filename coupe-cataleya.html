@@ -1226,7 +1226,7 @@ function renderSara(main) {
       <div class="page-title">Quel poste aujourd'hui ?</div>
     </div>
     <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px">
-      <div onclick="renderSaraStock(document.getElementById('main-content'))"
+      <div onclick="renderSaraStock(document.getElementById('app-main'))"
         style="flex:1;min-width:240px;background:white;border-radius:20px;border:3px solid #e5e7eb;padding:32px 28px;cursor:pointer;transition:all .15s;text-align:center"
         onmouseover="this.style.borderColor='#16a34a';this.style.boxShadow='0 4px 20px #16a34a22'"
         onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
@@ -1237,7 +1237,7 @@ function renderSara(main) {
           ${stockCount > 0 ? `${stockCount} lot(s) en attente` : '✅ Rien en attente'}
         </div>
       </div>
-      <div onclick="renderSaraFinal(document.getElementById('main-content'))"
+      <div onclick="renderSaraFinal(document.getElementById('app-main'))"
         style="flex:1;min-width:240px;background:white;border-radius:20px;border:3px solid #e5e7eb;padding:32px 28px;cursor:pointer;transition:all .15s;text-align:center"
         onmouseover="this.style.borderColor='var(--c-final)';this.style.boxShadow='0 4px 20px #22c55e22'"
         onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
@@ -1255,7 +1255,7 @@ function renderSaraStock(main) {
   const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'stock').sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'','fr'));
   main.innerHTML = `
     <div class="page-header">
-      <div class="page-eyebrow" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="renderSara(document.getElementById('main-content'))">
+      <div class="page-eyebrow" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="renderSara(document.getElementById('app-main'))">
         ← Retour
       </div>
       <div class="page-title">🧵 Vérification Stock Tissu</div>
@@ -1281,7 +1281,7 @@ function renderSaraFinal(main) {
   const stageDef = STAGES.find(s => s.id === 'final');
   main.innerHTML = `
     <div class="page-header">
-      <div class="page-eyebrow" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="renderSara(document.getElementById('main-content'))">
+      <div class="page-eyebrow" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="renderSara(document.getElementById('app-main'))">
         ← Retour
       </div>
       <div class="page-title">✅ Contrôle Final</div>
