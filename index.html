@@ -944,8 +944,8 @@
                                 {(isAdmin || isOperateur || isSara || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon="📊" label="Dashboard" />
                                 )}
-                                {/* Suivi Production — tous sauf Lecture */}
-                                {(isAdmin || isOperateur || isSara || isCommentaires || isLecteur) && (
+                                {/* Suivi Production — Admin + Sara + Fatima (pas Achraf) */}
+                                {(isAdmin || isSara || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'production'} onClick={() => setActiveTab('production')} icon="🧵" label="Suivi Production" />
                                 )}
                                 {/* Par Commande — Admin seulement */}
@@ -956,8 +956,8 @@
                                 {(isAdmin || isOperateur || isLecteur) && (
                                     <TabButton active={activeTab === 'multiorders'} onClick={() => setActiveTab('multiorders')} icon="👯" label="Multi-Commandes" />
                                 )}
-                                {/* Prêt à expédier — Admin + Achraf */}
-                                {(isAdmin || isOperateur || isLecteur) && (
+                                {/* Prêt à expédier — Admin seulement */}
+                                {(isAdmin || isLecteur) && (
                                     <TabButton active={activeTab === 'ready'} onClick={() => setActiveTab('ready')} icon="🎯" label="Prêt à expédier" />
                                 )}
                                 {/* Casiers — Admin seulement */}
@@ -971,7 +971,7 @@
                                 {(isAdmin || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'sav'} onClick={() => setActiveTab('sav')} icon="🔧" label="SAV" />
                                 )}
-                                {(isAdmin || isSara) && (
+                                {(isAdmin || isSara || isOperateur) && (
                                     <TabButton active={activeTab === 'reception'} onClick={() => setActiveTab('reception')} icon="📥" label="Réception" />
                                 )}
                             </div>
@@ -2654,6 +2654,7 @@
                                                             </div>
                                                             <p className="text-sm text-gray-600 mt-0.5">{order.client}</p>
                                                             <p className="text-xs text-green-600 mt-0.5">✅ {tousArticles.length - 1} autre(s) article(s) déjà prêt(s)</p>
+                                                            {order.comment && <p className="text-xs text-orange-700 bg-orange-100 border border-orange-300 rounded-lg px-2 py-1 mt-1 font-semibold">💬 {order.comment}</p>}
                                                         </div>
                                                         {active && <button onClick={() => handleReception(order)} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition">✅ Déposé</button>}
                                                     </div>
@@ -2680,6 +2681,7 @@
                                                             </div>
                                                             <p className="text-sm text-gray-600">{order.client || '—'}</p>
                                                             <p className="text-xs text-gray-400">{order.transporteur || '—'}</p>
+                                                            {order.comment && <p className="text-xs text-orange-700 bg-orange-100 border border-orange-300 rounded-lg px-2 py-1 mt-1 font-semibold">💬 {order.comment}</p>}
                                                         </div>
                                                         {active && <button onClick={() => handleReception(order)} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition">✅ Déposé</button>}
                                                     </div>
