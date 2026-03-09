@@ -1898,12 +1898,77 @@ async function validatePiece(lotId, pieceId, nextStage) {
   toast('✅ Pièce retouchée — renvoyée au contrôle !', 'success');
 }
 
+// ── Matching intelligent pièce → commande index.html ──
+function extractPieceInfo(pieceName) {
+  // Ex: "Abaya Ryhna Beige T56" → { base: "Abaya Ryhna Beige", taille: "56" }
+  const tailleMatch = pieceName.match(/\bT(\d+)\b/i);
+  const taille = tailleMatch ? tailleMatch[1] : null;
+  const base = pieceName.replace(/\bT\d+\b/i, '').trim().replace(/\s+/g,' ');
+  return { base, taille };
+}
+
+function normalizeStr(s) {
+  return (s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // accents
+    .replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function orderMatchesPiece(orderName, pieceBase, pieceTaille) {
+  const n = normalizeStr(orderName);
+  const b = normalizeStr(pieceBase);
+  // Vérifie que tous les mots du base sont dans le nom de commande
+  const words = b.split(' ').filter(w => w.length > 2);
+  const baseMatch = words.every(w => n.includes(w));
+  if (!baseMatch) return false;
+  // Vérifie la taille si présente
+  if (pieceTaille) {
+    // "T56" → cherche "56", "taille 56", "taille personnalisee 56", "t56"
+    const taillePatterns = [pieceTaille, `t${pieceTaille}`, `taille ${pieceTaille}`];
+    return taillePatterns.some(p => n.includes(normalizeStr(p)));
+  }
+  return true;
+}
+
+async function assignPieceToOrder(pieceName) {
+  const { base, taille } = extractPieceInfo(pieceName);
+  // Lire toutes les listes dans lists/
+  const snap = await db.ref('lists').once('value');
+  const allListsData = snap.val() || {};
+
+  let bestMatch = null; // { listId, listData, orderIdx, advancedCount }
+
+  Object.entries(allListsData).forEach(([listId, listData]) => {
+    const orders = listData.orders || [];
+    orders.forEach((order, idx) => {
+      if (!order || order.status === 'Reçu') return;
+      if (!orderMatchesPiece(order.name, base, taille)) return;
+      // Compter combien de commandes sont déjà "Reçu" dans cette liste (= liste la plus avancée)
+      const advancedCount = orders.filter(o => o && o.status === 'Reçu').length;
+      if (!bestMatch || advancedCount > bestMatch.advancedCount) {
+        bestMatch = { listId, listData, orderIdx: idx, advancedCount };
+      }
+    });
+  });
+
+  if (bestMatch) {
+    const { listId, orderIdx } = bestMatch;
+    await db.ref(`lists/${listId}/orders/${orderIdx}/status`).set('Reçu');
+    const orderName = bestMatch.listData.orders[orderIdx].name;
+    toast(`📦 Assigné automatiquement → ${orderName.substring(0,40)}...`, 'success');
+    return true;
+  } else {
+    toast(`⚠️ Aucune commande en attente trouvée pour : ${pieceName}`, 'error');
+    return false;
+  }
+}
+
 async function finalizePiece(lotId, pieceId) {
   const piece = allLots[lotId]?.pieces?.[pieceId];
   if (!piece) return;
   const history = [...(piece.history||[]), { stage:'done', status:'done', at:Date.now(), by:currentEmail }];
   await db.ref(`production/${lotId}/pieces/${pieceId}`).update({ stage:'done', history });
-  toast('🎉 Pièce terminée !', 'success');
+  // Assigner automatiquement à une commande dans index.html
+  await assignPieceToOrder(piece.name || '');
 }
 
 // Renvoyer pièce
