@@ -1019,6 +1019,7 @@ function renderAdmin(main) {
       <button class="nav-tab ${adminTab==='produits'?'active':''}" onclick="setAdminTab('produits')">👗 Fiches Produits</button>
       <button class="nav-tab ${adminTab==='listes'?'active':''}" onclick="setAdminTab('listes')">📋 Listes Coupe</button>
       <button class="nav-tab ${adminTab==='patrons'?'active':''}" onclick="setAdminTab('patrons')">📐 Patrons</button>
+      <button class="nav-tab ${adminTab==='reset'?'active':''}" style="color:#dc2626" onclick="setAdminTab('reset')">⚙️ Reset</button>
     </div>
 
     <div id="admin-tab-content"></div>
@@ -1041,6 +1042,7 @@ function renderAdminTab() {
   if (adminTab === 'lots') renderAdminLots(el);
   else if (adminTab === 'pipeline') renderAdminPipeline(el);
   else if (adminTab === 'listes') renderAdminListes(el);
+  else if (adminTab === 'reset') renderAdminReset(el);
   else if (adminTab === 'produits') renderComingSoon(el, '👗', 'Fiches Produits', 'Cette section permettra de gérer les fiches de chaque modèle (photos, matières, références…)');
   else if (adminTab === 'patrons') renderComingSoon(el, '📐', 'Patrons de Couture', 'Cette section permettra d\'uploader et gérer les patrons pour chaque modèle.');
 }
@@ -1601,6 +1603,109 @@ function renderCoupe(main) {
   });
 }
 
+// ══════════════════════════════════════════════
+// ADMIN RESET
+// ══════════════════════════════════════════════
+function renderAdminReset(el) {
+  const lots = Object.entries(allLots);
+  el.innerHTML = `
+    <div class="section-title" style="color:#dc2626">⚙️ Outils de Reset — Zone Dangereuse</div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div class="card" style="border:2px solid #fca5a5">
+        <div style="font-size:18px;font-weight:900;margin-bottom:6px">🔄 Régénérer les pièces d'un lot</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Supprime les pièces existantes et les régénère depuis la liste de coupe. À faire après un changement de code.</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${lots.filter(([,l]) => l.listeId && l.pieces).map(([lid, lot]) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fef2f2;border-radius:10px">
+              <div>
+                <div style="font-weight:800">${lot.name}</div>
+                <div style="font-size:12px;color:var(--text2)">${Object.keys(lot.pieces||{}).length} pièces actuelles · étape : ${lot.currentStage||'?'}</div>
+              </div>
+              <button class="btn" style="background:#dc2626;color:white;padding:6px 16px" onclick="regenPieces('${lid}')">🔄 Régénérer</button>
+            </div>`).join('')}
+          ${!lots.filter(([,l]) => l.listeId && l.pieces).length ? '<div style="color:var(--text2);font-size:13px">Aucun lot avec pièces trouvé</div>' : ''}
+        </div>
+      </div>
+
+      <div class="card" style="border:2px solid #fca5a5">
+        <div style="font-size:18px;font-weight:900;margin-bottom:6px">🗑️ Remettre un lot à zéro</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Supprime les pièces ET remet le lot à l'étape coupe. Index.html n'est pas touché.</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${lots.map(([lid, lot]) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fef2f2;border-radius:10px">
+              <div>
+                <div style="font-weight:800">${lot.name}</div>
+                <div style="font-size:12px;color:var(--text2)">étape actuelle : ${lot.currentStage||'stock'} · table : ${lot.coupeAssign||'non assigné'}</div>
+              </div>
+              <button class="btn" style="background:#dc2626;color:white;padding:6px 16px" onclick="resetLot('${lid}')">🗑️ Reset lot</button>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card" style="border:2px solid #dc2626;background:#fef2f2">
+        <div style="font-size:18px;font-weight:900;color:#dc2626;margin-bottom:6px">💥 Reset complet de la production</div>
+        <div style="font-size:13px;color:#7f1d1d;margin-bottom:16px">⚠️ Supprime TOUS les lots et TOUTES les pièces. Les listes de coupe et index.html ne sont PAS touchés.</div>
+        <button class="btn" style="background:#dc2626;color:white;width:100%;padding:12px;font-size:16px;font-weight:900" onclick="resetTout()">💥 Reset complet — Tout supprimer</button>
+      </div>
+
+    </div>`;
+}
+
+async function regenPieces(lotId) {
+  if (!confirm('Régénérer les pièces de ce lot ? Les pièces actuelles seront supprimées.')) return;
+  const lot = allLots[lotId];
+  const listeId = lot?.listeId;
+  const liste = listeId ? allListes[listeId] : null;
+  if (!liste?.lignes) { toast('⚠️ Pas de liste associée', 'error'); return; }
+
+  const lignesDuModele = Object.fromEntries(
+    Object.entries(liste.lignes).filter(([,row]) => getModele((row.c||'').split('||')[0]||'') === lot.name)
+  );
+  const noms = parseLignesEnPieces(lignesDuModele);
+  if (!noms.length) { toast('⚠️ Aucune pièce détectée', 'error'); return; }
+
+  // Supprimer les pièces existantes
+  await db.ref(`production/${lotId}/pieces`).remove();
+
+  // Régénérer
+  const updates = {};
+  const tempRef = db.ref(`production/${lotId}/pieces`);
+  noms.forEach(piece => {
+    const pKey = tempRef.push().key;
+    updates[`production/${lotId}/pieces/${pKey}`] = {
+      name: piece.name,
+      image: piece.image || null,
+      comment: piece.comment || null,
+      largeur: piece.largeur || null,
+      option: piece.option || null,
+      stage: lot.currentStage || 'etiquetage',
+      history: [{ stage: lot.currentStage || 'etiquetage', status:'pending', at:Date.now() }]
+    };
+  });
+  await db.ref().update(updates);
+  toast(`✅ ${noms.length} pièces régénérées !`, 'success');
+}
+
+async function resetLot(lotId) {
+  if (!confirm('Remettre ce lot à zéro ? Les pièces seront supprimées et le lot retournera à l\'étape coupe.')) return;
+  const lot = allLots[lotId];
+  const coupeStage = lot.coupeAssign || 'coupe1';
+  await db.ref(`production/${lotId}/pieces`).remove();
+  await db.ref(`production/${lotId}`).update({
+    currentStage: coupeStage,
+    stages: { stock: lot.stages?.stock || null, cao: lot.stages?.cao || null }
+  });
+  toast('✅ Lot remis à l\'étape coupe', 'success');
+}
+
+async function resetTout() {
+  if (!confirm('⚠️ ATTENTION : Supprimer TOUS les lots et pièces ?\nLes listes de coupe et index.html ne seront PAS touchés.')) return;
+  if (!confirm('Dernière confirmation — êtes-vous sûr ?')) return;
+  await db.ref('production').remove();
+  toast('✅ Production remise à zéro', 'success');
+}
+
 async function validateCoupeLigne(lotId, rowKey) {
   const lot = allLots[lotId];
   const listeId = lot?.listeId;
@@ -1800,7 +1905,7 @@ async function createLot() {
 
 // ── Parsing liste de coupe → pièces individuelles ──
 function parseLignesEnPieces(lignes) {
-  const IGNORE = new Set(['Produit','Image','Commentaire','comment','Qté','','Largeur','LARGEUR','Option','OPTION','largeur','option']);
+  const IGNORE = new Set(['Produit','Image','Commentaire','comment','Qté','','Largeur','LARGEUR','Option','OPTION','Option2','OPTION2','largeur','option']);
   const pieces = [];
   Object.values(lignes).forEach(row => {
     const h = (row.h || '').split('||');
@@ -1822,11 +1927,14 @@ function parseLignesEnPieces(lignes) {
     // Récupérer largeur et option (attributs fixes de la ligne)
     const largeurIdx = h.findIndex(x => x === 'Largeur' || x === 'LARGEUR');
     const largeur = (largeurIdx >= 0 && c[largeurIdx]?.trim()) ? c[largeurIdx].trim() : null;
-    const optionIdx = h.findIndex(x => x === 'Option' || x === 'OPTION');
+    const optionIdx = h.findIndex(x => x === 'Option' || x === 'OPTION' || x === 'Option2' || x === 'OPTION2');
     const option = (optionIdx >= 0 && c[optionIdx]?.trim()) ? c[optionIdx].trim() : null;
+    // Option2 séparée si présente
+    const option2Idx = h.findIndex(x => x === 'Option2' || x === 'OPTION2');
+    const option2 = (option2Idx >= 0 && option2Idx !== optionIdx && c[option2Idx]?.trim()) ? c[option2Idx].trim() : null;
 
-    // Construire le suffixe attributs (ex: " M-L Option Broderie")
-    const attrs = [largeur, option].filter(Boolean).join(' ');
+    // Construire le suffixe attributs (ex: " M-L Palazzo")
+    const attrs = [largeur, option, option2].filter(Boolean).join(' ');
 
     // Trouver les colonnes taille/quantité
     h.forEach((header, idx) => {
@@ -2224,6 +2332,9 @@ function toast(msg, type = '') {
 
 // Exposer pour les onclick inline
 window.validateLotStage = validateLotStage;
+window.regenPieces = regenPieces;
+window.resetLot = resetLot;
+window.resetTout = resetTout;
 window.renderSara = renderSara;
 window.renderSaraStock = renderSaraStock;
 window.renderSaraFinal = renderSaraFinal;
