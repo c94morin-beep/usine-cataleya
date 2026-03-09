@@ -1280,6 +1280,7 @@ function renderAbderrahim(main) {
               <div class="task-item-name">${p.name || p.pieceId}</div>
               <div class="task-item-meta">Lot : ${p.lotName}</div>
               ${p.returnedFrom ? `<div style="margin-top:4px;font-size:12px;font-weight:700;color:#9333ea">↩️ À renvoyer vers : ${p.returnedFrom}</div>` : ''}
+              ${p.comment ? `<div style="margin-top:4px;padding:4px 8px;background:#eff6ff;border-radius:6px;font-size:12px;font-weight:700;color:#1d4ed8;display:inline-block">💬 ${p.comment}</div>` : ''}
             </div>
           </div>
           ${p.returnReason ? `<div style="width:100%;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;font-size:13px;font-weight:700;color:#c2410c">⚠️ Raison : ${p.returnReason}</div>` : ''}
@@ -1646,6 +1647,7 @@ function renderPoste(stageId, stageDef, main, canReturn, container, noHeader) {
           ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:zoom-in" onclick="openZoom('${p.image}')" onerror="this.style.display='none'">` : `<div class="task-item-icon">${stageDef?.icon}</div>`}
           <div class="task-item-name">${p.name || p.pieceId}</div>
           <div class="task-item-meta">Lot : ${p.lotName}</div>
+          ${p.comment ? `<div style="margin-top:6px;padding:6px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:700;color:#1d4ed8">💬 ${p.comment}</div>` : ''}
           ${p.returnReason ? `<div style="margin-top:6px;padding:6px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:12px;font-weight:700;color:#c2410c">⚠️ Renvoyé : ${p.returnReason}</div>` : ''}
         </div>
         <div class="task-item-actions">
@@ -1808,13 +1810,22 @@ function parseLignesEnPieces(lignes) {
     // Récupérer l'image (colonne Image)
     const imgIdx = h.indexOf('Image');
     const image = (imgIdx >= 0 && c[imgIdx]?.startsWith('http')) ? c[imgIdx] : null;
+    // Récupérer le commentaire Fatima (colonne Commentaire ou comments Firebase)
+    const commentIdx = h.findIndex(x => x === 'Commentaire' || x === 'comment');
+    const commentCell = (commentIdx >= 0 && c[commentIdx]) ? c[commentIdx].trim() : '';
+    // Aussi récupérer les commentaires structurés (objets {text} dans row.comments)
+    const commentsObj = row.comments || {};
+    const commentsFatima = Object.values(commentsObj)
+      .map(co => typeof co === 'object' ? co.text : co)
+      .filter(Boolean).join(' / ');
+    const comment = commentsFatima || commentCell || null;
     // Trouver les colonnes taille/quantité
     h.forEach((header, idx) => {
       if (IGNORE.has(header)) return;
       const val = parseInt(c[idx]) || 0;
       if (val <= 0) return;
       for (let i = 0; i < val; i++) {
-        pieces.push({ name: `${nomProduit} ${header}`.trim(), image });
+        pieces.push({ name: `${nomProduit} ${header}`.trim(), image, comment });
       }
     });
     // Cas "Sans déclinaison"
@@ -1823,7 +1834,7 @@ function parseLignesEnPieces(lignes) {
       if (qteIdx >= 0) {
         const qty = parseInt(c[qteIdx]) || 0;
         for (let i = 0; i < qty; i++) {
-          pieces.push({ name: nomProduit, image });
+          pieces.push({ name: nomProduit, image, comment });
         }
       }
     }
@@ -1858,6 +1869,7 @@ async function validateLotStage(lotId, stageId, nextStageId) {
           updates[`production/${lotId}/pieces/${pKey}`] = {
             name: piece.name,
             image: piece.image || null,
+            comment: piece.comment || null,
             stage: 'etiquetage',
             history: [{ stage:'etiquetage', status:'pending', at:Date.now() }]
           };
