@@ -987,7 +987,10 @@ function renderAdmin(main) {
   const totalLots = lots.length;
   const inProgress = lots.filter(([,l]) => getCurrentStage(l) !== 'final' && getCurrentStage(l) !== null).length;
   const done = lots.filter(([,l]) => isLotDone(l)).length;
+  // Compter les pièces par statut
   const totalPieces = lots.reduce((s,[,l]) => s + (l.pieces ? Object.keys(l.pieces).length : 0), 0);
+  const piecesDone = lots.reduce((s,[,l]) => s + (l.pieces ? Object.values(l.pieces).filter(p => p.stage === 'done').length : 0), 0);
+  const piecesEnCours = totalPieces - piecesDone;
 
   main.innerHTML = `
     <div class="page-header">
@@ -1009,8 +1012,8 @@ function renderAdmin(main) {
       </div>
       <div class="stat-card">
         <div class="stat-icon">✅</div>
-        <div class="stat-num" style="color:var(--c-final)">${done}</div>
-        <div class="stat-label">Terminés</div>
+        <div class="stat-num" style="color:var(--c-final)">${piecesDone}</div>
+        <div class="stat-label">Pièces terminées</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">👗</div>
