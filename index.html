@@ -2475,7 +2475,7 @@
             };
 
             const handleReception = (order) => {
-                updateStatus(order.id, STATUTS.RECU, order.commentaires || '', userName);
+                updateStatus(order.id, STATUTS.RANGE, order.commentaires || '', userName);
             };
 
             const getArticlesARecevoir = () => {
@@ -2494,7 +2494,7 @@
                     ? `Marquer ${articles.length} article(s) taille(s) ${selectedTailles.join(', ')} comme déposés ?`
                     : `Marquer ${articles.length} article(s) comme déposés ?`;
                 if (!window.confirm(label)) return;
-                articles.forEach(o => updateStatus(o.id, STATUTS.RECU, o.commentaires || '', userName));
+                articles.forEach(o => updateStatus(o.id, STATUTS.RANGE, o.commentaires || '', userName));
             };
 
             // Pour compat avec le reste du code
@@ -2654,7 +2654,7 @@
                                                             </div>
                                                             <p className="text-sm text-gray-600 mt-0.5">{order.client}</p>
                                                             <p className="text-xs text-green-600 mt-0.5">✅ {tousArticles.length - 1} autre(s) article(s) déjà prêt(s)</p>
-                                                            {order.comment && <p className="text-xs text-orange-700 bg-orange-100 border border-orange-300 rounded-lg px-2 py-1 mt-1 font-semibold">💬 {order.comment}</p>}
+                                                            {order.commentaires && <p className="text-xs text-orange-700 bg-orange-100 border border-orange-300 rounded-lg px-2 py-1 mt-1 font-semibold">💬 {order.commentaires}</p>}
                                                         </div>
                                                         {active && <button onClick={() => handleReception(order)} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition">✅ Déposé</button>}
                                                     </div>
@@ -2681,7 +2681,7 @@
                                                             </div>
                                                             <p className="text-sm text-gray-600">{order.client || '—'}</p>
                                                             <p className="text-xs text-gray-400">{order.transporteur || '—'}</p>
-                                                            {order.comment && <p className="text-xs text-orange-700 bg-orange-100 border border-orange-300 rounded-lg px-2 py-1 mt-1 font-semibold">💬 {order.comment}</p>}
+                                                            {order.commentaires && <p className="text-xs text-orange-700 bg-orange-100 border border-orange-300 rounded-lg px-2 py-1 mt-1 font-semibold">💬 {order.commentaires}</p>}
                                                         </div>
                                                         {active && <button onClick={() => handleReception(order)} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition">✅ Déposé</button>}
                                                     </div>
