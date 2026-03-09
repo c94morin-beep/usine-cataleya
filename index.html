@@ -1586,8 +1586,8 @@
             const statutsDisponibles = isSara 
                 ? [STATUTS.EN_ATTENTE]
                 : isOperateur 
-                ? [STATUTS.EN_ATTENTE, STATUTS.RECU, STATUTS.RANGE]
-                : [STATUTS.EN_ATTENTE, STATUTS.RECU, STATUTS.RANGE]; // Admin : sans "Avec commentaire" dans dropdown
+                ? [STATUTS.EN_ATTENTE, STATUTS.RANGE]
+                : [STATUTS.EN_ATTENTE, STATUTS.RECU, STATUTS.RANGE];
             const [selectedImage, setSelectedImage] = React.useState(null);
             const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
             const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
