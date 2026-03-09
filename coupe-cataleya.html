@@ -1819,13 +1819,26 @@ function parseLignesEnPieces(lignes) {
       .map(co => typeof co === 'object' ? co.text : co)
       .filter(Boolean).join(' / ');
     const comment = commentsFatima || commentCell || null;
+    // Récupérer largeur et option (attributs fixes de la ligne)
+    const largeurIdx = h.findIndex(x => x === 'Largeur' || x === 'LARGEUR');
+    const largeur = (largeurIdx >= 0 && c[largeurIdx]?.trim()) ? c[largeurIdx].trim() : null;
+    const optionIdx = h.findIndex(x => x === 'Option' || x === 'OPTION');
+    const option = (optionIdx >= 0 && c[optionIdx]?.trim()) ? c[optionIdx].trim() : null;
+
+    // Construire le suffixe attributs (ex: " M-L Option Broderie")
+    const attrs = [largeur, option].filter(Boolean).join(' ');
+
     // Trouver les colonnes taille/quantité
     h.forEach((header, idx) => {
       if (IGNORE.has(header)) return;
+      if (header === 'Largeur' || header === 'LARGEUR') return;
+      if (header === 'Option' || header === 'OPTION') return;
       const val = parseInt(c[idx]) || 0;
       if (val <= 0) return;
+      // Nom complet : "Produit Taille Largeur Option"
+      const fullName = [nomProduit, header, attrs].filter(Boolean).join(' ').trim();
       for (let i = 0; i < val; i++) {
-        pieces.push({ name: `${nomProduit} ${header}`.trim(), image, comment });
+        pieces.push({ name: fullName, image, comment, largeur, option });
       }
     });
     // Cas "Sans déclinaison"
@@ -1833,8 +1846,9 @@ function parseLignesEnPieces(lignes) {
       const qteIdx = h.indexOf('Qté');
       if (qteIdx >= 0) {
         const qty = parseInt(c[qteIdx]) || 0;
+        const fullName = [nomProduit, attrs].filter(Boolean).join(' ').trim();
         for (let i = 0; i < qty; i++) {
-          pieces.push({ name: nomProduit, image, comment });
+          pieces.push({ name: fullName, image, comment, largeur, option });
         }
       }
     }
@@ -1870,6 +1884,8 @@ async function validateLotStage(lotId, stageId, nextStageId) {
             name: piece.name,
             image: piece.image || null,
             comment: piece.comment || null,
+            largeur: piece.largeur || null,
+            option: piece.option || null,
             stage: 'etiquetage',
             history: [{ stage:'etiquetage', status:'pending', at:Date.now() }]
           };
@@ -1899,12 +1915,16 @@ async function validatePiece(lotId, pieceId, nextStage) {
 }
 
 // ── Matching intelligent pièce → commande index.html ──
-function extractPieceInfo(pieceName) {
-  // Ex: "Abaya Ryhna Beige T56" → { base: "Abaya Ryhna Beige", taille: "56" }
+function extractPieceInfo(pieceName, pieceLargeur, pieceOption) {
+  // Ex: "Abaya Ryhna Beige T56 M-L" → { base: "Abaya Ryhna Beige", taille: "56", largeur: "M-L" }
   const tailleMatch = pieceName.match(/\bT(\d+)\b/i);
   const taille = tailleMatch ? tailleMatch[1] : null;
-  const base = pieceName.replace(/\bT\d+\b/i, '').trim().replace(/\s+/g,' ');
-  return { base, taille };
+  // Retirer la taille et les attrs du nom pour obtenir le base
+  let base = pieceName.replace(/\bT\d+\b/i, '');
+  if (pieceLargeur) base = base.replace(pieceLargeur, '');
+  if (pieceOption) base = base.replace(pieceOption, '');
+  base = base.trim().replace(/\s+/g,' ');
+  return { base, taille, largeur: pieceLargeur || null, option: pieceOption || null };
 }
 
 function normalizeStr(s) {
@@ -1913,7 +1933,7 @@ function normalizeStr(s) {
     .replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
 }
 
-function orderMatchesPiece(orderName, pieceBase, pieceTaille) {
+function orderMatchesPiece(orderName, pieceBase, pieceTaille, pieceLargeur, pieceOption) {
   const n = normalizeStr(orderName);
   const b = normalizeStr(pieceBase);
   // Vérifie que tous les mots du base sont dans le nom de commande
@@ -1922,15 +1942,24 @@ function orderMatchesPiece(orderName, pieceBase, pieceTaille) {
   if (!baseMatch) return false;
   // Vérifie la taille si présente
   if (pieceTaille) {
-    // "T56" → cherche "56", "taille 56", "taille personnalisee 56", "t56"
     const taillePatterns = [pieceTaille, `t${pieceTaille}`, `taille ${pieceTaille}`];
-    return taillePatterns.some(p => n.includes(normalizeStr(p)));
+    if (!taillePatterns.some(p => n.includes(normalizeStr(p)))) return false;
+  }
+  // Vérifie la largeur si présente (ex: "M-L" → cherche "m l", "ml", "m-l")
+  if (pieceLargeur) {
+    const lNorm = normalizeStr(pieceLargeur);
+    if (!n.includes(lNorm)) return false;
+  }
+  // Vérifie l'option si présente
+  if (pieceOption) {
+    const oNorm = normalizeStr(pieceOption);
+    if (!n.includes(oNorm)) return false;
   }
   return true;
 }
 
-async function assignPieceToOrder(pieceName) {
-  const { base, taille } = extractPieceInfo(pieceName);
+async function assignPieceToOrder(pieceName, pieceLargeur, pieceOption) {
+  const { base, taille, largeur, option } = extractPieceInfo(pieceName, pieceLargeur, pieceOption);
   // Lire toutes les listes dans lists/
   const snap = await db.ref('lists').once('value');
   const allListsData = snap.val() || {};
@@ -1941,7 +1970,7 @@ async function assignPieceToOrder(pieceName) {
     const orders = listData.orders || [];
     orders.forEach((order, idx) => {
       if (!order || order.status === 'Reçu') return;
-      if (!orderMatchesPiece(order.name, base, taille)) return;
+      if (!orderMatchesPiece(order.name, base, taille, largeur, option)) return;
       // Compter combien de commandes sont déjà "Reçu" dans cette liste (= liste la plus avancée)
       const advancedCount = orders.filter(o => o && o.status === 'Reçu').length;
       if (!bestMatch || advancedCount > bestMatch.advancedCount) {
@@ -1968,7 +1997,7 @@ async function finalizePiece(lotId, pieceId) {
   const history = [...(piece.history||[]), { stage:'done', status:'done', at:Date.now(), by:currentEmail }];
   await db.ref(`production/${lotId}/pieces/${pieceId}`).update({ stage:'done', history });
   // Assigner automatiquement à une commande dans index.html
-  await assignPieceToOrder(piece.name || '');
+  await assignPieceToOrder(piece.name || '', piece.largeur || null, piece.option || null);
 }
 
 // Renvoyer pièce
