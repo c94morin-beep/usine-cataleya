@@ -365,20 +365,27 @@
                             }
                         }
 
-                        const transformedData = data.map((row, index) => ({
-                            id: `${Date.now()}-${index}`,
-                            reference: row.reference,
-                            name: row.name,
-                            url_image: row.url_image,
-                            commentaires: '',
-                            quantity: parseInt(row.total) || 1,
-                            status: STATUTS.EN_ATTENTE,
-                            client: row.client,
-                            adresse_livraison: row.adresse_livraison,
-                            telephone: row.telephone,
-                            email: row.email,
-                            transporteur: row.transporteur
-                        }));
+                        const transformedData = [];
+                        const importTs = Date.now();
+                        data.forEach((row, index) => {
+                            const qty = parseInt(row.total) || 1;
+                            for (let q = 0; q < qty; q++) {
+                                transformedData.push({
+                                    id: `${importTs}-${index}-${q}`,
+                                    reference: row.reference,
+                                    name: row.name,
+                                    url_image: row.url_image,
+                                    commentaires: '',
+                                    quantity: 1,
+                                    status: STATUTS.EN_ATTENTE,
+                                    client: row.client,
+                                    adresse_livraison: row.adresse_livraison,
+                                    telephone: row.telephone,
+                                    email: row.email,
+                                    transporteur: row.transporteur
+                                });
+                            }
+                        });
 
                         const newList = {
                             id: `list-${Date.now()}`,
