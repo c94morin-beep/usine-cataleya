@@ -1418,6 +1418,16 @@ function renderCAO(main) {
     <div id="cao-lots-list">
     ${lots.map(([lid, lot]) => {
       const listeCourante = lot.listeId ? (allListes[lot.listeId]?.name || lot.listeId) : null;
+      // Récupérer les commentaires du lot depuis listescoupe
+      const lignesLot = liste ? Object.values(liste.lignes || {}).filter(row => getModele((row.c||'').split('||')[0]||'') === lot.name) : [];
+      const lotComments = lignesLot.flatMap(row => {
+        const fc = Object.values(row.comments||{}).map(co=>typeof co==='object'?co.text:co).filter(Boolean);
+        const h2 = (row.h||'').split('||');
+        const c2 = (row.c||'').split('||');
+        const ci2 = h2.findIndex(x=>x==='Commentaire'||x==='comment');
+        if (ci2>=0 && c2[ci2]?.trim()) fc.push(c2[ci2].trim());
+        return fc;
+      }).filter(Boolean);
       return `
       <div class="task-item" style="gap:12px;cursor:pointer" onclick="caoToggleLot('${lid}')">
         <input type="checkbox" id="cao-check-${lid}" style="width:20px;height:20px;flex-shrink:0;cursor:pointer" onchange="caoUpdateCount()" onclick="event.stopPropagation()">
@@ -1425,6 +1435,7 @@ function renderCAO(main) {
           <div class="task-item-name">${lot.name}</div>
           <div class="task-item-meta">${lot.description || listeCourante || '—'}</div>
           ${listeCourante ? `<div style="margin-top:4px;display:inline-block;padding:3px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:700;color:#15803d">📋 ${listeCourante}</div>` : ''}
+          ${lotComments.length ? `<div style="margin-top:6px;padding:6px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:700;color:#1d4ed8">💬 ${lotComments.join(' · ')}</div>` : ''}
         </div>
       </div>`;
     }).join('')}
@@ -1572,6 +1583,21 @@ function renderCoupe(main) {
             html += `<td>${cell||''}</td>`;
           }
         });
+        // Commentaire Fatima sur cette ligne (depuis row.comments ou colonne Commentaire)
+        const rowComments = row.comments || {};
+        const rowCommentText = Object.values(rowComments)
+          .map(co => typeof co === 'object' ? co.text : co).filter(Boolean).join(' / ');
+        const commentIdx2 = headers.findIndex(x => x === 'Commentaire' || x === 'comment');
+        const commentCell2 = (commentIdx2 >= 0 && cells[commentIdx2]?.trim()) ? cells[commentIdx2].trim() : '';
+        const rowComment = rowCommentText || commentCell2 || '';
+        if (rowComment) {
+          html += `</tr><tr style="${rowGrised?'opacity:0.35;background:#f3f4f6;':''}">
+            <td colspan="${headers.length + 1}" style="padding:4px 10px 8px">
+              <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:#eff6ff;border-radius:8px;font-size:12px;font-weight:700;color:#1d4ed8">
+                💬 ${rowComment}
+              </div>
+            </td>`;
+        }
         // Bouton valider la ligne (si pas encore grisée)
         html += `<td>${rowGrised
           ? `<span style="font-size:11px;color:#9ca3af;font-weight:700">✓ Fait</span>`
