@@ -1347,7 +1347,7 @@ function renderSaraStock(main) {
           <div class="task-item-meta">${lot.description || ''}</div>
         </div>
         <div class="task-item-actions">
-          <button class="btn btn-success btn-big" style="min-width:160px" onclick="validateLotStage('${lid}','stock','cao')">
+          <button class="btn btn-success btn-big" style="min-width:160px" onclick="validateLotStage('${lid}','stock','cao').then(()=>renderSaraStock(document.getElementById('app-main')))">
             ✅ Stock OK — Valider
           </button>
         </div>
