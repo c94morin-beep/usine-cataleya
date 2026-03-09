@@ -86,40 +86,37 @@
         };
 
         // Composant principal
+        // ── Thèmes de listes (constantes globales) ──────────────────────────────
+        const LIST_THEMES = [
+            { id: 'global', from: '#16a34a', to: '#059669', gradient: 'from-green-600 to-emerald-600', headerSub: 'text-green-100',  tabActive: 'bg-green-100 text-green-700 border-2 border-green-300',   btnActive: 'bg-green-600 text-white border-green-600',   label: '📂 GLOBAL', accent: '#16a34a' },
+            { from: '#2563eb', to: '#4338ca', gradient: 'from-blue-600 to-indigo-600',     headerSub: 'text-blue-100',   tabActive: 'bg-blue-100 text-blue-700 border-2 border-blue-300',     btnActive: 'bg-blue-600 text-white border-blue-600',     accent: '#2563eb' },
+            { from: '#9333ea', to: '#7c3aed', gradient: 'from-purple-600 to-violet-600',   headerSub: 'text-purple-100', tabActive: 'bg-purple-100 text-purple-700 border-2 border-purple-300', btnActive: 'bg-purple-600 text-white border-purple-600', accent: '#9333ea' },
+            { from: '#f97316', to: '#d97706', gradient: 'from-orange-500 to-amber-500',    headerSub: 'text-orange-100', tabActive: 'bg-orange-100 text-orange-700 border-2 border-orange-300', btnActive: 'bg-orange-500 text-white border-orange-500', accent: '#f97316' },
+            { from: '#e11d48', to: '#db2777', gradient: 'from-rose-600 to-pink-600',       headerSub: 'text-rose-100',   tabActive: 'bg-rose-100 text-rose-700 border-2 border-rose-300',       btnActive: 'bg-rose-600 text-white border-rose-600',     accent: '#e11d48' },
+            { from: '#0d9488', to: '#0891b2', gradient: 'from-teal-600 to-cyan-600',       headerSub: 'text-teal-100',   tabActive: 'bg-teal-100 text-teal-700 border-2 border-teal-300',       btnActive: 'bg-teal-600 text-white border-teal-600',     accent: '#0d9488' },
+            { from: '#ca8a04', to: '#65a30d', gradient: 'from-yellow-500 to-lime-500',     headerSub: 'text-yellow-100', tabActive: 'bg-yellow-100 text-yellow-700 border-2 border-yellow-300', btnActive: 'bg-yellow-500 text-white border-yellow-500', accent: '#eab308' },
+        ];
+        const getTheme = (listId, listsArr) => {
+            if (!listId || listId === 'global') return LIST_THEMES[0];
+            const idx = listsArr.findIndex(l => l.id === listId);
+            if (idx === -1) return LIST_THEMES[1];
+            return LIST_THEMES[(idx % (LIST_THEMES.length - 1)) + 1];
+        };
+        // ────────────────────────────────────────────────────────────────────────
+
         function App() {
             const [lists, setLists] = useState([]);
             // activeListId géré via wrapper ci-dessous
 
             // Système de thèmes par liste
-            const LIST_THEMES = [
-                { // global
-                    id: 'global',
-                    gradient: 'from-green-600 to-emerald-600',
-                    headerSub: 'text-green-100',
-                    tabActive: 'bg-green-100 text-green-700 border-2 border-green-300',
-                    btnActive: 'bg-green-600 text-white border-green-600',
-                    label: '📂 GLOBAL',
-                    accent: '#16a34a'
-                },
-                { gradient: 'from-blue-600 to-indigo-600',       headerSub: 'text-blue-100',   tabActive: 'bg-blue-100 text-blue-700 border-2 border-blue-300',     btnActive: 'bg-blue-600 text-white border-blue-600',     accent: '#2563eb' },
-                { gradient: 'from-purple-600 to-violet-600',     headerSub: 'text-purple-100', tabActive: 'bg-purple-100 text-purple-700 border-2 border-purple-300', btnActive: 'bg-purple-600 text-white border-purple-600', accent: '#9333ea' },
-                { gradient: 'from-orange-500 to-amber-500',      headerSub: 'text-orange-100', tabActive: 'bg-orange-100 text-orange-700 border-2 border-orange-300', btnActive: 'bg-orange-500 text-white border-orange-500', accent: '#f97316' },
-                { gradient: 'from-rose-600 to-pink-600',         headerSub: 'text-rose-100',   tabActive: 'bg-rose-100 text-rose-700 border-2 border-rose-300',       btnActive: 'bg-rose-600 text-white border-rose-600',     accent: '#e11d48' },
-                { gradient: 'from-teal-600 to-cyan-600',         headerSub: 'text-teal-100',   tabActive: 'bg-teal-100 text-teal-700 border-2 border-teal-300',       btnActive: 'bg-teal-600 text-white border-teal-600',     accent: '#0d9488' },
-                { gradient: 'from-yellow-500 to-lime-500',       headerSub: 'text-yellow-100', tabActive: 'bg-yellow-100 text-yellow-700 border-2 border-yellow-300', btnActive: 'bg-yellow-500 text-white border-yellow-500', accent: '#eab308' },
-            ];
-            const getTheme = (listId) => {
-                if (listId === 'global') return LIST_THEMES[0];
-                const idx = lists.findIndex(l => l.id === listId);
-                return LIST_THEMES[idx + 1] || LIST_THEMES[((idx + 1) % (LIST_THEMES.length - 1)) + 1];
-            };
-            const activeTheme = getTheme(activeListId);
-            const activeListName = activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name || '';
+            // (LIST_THEMES et getTheme définis en global)
             const [activeTab, setActiveTabRaw] = useState(() => localStorage.getItem('cataleya_activeTab') || 'dashboard');
             const setActiveTab = (tab) => { setActiveTabRaw(tab); localStorage.setItem('cataleya_activeTab', tab); };
             const [activeListIdRaw, setActiveListIdRaw] = useState(() => localStorage.getItem('cataleya_activeListId') || 'global');
             const setActiveListId = (id) => { setActiveListIdRaw(id); localStorage.setItem('cataleya_activeListId', id); };
             const activeListId = activeListIdRaw;
+            const activeTheme = getTheme(activeListId, lists);
+            const activeListName = activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name || '';
             React.useEffect(() => {
                 if (isSara) setActiveTab('dashboard');
                 else if (isCommentaires) setActiveTab('production');
@@ -137,6 +134,13 @@
             const [showImportModal, setShowImportModal] = useState(false);
             const [completionAlert, setCompletionAlert] = useState(null); // {reference, client, autresCommandes[]}
             const [casierAlert, setCasierAlert] = useState(null); // {casierNum, reference}
+            const [showScrollTop, setShowScrollTop] = useState(false);
+
+            useEffect(() => {
+                const onScroll = () => setShowScrollTop(window.scrollY > 300);
+                window.addEventListener('scroll', onScroll);
+                return () => window.removeEventListener('scroll', onScroll);
+            }, []);
 
             // Auth
             const [user, setUser] = useState(null);
@@ -813,14 +817,26 @@
                         </div>
                     )}
 
+                    {/* Bouton scroll to top */}
+                    {showScrollTop && (
+                        <button
+                            onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}
+                            className="fixed bottom-6 right-6 z-[90] bg-gray-800 bg-opacity-80 hover:bg-opacity-100 text-white w-11 h-11 rounded-full shadow-lg flex items-center justify-center text-xl transition"
+                        >
+                            ↑
+                        </button>
+                    )}
+
                     {/* Header */}
-                    <header className={`bg-gradient-to-r ${activeTheme.gradient} text-white shadow-lg transition-all duration-500`}>
+                    <header className="text-white shadow-lg" style={{background: `linear-gradient(to right, ${activeTheme.from}, ${activeTheme.to})`, transition: "background 0.5s ease"}}>
                         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-                            <div>
-                                <h1 className="text-xl md:text-3xl font-bold">📦 Suivi de Production</h1>
-                                <p className={`${activeTheme.headerSub} text-xs md:text-sm hidden sm:block font-semibold`}>
-                                    {activeListId === 'global' ? 'CATALEYA · Toutes les listes' : `CATALEYA · "${activeListName}"`}
-                                </p>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => window.scrollTo({top:0, behavior:'smooth'})} className="hover:opacity-80 transition text-left" title="Retour en haut">
+                                    <h1 className="text-lg md:text-2xl font-bold tracking-tight">Suivi-Commandes CATALEYA</h1>
+                                    <p className="text-xs md:text-sm hidden sm:block font-semibold opacity-80">
+                                        {activeListId === 'global' ? 'Toutes les listes' : activeListName || ''}
+                                    </p>
+                                </button>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="text-right">
