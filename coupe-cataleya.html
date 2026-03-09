@@ -1216,10 +1216,48 @@ function renderComingSoon(el, icon, title, sub) {
 // VUE SARA — Stock tissu
 // ══════════════════════════════════════════════
 function renderSara(main) {
+  // Page de choix de poste pour Sara
+  const stockCount = Object.values(allLots).filter(l => getCurrentStage(l) === 'stock').length;
+  const finalPieces = Object.values(allLots).flatMap(l => Object.values(l.pieces||{})).filter(p => p.stage === 'final').length;
+
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-eyebrow">Bonjour Sara 👋</div>
+      <div class="page-title">Quel poste aujourd'hui ?</div>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px">
+      <div onclick="renderSaraStock(document.getElementById('main-content'))"
+        style="flex:1;min-width:240px;background:white;border-radius:20px;border:3px solid #e5e7eb;padding:32px 28px;cursor:pointer;transition:all .15s;text-align:center"
+        onmouseover="this.style.borderColor='#16a34a';this.style.boxShadow='0 4px 20px #16a34a22'"
+        onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+        <div style="font-size:56px;margin-bottom:12px">🧵</div>
+        <div style="font-size:22px;font-weight:900;color:#111;margin-bottom:8px">Stock Tissu</div>
+        <div style="font-size:14px;color:#6b7280;font-weight:600;margin-bottom:16px">Vérifier les rouleaux avant production</div>
+        <div style="display:inline-block;padding:8px 20px;background:${stockCount>0?'#fef9c3':'#f0fdf4'};border-radius:20px;font-size:15px;font-weight:800;color:${stockCount>0?'#92400e':'#15803d'}">
+          ${stockCount > 0 ? `${stockCount} lot(s) en attente` : '✅ Rien en attente'}
+        </div>
+      </div>
+      <div onclick="renderSaraFinal(document.getElementById('main-content'))"
+        style="flex:1;min-width:240px;background:white;border-radius:20px;border:3px solid #e5e7eb;padding:32px 28px;cursor:pointer;transition:all .15s;text-align:center"
+        onmouseover="this.style.borderColor='var(--c-final)';this.style.boxShadow='0 4px 20px #22c55e22'"
+        onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+        <div style="font-size:56px;margin-bottom:12px">✅</div>
+        <div style="font-size:22px;font-weight:900;color:#111;margin-bottom:8px">Contrôle Final</div>
+        <div style="font-size:14px;color:#6b7280;font-weight:600;margin-bottom:16px">Validation avant expédition</div>
+        <div style="display:inline-block;padding:8px 20px;background:${finalPieces>0?'#fef9c3':'#f0fdf4'};border-radius:20px;font-size:15px;font-weight:800;color:${finalPieces>0?'#92400e':'#15803d'}">
+          ${finalPieces > 0 ? `${finalPieces} pièce(s) en attente` : '✅ Rien en attente'}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSaraStock(main) {
   const lots = Object.entries(allLots).filter(([,l]) => getCurrentStage(l) === 'stock').sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'','fr'));
   main.innerHTML = `
     <div class="page-header">
-      <div class="page-eyebrow">Poste · Sara</div>
+      <div class="page-eyebrow" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="renderSara(document.getElementById('main-content'))">
+        ← Retour
+      </div>
       <div class="page-title">🧵 Vérification Stock Tissu</div>
       <div class="page-sub">Vérifiez la présence des rouleaux pour chaque lot</div>
     </div>
@@ -1229,7 +1267,7 @@ function renderSara(main) {
         <div>
           <div class="task-item-icon">🧵</div>
           <div class="task-item-name">${lot.name}</div>
-          <div class="task-item-meta">${lot.pieces ? Object.keys(lot.pieces).length : 0} pièces · ${lot.description || ''}</div>
+          <div class="task-item-meta">${lot.description || ''}</div>
         </div>
         <div class="task-item-actions">
           <button class="btn btn-success btn-big" style="min-width:160px" onclick="validateLotStage('${lid}','stock','cao')">
@@ -1237,6 +1275,22 @@ function renderSara(main) {
           </button>
         </div>
       </div>`).join('')}`;
+}
+
+function renderSaraFinal(main) {
+  const stageDef = STAGES.find(s => s.id === 'final');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-eyebrow" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="renderSara(document.getElementById('main-content'))">
+        ← Retour
+      </div>
+      <div class="page-title">✅ Contrôle Final</div>
+      <div class="page-sub">Sara & Mounia · Validation avant expédition</div>
+    </div>
+    <div id="sara-final-content"></div>`;
+  // Réutiliser renderPoste pour la vue final
+  const sub = document.getElementById('sara-final-content');
+  renderPoste('final', stageDef, { innerHTML: '' }, true, sub);
 }
 
 // ══════════════════════════════════════════════
@@ -1346,13 +1400,34 @@ function renderCoupe(main) {
     l.coupeAssign === stage && getCurrentStage(l) === stage
   ).sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'','fr'));
 
+  // Aussi récupérer les lots déjà terminés (envoyés à étiquetage) pour la sidebar
+  const lotsFinis = Object.entries(allLots).filter(([,l]) =>
+    l.coupeAssign === stage && getCurrentStage(l) !== stage
+  ).sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'','fr'));
+
   main.innerHTML = `
     <div class="page-header">
       <div class="page-eyebrow">Poste · ${stageDef?.person || 'Coupe'}</div>
       <div class="page-title">${stageDef?.icon} ${stageDef?.label}</div>
-      <div class="page-sub">Cochez les tailles au fur et à mesure de la coupe</div>
+      <div class="page-sub">${lots.length} en cours · ${lotsFinis.length} terminé(s)</div>
     </div>
-    <div id="coupe-content"></div>`;
+    <div style="display:flex;gap:0;align-items:flex-start">
+      <div id="coupe-sidebar" style="width:180px;flex-shrink:0;position:sticky;top:16px;background:white;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;margin-right:16px;max-height:80vh;overflow-y:auto">
+        <div style="padding:10px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.5px">Mes lots</div>
+        ${lots.map(([lid, lot]) => `
+          <div onclick="document.getElementById('lot-${lid}').scrollIntoView({behavior:'smooth',block:'start'})"
+            style="padding:10px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;font-size:13px;font-weight:700;color:#111;display:flex;align-items:center;gap:8px;hover:background:#f9fafb">
+            <span style="width:8px;height:8px;border-radius:50%;background:#f97316;flex-shrink:0"></span>
+            ${lot.name}
+          </div>`).join('')}
+        ${lotsFinis.map(([lid, lot]) => `
+          <div style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;font-weight:700;color:#9ca3af;display:flex;align-items:center;gap:8px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#16a34a;flex-shrink:0"></span>
+            ${lot.name}
+          </div>`).join('')}
+      </div>
+      <div id="coupe-content" style="flex:1;min-width:0"></div>
+    </div>`;
 
   const coupeEl = document.getElementById('coupe-content');
   if (!lots.length) {
@@ -1371,7 +1446,7 @@ function renderCoupe(main) {
     });
 
     let html = `
-      <div class="card" style="margin-bottom:20px">
+      <div id="lot-${lid}" class="card" style="margin-bottom:20px;scroll-margin-top:16px">
         <div style="font-size:20px;font-weight:900;margin-bottom:4px">${lot.name}</div>
         <div style="font-size:13px;color:var(--text2);font-weight:600;margin-bottom:4px">${lot.description || ''}</div>
         ${liste ? `<div style="font-size:12px;font-weight:700;color:var(--c-cao);margin-bottom:16px">📋 ${liste.name || listeId}</div>` : ''}`;
@@ -1471,9 +1546,10 @@ async function toggleCoupeCell(lotId, rowKey, cellIdx, current) {
 // ══════════════════════════════════════════════
 // VUE POSTE GÉNÉRIQUE (étiquetage, dispatche, ctrl1, défauts, final)
 // ══════════════════════════════════════════════
-function renderPoste(stageId, stageDef, main, canReturn) {
+function renderPoste(stageId, stageDef, main, canReturn, container) {
   const prevStage = getPrevStage(stageId);
   const nextStage = getNextStage(stageId);
+  const target = container || main; // container optionnel pour Sara Final
 
   const pieces = [];
   Object.entries(allLots).forEach(([lid, lot]) => {
@@ -1483,13 +1559,13 @@ function renderPoste(stageId, stageDef, main, canReturn) {
     });
   });
 
-  main.innerHTML = `
+  target.innerHTML = `
     <div class="page-header">
       <div class="page-eyebrow">Poste · ${stageDef?.person || ''}</div>
       <div class="page-title">${stageDef?.icon} ${stageDef?.label}</div>
       <div class="page-sub">${pieces.length} pièce${pieces.length>1?'s':''} en attente</div>
     </div>
-    ${!pieces.length ? `<div class="empty-state"><div class="empty-state-icon">${stageDef?.icon}</div><div class="empty-state-title">Aucune pièce en attente</div><div class="empty-state-sub">Tout est traité ! En attente de l'étape précédente.</div></div>` :
+    ${!pieces.length ? `<div class="empty-state"><div class="empty-state-icon">${stageDef?.icon}</div><div class="empty-state-title">Aucune pièce en attente ✅</div><div class="empty-state-sub">Tout est traité !</div></div>` :
     pieces.map(p => `
       <div class="task-item">
         <div class="task-item-left">
@@ -1960,6 +2036,9 @@ function toast(msg, type = '') {
 
 // Exposer pour les onclick inline
 window.validateLotStage = validateLotStage;
+window.renderSara = renderSara;
+window.renderSaraStock = renderSaraStock;
+window.renderSaraFinal = renderSaraFinal;
 window.validateCAO = validateCAO;
 window.validatePiece = validatePiece;
 window.finalizePiece = finalizePiece;
