@@ -413,7 +413,7 @@
                     ...list,
                     orders: list.orders.map(order =>
                         order.id === orderId 
-                            ? { ...order, status: newStatus, commentaires: newCommentaires !== undefined ? newCommentaires : order.commentaires, commentAuthor: (newCommentaires && author) ? author : (newCommentaires === '' ? null : order.commentAuthor) } 
+                            ? { ...order, status: newStatus, updatedAt: Date.now(), commentaires: newCommentaires !== undefined ? newCommentaires : order.commentaires, commentAuthor: (newCommentaires && author) ? author : (newCommentaires === '' ? null : order.commentAuthor) } 
                             : order
                     )
                 }));
@@ -944,8 +944,8 @@
                                 {(isAdmin || isOperateur || isSara || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon="📊" label="Dashboard" />
                                 )}
-                                {/* Suivi Production — Admin + Sara + Fatima (pas Achraf) */}
-                                {(isAdmin || isSara || isCommentaires || isLecteur) && (
+                                {/* Suivi Production — Admin + Sara + Fatima + Achraf */}
+                                {(isAdmin || isOperateur || isSara || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'production'} onClick={() => setActiveTab('production')} icon="🧵" label="Suivi Production" />
                                 )}
                                 {/* Par Commande — Admin seulement */}
@@ -1591,6 +1591,7 @@
             const [selectedImage, setSelectedImage] = React.useState(null);
             const [sortColumn, setSortColumn] = React.useState('name'); // Colonne de tri par défaut
             const [sortDirection, setSortDirection] = React.useState('asc'); // asc ou desc
+            const [showDerniersRanges, setShowDerniersRanges] = React.useState(false);
             
             // Fonction de tri
             const handleSort = (column) => {
@@ -1605,26 +1606,30 @@
             };
             
             // Trier les commandes
-            const sortedOrders = [...orders].sort((a, b) => {
-                let aVal = a[sortColumn] || '';
-                let bVal = b[sortColumn] || '';
-                
-                // Tri numérique pour reference
-                if (sortColumn === 'reference') {
-                    aVal = parseInt(aVal) || 0;
-                    bVal = parseInt(bVal) || 0;
-                } else {
-                    // Tri alphabétique pour les autres
-                    aVal = String(aVal).toLowerCase();
-                    bVal = String(bVal).toLowerCase();
+            const sortedOrders = (() => {
+                // Mode "Derniers rangés" : filtre Rangé + tri par updatedAt décroissant
+                if (showDerniersRanges) {
+                    return [...orders]
+                        .filter(o => o.status === STATUTS.RANGE)
+                        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
                 }
-                
-                if (sortDirection === 'asc') {
-                    return aVal > bVal ? 1 : -1;
-                } else {
-                    return aVal < bVal ? 1 : -1;
-                }
-            });
+                return [...orders].sort((a, b) => {
+                    let aVal = a[sortColumn] || '';
+                    let bVal = b[sortColumn] || '';
+                    if (sortColumn === 'reference') {
+                        aVal = parseInt(aVal) || 0;
+                        bVal = parseInt(bVal) || 0;
+                    } else {
+                        aVal = String(aVal).toLowerCase();
+                        bVal = String(bVal).toLowerCase();
+                    }
+                    if (sortDirection === 'asc') {
+                        return aVal > bVal ? 1 : -1;
+                    } else {
+                        return aVal < bVal ? 1 : -1;
+                    }
+                });
+            })();
             
             // Fonction pour ouvrir le récap d'une commande
 
@@ -1698,12 +1703,18 @@
                                     ))}
                                 </select>
                             </div>
-                            <div className="flex items-end">
+                            <div className="flex items-end gap-2">
                                 <button
-                                    onClick={() => { setSearchTerm(''); setFilterStatus('all'); }}
-                                    className="w-full px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                                    onClick={() => { setSearchTerm(''); setFilterStatus('all'); setShowDerniersRanges(false); }}
+                                    className="flex-1 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
                                 >
                                     🔄 Effacer
+                                </button>
+                                <button
+                                    onClick={() => { setShowDerniersRanges(v => !v); setSearchTerm(''); setFilterStatus('all'); }}
+                                    className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition ${showDerniersRanges ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
+                                >
+                                    🕐 Derniers rangés
                                 </button>
                             </div>
                         </div>
@@ -2463,7 +2474,7 @@
 
             const handleSelectAttr = (key, val) => {
                 setSelectedAttrs(prev => ({ ...prev, [key]: val }));
-                setSelectedTailles([]); // reset tailles si on change un attribut
+                // Ne pas reset les tailles si c'est un autre attribut (Option, etc.)
             };
 
             const resetSelection = () => {
@@ -2478,22 +2489,11 @@
                 updateStatus(order.id, STATUTS.RANGE, order.commentaires || '', userName);
             };
 
-            const getArticlesARecevoir = () => {
-                if (selectedTailles.length > 0) {
-                    return articlesMatch.filter(o => {
-                        const taille = parseProduct(o.name).attrs['Taille'];
-                        return selectedTailles.includes(taille);
-                    });
-                }
-                return articlesMatch;
-            };
+            const getArticlesARecevoir = () => articlesMatch;
 
             const handleReceptionTous = () => {
                 const articles = getArticlesARecevoir();
-                const label = selectedTailles.length > 0 
-                    ? `Marquer ${articles.length} article(s) taille(s) ${selectedTailles.join(', ')} comme déposés ?`
-                    : `Marquer ${articles.length} article(s) comme déposés ?`;
-                if (!window.confirm(label)) return;
+                if (!window.confirm(`Marquer ${articles.length} article(s) comme déposés ?`)) return;
                 articles.forEach(o => updateStatus(o.id, STATUTS.RANGE, o.commentaires || '', userName));
             };
 
@@ -2509,9 +2509,9 @@
                         {/* Étape 1 : Recherche nom de base */}
                         <div className="relative mb-4">
                             <div className="flex items-center gap-2 mb-2">
-                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${selectedBase ? 'bg-green-500' : 'bg-blue-500'}`}>1</span>
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white bg-blue-500`}>1</span>
                                 <span className="text-sm font-semibold text-gray-700">Nom du produit</span>
-                                {selectedBase && <span className="text-sm font-bold text-green-600">{selectedBase}</span>}
+                                {selectedBase && <span className="text-sm font-bold text-blue-600">{selectedBase}</span>}
                             </div>
                             {!selectedBase ? (
                                 <div className="relative">
@@ -2555,40 +2555,18 @@
                             return (
                                 <div key={key} className={`mb-4 transition-all ${!isPending && !isSelected ? 'opacity-40' : ''}`}>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${isSelected ? 'bg-green-500' : 'bg-blue-500'}`}>{idx + 2}</span>
+                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white bg-blue-500`}>{idx + 2}</span>
                                         <span className="text-sm font-semibold text-gray-700">{key}</span>
-                                        {isSelected && <span className="text-sm font-bold text-green-600">{selectedAttrs[key]}</span>}
+                                        {isSelected && <span className="text-sm font-bold text-blue-600">{selectedAttrs[key]}</span>}
                                     </div>
                                     {(!isSelected) && (
                                         <div className="flex flex-wrap gap-2">
-                                            {key === 'Taille' ? (
-                                                // Multi-sélection pour les tailles
-                                                <>
-                                                    {vals.map(val => {
-                                                        const isChecked = selectedTailles.includes(val);
-                                                        return (
-                                                            <button key={val}
-                                                                onClick={() => setSelectedTailles(prev => isChecked ? prev.filter(t => t !== val) : [...prev, val])}
-                                                                className={`px-4 py-2 border-2 rounded-xl text-sm font-semibold transition ${isChecked ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-blue-200 hover:border-blue-500 hover:bg-blue-50 text-gray-700'}`}>
-                                                                {isChecked ? '✓ ' : ''}{val}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                    {selectedTailles.length > 0 && (
-                                                        <div className="flex items-center gap-2 w-full mt-1">
-                                                            <span className="text-xs text-blue-600 font-semibold">{selectedTailles.length} taille(s) sélectionnée(s)</span>
-                                                            <button onClick={() => setSelectedTailles([])} className="text-xs text-gray-400 hover:text-red-500 underline">Tout décocher</button>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                vals.map(val => (
-                                                    <button key={val} onClick={() => handleSelectAttr(key, val)}
-                                                        className="px-4 py-2 bg-white border-2 border-blue-200 hover:border-blue-500 hover:bg-blue-50 rounded-xl text-sm font-semibold text-gray-700 transition">
-                                                        {val}
-                                                    </button>
-                                                ))
-                                            )}
+                                            {vals.map(val => (
+                                                <button key={val} onClick={() => handleSelectAttr(key, val)}
+                                                    className="px-4 py-2 bg-white border-2 border-blue-200 hover:border-blue-500 hover:bg-blue-50 rounded-xl text-sm font-semibold text-gray-700 transition">
+                                                    {val}
+                                                </button>
+                                            ))}
                                         </div>
                                     )}
                                     {isSelected && (
@@ -2600,9 +2578,8 @@
 
                         {/* Résultats */}
                         {selectedProduct && articlesMatch.length > 0 && (() => {
-                            // Pour chaque commande, déterminer si elle correspond aux tailles sélectionnées
                             const getTailleOrder = (order) => parseProduct(order.name).attrs['Taille'];
-                            const isActive = (order) => selectedTailles.length === 0 || selectedTailles.includes(getTailleOrder(order));
+                            const isActive = (order) => true;
 
                             // Séparer : commandes où c'est le DERNIER article en attente vs les autres
                             const urgentes = articlesMatch.filter(o => {
@@ -2619,16 +2596,13 @@
                             <div>
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="font-bold text-gray-700">
-                                        {selectedTailles.length > 0 
-                                            ? <>{getArticlesARecevoir().length} commande(s) · taille(s) <span className="text-blue-600">{selectedTailles.join(', ')}</span></>
-                                            : <>{articlesMatch.length} commande(s) en attente de <span className="text-green-600">"{selectedProduct}"</span></>
-                                        }
+                                        {articlesMatch.length} commande(s) en attente de <span className="text-blue-600">"{selectedProduct}"</span>
                                     </h3>
                                     <button
                                         onClick={handleReceptionTous}
-                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition"
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition"
                                     >
-                                        {selectedTailles.length > 0 ? `✅ Déposer taille(s) ${selectedTailles.join(', ')}` : '✅ Tout marquer déposé'}
+                                        ✅ Tout marquer déposé
                                     </button>
                                 </div>
 
@@ -2650,7 +2624,7 @@
                                                             <div className="flex items-center gap-2">
                                                                 <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline text-lg">#{order.reference}</button>
                                                                 <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">Dernière pièce !</span>
-                                                                {taille && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${active && selectedTailles.length > 0 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}>T.{taille}</span>}
+                                                                {taille && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">T.{taille}</span>}
                                                             </div>
                                                             <p className="text-sm text-gray-600 mt-0.5">{order.client}</p>
                                                             <p className="text-xs text-green-600 mt-0.5">✅ {tousArticles.length - 1} autre(s) article(s) déjà prêt(s)</p>
@@ -2677,7 +2651,7 @@
                                                         <div>
                                                             <div className="flex items-center gap-2">
                                                                 <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline">#{order.reference}</button>
-                                                                {taille && <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${active && selectedTailles.length > 0 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}>T.{taille}</span>}
+                                                                {taille && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">T.{taille}</span>}
                                                             </div>
                                                             <p className="text-sm text-gray-600">{order.client || '—'}</p>
                                                             <p className="text-xs text-gray-400">{order.transporteur || '—'}</p>
