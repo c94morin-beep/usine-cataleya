@@ -1955,9 +1955,9 @@
                                                 {statutsDisponibles.map(s => (<option key={s} value={s}>{s}</option>))}
                                             </select>}
                                         </div>
-                                        <p className="text-sm font-medium text-gray-800 mt-1 truncate">{order.name}</p>
+                                        <p className="text-sm font-medium text-gray-800 mt-1">{order.name}</p>
                                         <p className="text-xs text-gray-500 mt-0.5">{order.client || ''}</p>
-                                        <p className="text-xs text-gray-500">🚚 {order.transporteur || '-'}</p>
+                                        <p className="text-xs text-gray-500 md:block hidden">🚚 {order.transporteur || '-'}</p>
                                     </div>
                                 </div>
                                 {order.commentaires ? (
