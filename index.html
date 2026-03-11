@@ -1163,6 +1163,29 @@
             const [showSAVModal, setShowSAVModal] = useState(false);
             const [savArticles, setSavArticles] = useState([]);
             const [showTerminesModal, setShowTerminesModal] = useState(false);
+            const [bordereaux, setBordereaux] = useState({}); // { ref: timestamp }
+
+            React.useEffect(() => {
+                const r = window.firebaseRef(window.db, 'bordereaux');
+                const unsub = window.firebaseOnValue(r, snap => {
+                    setBordereaux(snap.val() || {});
+                });
+                return () => unsub();
+            }, []);
+
+            const toggleBordereau = async (ref, e) => {
+                e.stopPropagation();
+                const already = bordereaux[ref];
+                const updated = { ...bordereaux };
+                if (already) {
+                    delete updated[ref];
+                    await window.firebaseRemove(window.firebaseRef(window.db, 'bordereaux/' + ref));
+                } else {
+                    updated[ref] = Date.now();
+                    await window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [ref]: Date.now() });
+                }
+                setBordereaux(updated);
+            };
 
             // Charger les articles SAV pour la carte
             React.useEffect(() => {
@@ -1494,16 +1517,35 @@
                                                                 <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{refsArray.length} commande(s)</span>
                                                             </div>
                                                             <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                                                {refsArray.map((ref, index) => (
-                                                                    <div key={ref} className={`py-2 px-3 ${index % 2 === 0 ? 'bg-green-50' : 'bg-white'}`}>
-                                                                        <button
-                                                                            onClick={(e) => { e.stopPropagation(); openOrderRecap(ref); }}
-                                                                            className="font-mono text-green-900 text-base hover:text-blue-600 hover:underline cursor-pointer text-left w-full flex items-center gap-2"
-                                                                        >
-                                                                            {ref}
-                                                                        </button>
-                                                                    </div>
-                                                                ))}
+                                                                {refsArray.map((ref, index) => {
+                                                                    const printed = bordereaux[ref];
+                                                                    const printedDate = printed ? (() => {
+                                                                        const d = new Date(printed);
+                                                                        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} à ${String(d.getHours()).padStart(2,'0')}h${String(d.getMinutes()).padStart(2,'0')}`;
+                                                                    })() : null;
+                                                                    return (
+                                                                        <div key={ref} className={`py-2 px-3 flex items-center gap-2 ${printed ? 'bg-gray-100' : (index % 2 === 0 ? 'bg-green-50' : 'bg-white')}`}>
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); openOrderRecap(ref); }}
+                                                                                className={`font-mono text-base hover:text-blue-600 hover:underline cursor-pointer text-left flex-1 ${printed ? 'text-gray-400 line-through' : 'text-green-900'}`}
+                                                                            >
+                                                                                {ref}
+                                                                            </button>
+                                                                            {printedDate && (
+                                                                                <span aria-hidden="true" style={{userSelect:'none'}} className="text-xs text-gray-400 whitespace-nowrap">🖨️ {printedDate}</span>
+                                                                            )}
+                                                                            <button
+                                                                                onClick={(e) => toggleBordereau(ref, e)}
+                                                                                title={printed ? 'Marquer comme non imprimé' : 'Marquer bordereau imprimé'}
+                                                                                aria-hidden="true"
+                                                                                style={{userSelect:'none'}}
+                                                                                className={`text-xs px-2 py-0.5 rounded-full border font-semibold transition-all ${printed ? 'bg-gray-200 text-gray-500 border-gray-300 hover:bg-red-50 hover:text-red-400 hover:border-red-300' : 'bg-white text-gray-400 border-gray-200 hover:bg-green-50 hover:text-green-600 hover:border-green-300'}`}
+                                                                            >
+                                                                                {printed ? '✓' : '🖨️'}
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         </div>
                                                     );
@@ -4379,6 +4421,6 @@
         // Render
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.1 — 05/03/26</div>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.2 — 10/03/26</div>
 </body>
 </html>
