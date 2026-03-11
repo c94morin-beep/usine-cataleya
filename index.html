@@ -129,6 +129,21 @@
             React.useEffect(() => { if (window._casiersCache) setGlobalCasiersData(window._casiersCache); }, []);
             const getCasierNum = (reference) => { const entry = Object.entries(globalCasiers || {}).find(([, v]) => String(v.commande) === String(reference)); return entry ? (entry[1].casierNum || entry[0]) : null; };
             const [globalCasiers, setGlobalCasiers] = useState({});
+            const [poidsData, setPoidsData] = useState({});
+            React.useEffect(() => {
+                const r = window.firebaseRef(window.db, 'poids');
+                const unsub = window.firebaseOnValue(r, snap => setPoidsData(snap.val() || {}));
+                return () => unsub();
+            }, []);
+            const savePoids = async (ref, val) => {
+                if (!val || val.trim() === '') {
+                    await window.firebaseRemove(window.firebaseRef(window.db, 'poids/' + ref));
+                } else {
+                    await window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), {});
+                    await window.firebaseUpdate(window.firebaseRef(window.db, 'poids'), { [ref]: val.trim() });
+                }
+                setPoidsData(prev => ({ ...prev, [ref]: val.trim() }));
+            };
             const [searchTerm, setSearchTerm] = useState('');
             const [filterStatus, setFilterStatus] = useState('all');
             const [showImportModal, setShowImportModal] = useState(false);
@@ -601,7 +616,6 @@
                         fetch(`https://cataleyaparis.com/get_relay_token.php?id_order=${reference}`).then(r => r.json()).catch(() => null),
                         fetch(`https://cataleyaparis.com/get_packlink_label.php?id_order=${reference}`).then(r => r.json()).catch(() => null)
                     ]);
-                    if (relayRes?.success || packlinkRes?.success) { window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [reference]: Date.now() }); }
                     setGlobalSelectedOrder(prev => prev ? {
                         ...prev,
                         labelUrl: relayRes?.success ? relayRes.label_url : null,
@@ -697,6 +711,31 @@
                                                 {globalSelectedOrder.telephone && <p className="flex items-start gap-2"><span className="text-lg">📞</span><a href={`tel:${globalSelectedOrder.telephone}`} className="hover:underline">{globalSelectedOrder.telephone}</a></p>}
                                                 {globalSelectedOrder.email && <p className="flex items-start gap-2"><span className="text-lg">✉️</span><a href={`mailto:${globalSelectedOrder.email}`} className="hover:underline">{globalSelectedOrder.email}</a></p>}
                                                 {globalSelectedOrder.transporteur && <p className="flex items-start gap-2"><span className="text-lg">🚚</span><span>{globalSelectedOrder.transporteur}</span></p>}
+                                                {(() => {
+                                                    const lines = (globalSelectedOrder.adresse_livraison || '').trim().split('\n').map(l => l.trim()).filter(Boolean);
+                                                    const paysLine = lines.length >= 2 ? lines[lines.length - 2] : lines[lines.length - 1];
+                                                    const PAYS_EXEMPTS = ['france','allemagne','belgique','espagne','italie','pays-bas','netherlands','portugal','autriche','suède','sweden','danemark','denmark','finlande','finland','irlande','ireland','grèce','greece','pologne','poland','tchéquie','czech','hongrie','hungary','roumanie','romania','bulgarie','bulgaria','croatie','croatia','slovaquie','slovakia','slovénie','slovenia','lituanie','lithuania','lettonie','latvia','estonie','estonia','luxembourg','malte','malta','chypre','cyprus','maroc','morocco'];
+                                                    const pays = (paysLine || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                                    const needsCustoms = !PAYS_EXEMPTS.some(p => pays.includes(p.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+                                                    if (!needsCustoms) return null;
+                                                    const ref = globalSelectedOrder.reference;
+                                                    const poids = poidsData[ref] || '';
+                                                    return (
+                                                        <p className="flex items-center gap-2 mt-1">
+                                                            <span className="text-lg">⚖️</span>
+                                                            <span className="text-sm text-blue-100 font-semibold">Poids :</span>
+                                                            <input
+                                                                type="text"
+                                                                value={poids}
+                                                                onChange={e => setPoidsData(prev => ({ ...prev, [ref]: e.target.value }))}
+                                                                onBlur={e => savePoids(ref, e.target.value)}
+                                                                placeholder="ex: 1.2 kg"
+                                                                className="bg-white bg-opacity-20 text-white placeholder-blue-200 text-sm px-2 py-0.5 rounded-lg border border-white border-opacity-30 focus:outline-none focus:border-opacity-70 w-28"
+                                                            />
+                                                            {poids && <span className="text-xs text-green-300">✓ Sauvegardé</span>}
+                                                        </p>
+                                                    );
+                                                })()}
                                                 {/* Boutons bordereau dans le header */}
                                                 {!globalSelectedOrder.loadingShipping && (
                                                     <div className="flex gap-2 flex-wrap mt-2">
