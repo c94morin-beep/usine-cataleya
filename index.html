@@ -1089,7 +1089,7 @@
                                     <SAVTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} />
                                 )}
                                 {activeTab === 'reception' && (
-                                    <ReceptionTab orders={activeOrders} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} />
+                                    <ReceptionTab orders={activeOrders} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} lists={lists} activeListId={activeListId} />
                                 )}
 
 
@@ -2586,7 +2586,7 @@
         }
 
         // CasiersTab
-        function ReceptionTab({ orders, updateStatus, userName, openOrderRecap }) {
+        function ReceptionTab({ orders, updateStatus, userName, openOrderRecap, lists, activeListId }) {
             const [searchBase, setSearchBase] = React.useState('');
             const [selectedBase, setSelectedBase] = React.useState(null);
             const [selectedAttrs, setSelectedAttrs] = React.useState({});
@@ -2804,10 +2804,11 @@
                                                 return (
                                                     <div key={order.id} className={`flex items-center justify-between rounded-xl p-4 shadow-sm border-2 transition-all ${active ? 'bg-green-50 border-green-400' : 'bg-gray-50 border-gray-200 opacity-40'}`}>
                                                         <div>
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-2 flex-wrap">
                                                                 <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline text-lg">#{order.reference}</button>
                                                                 <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">Dernière pièce !</span>
                                                                 {taille && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">T.{taille}</span>}
+                                                                {activeListId === 'global' && lists && (() => { const l = lists.find(li => li.orders.some(o => o.id === order.id)); return l ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">📋 {l.name}</span> : null; })()}
                                                             </div>
                                                             <p className="text-sm text-gray-600 mt-0.5">{order.client}</p>
                                                             <p className="text-xs text-green-600 mt-0.5">✅ {tousArticles.length - 1} autre(s) article(s) déjà prêt(s)</p>
@@ -2832,9 +2833,10 @@
                                                 return (
                                                     <div key={order.id} className={`flex items-center justify-between rounded-xl p-4 border transition-all ${active ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200 opacity-40'}`}>
                                                         <div>
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-2 flex-wrap">
                                                                 <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline">#{order.reference}</button>
                                                                 {taille && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">T.{taille}</span>}
+                                                                {activeListId === 'global' && lists && (() => { const l = lists.find(li => li.orders.some(o => o.id === order.id)); return l ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">📋 {l.name}</span> : null; })()}
                                                             </div>
                                                             <p className="text-sm text-gray-600">{order.client || '—'}</p>
                                                             <p className="text-xs text-gray-400">{order.transporteur || '—'}</p>
