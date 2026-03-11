@@ -1089,7 +1089,7 @@
                                     <SAVTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} />
                                 )}
                                 {activeTab === 'reception' && (
-                                    <ReceptionTab orders={getAllOrders()} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} />
+                                    <ReceptionTab orders={activeOrders} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} />
                                 )}
 
 
