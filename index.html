@@ -601,6 +601,7 @@
                         fetch(`https://cataleyaparis.com/get_relay_token.php?id_order=${reference}`).then(r => r.json()).catch(() => null),
                         fetch(`https://cataleyaparis.com/get_packlink_label.php?id_order=${reference}`).then(r => r.json()).catch(() => null)
                     ]);
+                    if (relayRes?.success || packlinkRes?.success) { window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [reference]: Date.now() }); }
                     setGlobalSelectedOrder(prev => prev ? {
                         ...prev,
                         labelUrl: relayRes?.success ? relayRes.label_url : null,
@@ -699,9 +700,9 @@
                                                 {/* Boutons bordereau dans le header */}
                                                 {!globalSelectedOrder.loadingShipping && (
                                                     <div className="flex gap-2 flex-wrap mt-2">
-                                                        {globalSelectedOrder.labelUrl && <a href={globalSelectedOrder.labelUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette MR</a>}
+                                                        {globalSelectedOrder.labelUrl && <a href={globalSelectedOrder.labelUrl} target="_blank" rel="noopener noreferrer" onClick={() => { const ref = globalSelectedOrder.reference; if (ref) window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [ref]: Date.now() }); }} className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette MR</a>}
                                                         {globalSelectedOrder.trackingUrl && <a href={globalSelectedOrder.trackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🔍 Suivi MR</a>}
-                                                        {globalSelectedOrder.packlinkUrl && <a href={globalSelectedOrder.packlinkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-orange-400 hover:bg-orange-500 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette {globalSelectedOrder.packlinkCarrier || 'Packlink'}</a>}
+                                                        {globalSelectedOrder.packlinkUrl && <a href={globalSelectedOrder.packlinkUrl} target="_blank" rel="noopener noreferrer" onClick={() => { const ref = globalSelectedOrder.reference; if (ref) window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [ref]: Date.now() }); }} className="flex items-center gap-1 px-3 py-1.5 bg-orange-400 hover:bg-orange-500 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette {globalSelectedOrder.packlinkCarrier || 'Packlink'}</a>}
                                                         {globalSelectedOrder.packlinkTrackingUrl && <a href={globalSelectedOrder.packlinkTrackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🔍 Suivi {globalSelectedOrder.packlinkTrackingNumber || 'colis'}</a>}
                                                         <a href={`https://cataleyaparis.fr/FIEdit.php.php?secure_key=ed3fa1ce558e1cfbaa3f99403&id_order=${globalSelectedOrder.reference}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🧾 Facture</a>
                                                         {globalSelectedOrder.loadingShipping === false && !globalSelectedOrder.labelUrl && !globalSelectedOrder.packlinkUrl && null}
@@ -1164,6 +1165,23 @@
             const [savArticles, setSavArticles] = useState([]);
             const [showTerminesModal, setShowTerminesModal] = useState(false);
             const [bordereaux, setBordereaux] = useState({}); // { ref: timestamp }
+            const [selectedRefs, setSelectedRefs] = useState(new Set());
+
+            const toggleSelectRef = (ref) => {
+                setSelectedRefs(prev => {
+                    const next = new Set(prev);
+                    if (next.has(ref)) next.delete(ref); else next.add(ref);
+                    return next;
+                });
+            };
+
+            const markSelectedPrinted = async () => {
+                if (selectedRefs.size === 0) return;
+                const updates = {};
+                selectedRefs.forEach(ref => { updates[ref] = Date.now(); });
+                await window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), updates);
+                setSelectedRefs(new Set());
+            };
 
             React.useEffect(() => {
                 const r = window.firebaseRef(window.db, 'bordereaux');
@@ -1491,8 +1509,19 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowTerminesModal(false)}>
                             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-6 border-b">
-                                    <h3 className="text-xl font-bold text-green-700">✅ Commandes terminées ({terminesRefs.length})</h3>
-                                    <button onClick={() => setShowTerminesModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-xl font-bold text-green-700">✅ Commandes terminées ({terminesRefs.length})</h3>
+                                        <label aria-hidden="true" style={{userSelect:'none'}} className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedRefs.size === terminesRefs.length && terminesRefs.length > 0}
+                                                onChange={e => setSelectedRefs(e.target.checked ? new Set(terminesRefs) : new Set())}
+                                                className="w-4 h-4 accent-green-600"
+                                            />
+                                            Tout
+                                        </label>
+                                    </div>
+                                    <button onClick={() => { setShowTerminesModal(false); setSelectedRefs(new Set()); }} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
                                 </div>
                                 <div className="overflow-y-auto p-6">
                                     {terminesRefs.length === 0 ? (
@@ -1538,6 +1567,15 @@
                                                                     })() : null;
                                                                     return (
                                                                         <div key={ref} className={`py-2 px-3 flex items-center gap-2 ${printed ? 'bg-gray-100' : (index % 2 === 0 ? 'bg-green-50' : 'bg-white')}`}>
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                aria-hidden="true"
+                                                                                style={{userSelect:'none'}}
+                                                                                checked={selectedRefs.has(ref)}
+                                                                                onChange={() => toggleSelectRef(ref)}
+                                                                                onClick={e => e.stopPropagation()}
+                                                                                className="w-4 h-4 accent-green-600 cursor-pointer flex-shrink-0"
+                                                                            />
                                                                             <button
                                                                                 onClick={(e) => { e.stopPropagation(); openOrderRecap(ref); }}
                                                                                 className={`font-mono text-base hover:text-blue-600 hover:underline cursor-pointer text-left flex-1 ${printed ? 'text-gray-400 line-through' : 'text-green-900'}`}
@@ -1561,7 +1599,7 @@
                                                                             )}
                                                                             <button
                                                                                 onClick={(e) => toggleBordereau(ref, e)}
-                                                                                title={printed ? 'Marquer comme non imprimé' : 'Marquer bordereau imprimé'}
+                                                                                title={printed ? 'Annuler' : 'Marquer bordereau imprimé'}
                                                                                 aria-hidden="true"
                                                                                 style={{userSelect:'none'}}
                                                                                 className={`text-xs px-2 py-0.5 rounded-full border font-semibold transition-all ${printed ? 'bg-gray-200 text-gray-500 border-gray-300 hover:bg-red-50 hover:text-red-400 hover:border-red-300' : 'bg-white text-gray-400 border-gray-200 hover:bg-green-50 hover:text-green-600 hover:border-green-300'}`}
@@ -1579,8 +1617,24 @@
                                         </div>
                                     )}
                                 </div>
-                                <div className="p-4 border-t bg-gray-50 rounded-b-xl">
-                                    <p className="text-sm text-gray-500 text-center">{terminesOrders.length} article(s) terminé(s) au total</p>
+                                <div className="p-4 border-t bg-gray-50 rounded-b-xl flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm text-gray-500">{terminesOrders.length} article(s) terminé(s)</p>
+                                        <button
+                                                onClick={async () => { if (!window.confirm('Effacer tous les bordereaux marqués ?')) return; await window.firebaseRemove(window.firebaseRef(window.db, 'bordereaux')); setSelectedRefs(new Set()); }}
+                                                className="text-xs px-2 py-1 border border-red-200 text-red-400 rounded-lg hover:bg-red-50 transition"
+                                            >🗑 Tout effacer</button>
+                                    </div>
+                                    {selectedRefs.size > 0 && (
+                                        <button
+                                            onClick={markSelectedPrinted}
+                                            aria-hidden="true"
+                                            style={{userSelect:'none'}}
+                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition"
+                                        >
+                                            🖨️ Marquer {selectedRefs.size} imprimé(s)
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
