@@ -1500,8 +1500,20 @@
                                     ) : (
                                         <div className="space-y-6">
                                             {(() => {
+                                                // Pays UE — pas de facture douane
+                                                const PAYS_UE = ['france','allemagne','belgique','espagne','italie','pays-bas','netherlands','portugal','autriche','suède','sweden','danemark','denmark','finlande','finland','irlande','ireland','grèce','greece','pologne','poland','tchéquie','czech','hongrie','hungary','roumanie','romania','bulgarie','bulgaria','croatie','croatia','slovaquie','slovakia','slovénie','slovenia','lituanie','lithuania','lettonie','latvia','estonie','estonia','luxembourg','malte','malta','chypre','cyprus','maroc','morocco'];
+                                                const needsCustoms = (ref) => {
+                                                    const item = orders.find(o => o.reference === ref);
+                                                    if (!item || !item.adresse_livraison) return false;
+                                                    const lines = item.adresse_livraison.trim().split('\n').map(l => l.trim()).filter(Boolean);
+                                                    // Le pays est l'avant-dernière ligne (avant le tel) ou la dernière si pas de tel
+                                                    const paysLine = lines.length >= 2 ? lines[lines.length - 2] : lines[lines.length - 1];
+                                                    if (!paysLine) return false;
+                                                    const pays = paysLine.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                                    return !PAYS_UE.some(p => pays.includes(p.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+                                                };
+
                                                 const byTransporteur = {};
-                                                // Utiliser uniquement les commandes 100% terminées
                                                 terminesRefs.forEach(ref => {
                                                     const firstItem = orders.find(o => o.reference === ref);
                                                     const t = (firstItem && firstItem.transporteur) || 'Non défini';
@@ -1519,6 +1531,7 @@
                                                             <div className="border border-gray-200 rounded-lg overflow-hidden">
                                                                 {refsArray.map((ref, index) => {
                                                                     const printed = bordereaux[ref];
+                                                                    const customs = needsCustoms(ref);
                                                                     const printedDate = printed ? (() => {
                                                                         const d = new Date(printed);
                                                                         return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} à ${String(d.getHours()).padStart(2,'0')}h${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1531,6 +1544,18 @@
                                                                             >
                                                                                 {ref}
                                                                             </button>
+                                                                            {customs && (
+                                                                                <a
+                                                                                    href={`https://cataleyaparis.fr/FIEdit.php?secure_key=ed3fa1ce558e1cfbaa3f99403&id_order=${ref}`}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    aria-hidden="true"
+                                                                                    style={{userSelect:'none'}}
+                                                                                    title="Ouvrir la facture douane"
+                                                                                    onClick={e => e.stopPropagation()}
+                                                                                    className="text-base hover:scale-110 transition-transform"
+                                                                                >🧾</a>
+                                                                            )}
                                                                             {printedDate && (
                                                                                 <span aria-hidden="true" style={{userSelect:'none'}} className="text-xs text-gray-400 whitespace-nowrap">🖨️ {printedDate}</span>
                                                                             )}
