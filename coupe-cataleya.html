@@ -711,6 +711,7 @@
         <span class="user-name" id="user-name">—</span>
       </div>
       <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+      <button id="btn-dev-switch" onclick="devSwitchRole()" style="display:none;margin-left:6px;padding:5px 10px;border:1px dashed #f59e0b;border-radius:8px;background:transparent;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer;" title="Changer de rôle (mode DEV)">⚡ Rôle</button>
     </div>
   </header>
 
@@ -816,6 +817,11 @@ const db = firebase.database();
 // ══════════════════════════════════════════════
 // CONFIG MÉTIER
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// MODE DEV — mettre false en production
+// ══════════════════════════════════════════════
+const DEV_MODE = true;
+
 const EMAIL_ROLE = {
   'admin@usine-cataleyaparis.com':          'admin',
   'sara@usine-cataleyaparis.com':           'sara',
@@ -883,7 +889,23 @@ let searchQuery = '';
 // ══════════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════════
+// ── Fonction partagée pour activer une session (DEV ou Firebase) ──
+function activateSession(email) {
+  currentEmail = email;
+  currentRole = EMAIL_ROLE[email] || 'guest';
+  if (currentRole === 'coupe') {
+    if (email.includes('coupe1')) currentCoupeStage = 'coupe1';
+    else if (email.includes('coupe2')) currentCoupeStage = 'coupe2';
+    else currentCoupeStage = 'coupe3';
+  }
+  setupUserBadge();
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('screen-app').classList.add('visible');
+  startListeners();
+}
+
 async function doLogin() {
+  if (DEV_MODE) return; // ignoré en mode dev
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
@@ -896,7 +918,31 @@ async function doLogin() {
   }
 }
 
+function doDevLogin(email) {
+  currentUser = { email, uid: 'dev-' + email };
+  // Stopper les anciens listeners Firebase avant de changer de rôle
+  db.ref('production').off();
+  db.ref('listescoupe').off();
+  activateSession(email);
+  // Cacher le panneau de sélection s'il est visible
+  const panel = document.getElementById('dev-role-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+function devSwitchRole() {
+  const panel = document.getElementById('dev-role-panel');
+  if (panel) {
+    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+  }
+}
+
 function doLogout() {
+  if (DEV_MODE) {
+    currentUser = null; currentRole = null;
+    document.getElementById('screen-login').style.display = 'flex';
+    document.getElementById('screen-app').classList.remove('visible');
+    return;
+  }
   auth.signOut();
 }
 
@@ -904,27 +950,63 @@ document.getElementById('login-password').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
 
-auth.onAuthStateChanged(user => {
-  if (user) {
-    currentUser = user;
-    currentEmail = user.email;
-    currentRole = EMAIL_ROLE[user.email] || 'guest';
-    // Déterminer coupe1/2/3 selon email
-    if (currentRole === 'coupe') {
-      if (currentEmail.includes('coupe1')) currentCoupeStage = 'coupe1';
-      else if (currentEmail.includes('coupe2')) currentCoupeStage = 'coupe2';
-      else currentCoupeStage = 'coupe3';
+// Afficher les boutons DEV ou le formulaire normal
+if (DEV_MODE) {
+  // Masquer formulaire classique, afficher les boutons de rôle
+  const loginBox = document.getElementById('screen-login');
+  const devRoles = [
+    { email: 'admin@usine-cataleyaparis.com',        label: '👑 Admin' },
+    { email: 'sara@usine-cataleyaparis.com',          label: '🧵 Sara' },
+    { email: 'cao@usine-cataleyaparis.com',           label: '📐 CAO' },
+    { email: 'coupe1@usine-cataleyaparis.com',        label: '✂️ Coupe 1' },
+    { email: 'coupe2@usine-cataleyaparis.com',        label: '✂️ Coupe 2' },
+    { email: 'coupe3@usine-cataleyaparis.com',        label: '✂️ Coupe 3' },
+    { email: 'etiquetage@usine-cataleyaparis.com',    label: '🏷️ Étiquetage' },
+    { email: 'dispatche@usine-cataleyaparis.com',     label: '📤 Dispatche' },
+    { email: 'controle1@usine-cataleyaparis.com',     label: '🔍 Ctrl Chaîne' },
+    { email: 'defauts@usine-cataleyaparis.com',       label: '🪡 Ctrl Défauts' },
+    { email: 'controle.final@usine-cataleyaparis.com',label: '✅ Ctrl Final' },
+    { email: 'abderrahim@usine-cataleyaparis.com',    label: '🔧 Chef Atelier' },
+  ];
+  // Injecter les boutons dans l'écran login
+  document.addEventListener('DOMContentLoaded', () => {
+    // Afficher le bouton DEV dans le header
+    const btnSwitch = document.getElementById('btn-dev-switch');
+    if (btnSwitch) btnSwitch.style.display = 'inline-block';
+
+    // Créer le panneau flottant de sélection de rôle
+    const panel = document.createElement('div');
+    panel.id = 'dev-role-panel';
+    panel.style.cssText = 'display:flex;flex-direction:column;gap:8px;position:fixed;top:64px;right:16px;z-index:9999;background:#0f172a;border:1.5px dashed #f59e0b;border-radius:14px;padding:16px;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+    panel.innerHTML = '<div style="font-size:12px;font-weight:700;color:#f59e0b;letter-spacing:1px;margin-bottom:4px;text-align:center;">⚡ MODE DEV — Choisir un rôle</div>';
+    devRoles.forEach(r => {
+      const btn = document.createElement('button');
+      btn.textContent = r.label;
+      btn.style.cssText = 'width:100%;padding:8px 14px;border:none;border-radius:8px;background:#1e293b;color:#f1f5f9;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background 0.15s;';
+      btn.onmouseover = () => btn.style.background = '#334155';
+      btn.onmouseout  = () => btn.style.background = '#1e293b';
+      btn.onclick = () => doDevLogin(r.email);
+      panel.appendChild(btn);
+    });
+    document.body.appendChild(panel);
+
+    // Écran login simplifié (juste un fond avec message)
+    const container = document.getElementById('screen-login');
+    container.innerHTML = '<div style="color:#f59e0b;font-size:16px;font-weight:700;">⚡ MODE DEV — Clique sur un rôle →</div>';
+    container.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0f172a;';
+  });
+} else {
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      activateSession(user.email);
+    } else {
+      currentUser = null; currentRole = null;
+      document.getElementById('screen-login').style.display = 'flex';
+      document.getElementById('screen-app').classList.remove('visible');
     }
-    setupUserBadge();
-    document.getElementById('screen-login').style.display = 'none';
-    document.getElementById('screen-app').classList.add('visible');
-    startListeners();
-  } else {
-    currentUser = null; currentRole = null;
-    document.getElementById('screen-login').style.display = 'flex';
-    document.getElementById('screen-app').classList.remove('visible');
-  }
-});
+  });
+}
 
 function setupUserBadge() {
   const info = ROLE_INFO[currentRole] || { label: currentRole, color:'#6b7280', avatar:'👤' };
