@@ -261,6 +261,15 @@
                     window.firebaseOnAuthStateChanged(async (firebaseUser) => {
                         if (firebaseUser) {
                             const role = await window.firebaseGetUserRole(firebaseUser.uid);
+                            // Rôles autorisés sur cette app
+                            const ROLES_AUTORISES = ['admin', 'operateur', 'commentaires', 'livreur', 'lecteur'];
+                            if (!ROLES_AUTORISES.includes(role)) {
+                                // Rediriger vers l'app coupe
+                                await window.firebaseSignOut();
+                                alert('Accès non autorisé sur cette application. Vous allez être redirigé.');
+                                window.location.href = 'coupe-cataleya.html';
+                                return;
+                            }
                             setUser(firebaseUser); setUserRole(role);
                         } else { setUser(null); setUserRole(null); }
                         setAuthLoading(false);
