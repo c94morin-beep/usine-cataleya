@@ -142,38 +142,12 @@
                 return () => unsub();
             }, []);
             // Sauvegarde d'un champ de la commande (client, email, adresse, transporteur, telephone)
+            // Modification désactivée temporairement — à reconstruire proprement
             const saveOrderField = async (ref, field, value) => {
-                const allLists = lists;
-                for (const list of allLists) {
-                    const orderIdx = list.orders ? list.orders.findIndex(o => String(o.reference) === String(ref)) : -1;
-                    if (orderIdx === -1) continue;
-                    // Mettre à jour tous les articles de cette commande dans cette liste
-                    const updatedOrders = list.orders.map(o => String(o.reference) === String(ref) ? { ...o, [field]: value } : o);
-                    await window.firebaseSet(window.firebaseRef(window.db, `lists/${list.id}/orders`), updatedOrders);
-                    break;
-                }
-                // Mettre à jour l'ordre affiché localement
-                setGlobalSelectedOrder(prev => prev ? { ...prev, [field]: value } : prev);
+                alert("Modification temporairement désactivée. Contactez l'administrateur.");
             };
-
-            // Sauvegarde du nom d'un article spécifique
             const saveArticleField = async (ref, itemId, field, value) => {
-                const allLists = lists;
-                for (const list of allLists) {
-                    const hasRef = list.orders && list.orders.some(o => String(o.reference) === String(ref));
-                    if (!hasRef) continue;
-                    const updatedOrders = list.orders.map(o =>
-                        String(o.reference) === String(ref) && String(o.id) === String(itemId)
-                            ? { ...o, [field]: value }
-                            : o
-                    );
-                    await window.firebaseSet(window.firebaseRef(window.db, `lists/${list.id}/orders`), updatedOrders);
-                    break;
-                }
-                setGlobalSelectedOrder(prev => prev ? {
-                    ...prev,
-                    items: prev.items.map(i => String(i.id) === String(itemId) ? { ...i, [field]: value } : i)
-                } : prev);
+                alert("Modification temporairement désactivée. Contactez l'administrateur.");
             };
 
             const toggleValidation = async (ref) => {
@@ -319,18 +293,23 @@
                 const init = () => {
                     const unsub = window.firebaseOnLists((data) => {
                         if (ignoringFirebaseRef.current) { console.log('[Firebase] update ignoré (flag actif)'); return; }
-                        const raw = Array.isArray(data) ? data : Object.values(data || {});
+                        const rawData = data || {};
+                        const raw = (Array.isArray(rawData) ? rawData : Object.values(rawData)).filter(Boolean);
                         // Log pour debug commentaires
                         const sample = raw[0]?.orders?.slice(0,3).map(o => ({id:o.id, commentaires:o.commentaires}));
                         console.log('[Firebase] setLists depuis Firebase, sample:', JSON.stringify(sample));
-                        const cleaned = raw.map(list => ({
-                            ...list,
-                            orders: (list.orders || []).map(order => ({
-                                ...order,
-                                commentaires: order.commentaires === '__clear__' ? '' : order.commentaires,
-                                commentAuthor: order.commentAuthor === '__clear__' ? null : order.commentAuthor,
-                            }))
-                        }));
+                        const cleaned = raw.map(list => {
+                            const rawOrders = list.orders || [];
+                            const ordersArr = Array.isArray(rawOrders) ? rawOrders : Object.values(rawOrders);
+                            return {
+                                ...list,
+                                orders: ordersArr.filter(Boolean).map(order => ({
+                                    ...order,
+                                    commentaires: order.commentaires === '__clear__' ? '' : order.commentaires,
+                                    commentAuthor: order.commentAuthor === '__clear__' ? null : order.commentAuthor,
+                                }))
+                            };
+                        });
                         setLists(cleaned);
                     });
                     return unsub;
