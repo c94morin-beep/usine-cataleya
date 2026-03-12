@@ -262,7 +262,7 @@
                         if (firebaseUser) {
                             const role = await window.firebaseGetUserRole(firebaseUser.uid);
                             // Rôles autorisés sur cette app
-                            const ROLES_AUTORISES = ['admin', 'operateur', 'commentaires', 'livreur', 'lecteur'];
+                            const ROLES_AUTORISES = ['admin', 'operateur', 'commentaires', 'livreur', 'lecture'];
                             if (!ROLES_AUTORISES.includes(role)) {
                                 // Rediriger vers l'app coupe
                                 await window.firebaseSignOut();
@@ -672,7 +672,7 @@
             if (!user) return <LoginPage />;
             const isAdmin = userRole === 'admin';
             const isOperateur = userRole === 'operateur';
-            const isLecteur = !userRole || userRole === 'lecteur' || (!['admin','operateur','commentaires','livreur'].includes(userRole));
+            const isLecteur = !userRole || userRole === 'lecture' || (!['admin','operateur','commentaires','livreur'].includes(userRole));
             const isCommentaires = userRole === 'commentaires';
             const isSara = userRole === 'livreur';
             const canEditStatus = isAdmin || isOperateur;
