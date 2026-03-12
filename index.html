@@ -1176,7 +1176,7 @@
                                     <ListeCoupeTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} activeTheme={activeTheme} listThemes={LIST_THEMES} activeListId={activeListId} parentLists={lists} />
                                 )}
                                 {activeTab === 'sav' && (
-                                    <SAVTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} />
+                                    <SAVTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} isOperateur={isOperateur} userName={userName} />
                                 )}
                                 {activeTab === 'reception' && (
                                     <ReceptionTab orders={activeOrders} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} lists={lists} activeListId={activeListId} />
@@ -1480,7 +1480,7 @@
                         {/* Avec commentaire — Admin/Achraf + Fatima */}
                         {!isSara && <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />}
                         {/* SAV — visible par tous */}
-                        <StatCard title="SAV" value={savArticles.filter(a => a.status !== 'Rangé').length} subtitle={`${savArticles.length} total`} color="red" icon="🔧" onClick={() => setShowSAVModal(true)} clickable={true} />
+                        <StatCard title="SAV" value={savArticles.reduce((n, sav) => { const arts = sav.articles ? (Array.isArray(sav.articles) ? sav.articles : Object.values(sav.articles)) : [sav]; return n + arts.filter(a => a.status !== 'Rangé').length; }, 0)} subtitle={`${savArticles.reduce((n, sav) => { const arts = sav.articles ? (Array.isArray(sav.articles) ? sav.articles : Object.values(sav.articles)) : [sav]; return n + arts.length; }, 0)} total`} color="red" icon="🔧" onClick={() => setShowSAVModal(true)} clickable={true} />
                     </div>
 
                     <div className="bg-white rounded-lg shadow p-6">
@@ -1518,17 +1518,30 @@
                                         <p className="text-center text-gray-400 py-8">Aucun article SAV</p>
                                     ) : (
                                         <div className="space-y-3">
-                                            {savArticles.sort((a,b) => (b.createdAt||0)-(a.createdAt||0)).map((a, i) => {
+                                            {savArticles.sort((a,b) => (b.createdAt||0)-(a.createdAt||0)).map((sav, i) => {
                                                 const statusColors = {'En attente':'bg-orange-100 text-orange-700','Reçu':'bg-blue-100 text-blue-700','Rangé':'bg-green-100 text-green-700'};
+                                                // Compatibilité ancienne structure
+                                                const arts = sav.articles ? (Array.isArray(sav.articles) ? sav.articles : Object.values(sav.articles)) : [{ produit: sav.produit, couleurTaille: sav.couleurTaille, photoUrl: sav.photoUrl, status: sav.status }];
+                                                const activeArts = arts.filter(a => a.status !== 'Rangé');
+                                                if (activeArts.length === 0) return null;
                                                 return (
-                                                    <div key={i} className="border border-gray-200 rounded-xl p-3 flex items-center gap-3">
-                                                        {a.photoUrl && <img src={a.photoUrl} className="w-12 h-12 object-cover rounded-lg flex-shrink-0" onError={e=>e.target.style.display='none'} />}
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="font-semibold text-sm text-gray-800">{a.produit}</p>
-                                                            {a.couleurTaille && <p className="text-xs text-gray-500">{a.couleurTaille}</p>}
-                                                            {a.cliente && <p className="text-xs text-gray-500">👤 {a.cliente}</p>}
-                                                        </div>
-                                                        <span className={`text-xs px-2 py-1 rounded-full font-semibold flex-shrink-0 ${statusColors[a.status] || 'bg-gray-100 text-gray-600'}`}>{a.status}</span>
+                                                    <div key={i} className="border border-gray-200 rounded-xl overflow-hidden">
+                                                        {(sav.reference || sav.cliente) && (
+                                                            <div className="bg-orange-50 px-3 py-1.5 flex items-center gap-2 border-b border-orange-100">
+                                                                {sav.reference && <span className="text-xs font-bold text-orange-700">📦 Réf. {sav.reference}</span>}
+                                                                {sav.cliente && <span className="text-xs text-orange-500">👤 {sav.cliente}</span>}
+                                                            </div>
+                                                        )}
+                                                        {activeArts.map((a, j) => (
+                                                            <div key={j} className="p-3 flex items-center gap-3 border-b border-gray-100 last:border-0">
+                                                                {a.photoUrl && <img src={a.photoUrl} className="w-12 h-12 object-cover rounded-lg flex-shrink-0" onError={e=>e.target.style.display='none'} />}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="font-semibold text-sm text-gray-800">{a.produit}</p>
+                                                                    {a.couleurTaille && <p className="text-xs text-gray-500">{a.couleurTaille}</p>}
+                                                                </div>
+                                                                <span className={`text-xs px-2 py-1 rounded-full font-semibold flex-shrink-0 ${statusColors[a.status] || 'bg-gray-100 text-gray-600'}`}>{a.status}</span>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 );
                                             })}
@@ -4536,17 +4549,17 @@
         }
 
         // ===================== SAV TAB =====================
-        function SAVTab({ isAdmin, isSara, isCommentaires, userName }) {
+        function SAVTab({ isAdmin, isSara, isCommentaires, isOperateur, userName }) {
             const db = window.db;
-            const [articles, setArticles] = React.useState([]);
-            const [showForm, setShowForm] = React.useState(false);
+            const [savList, setSavList] = React.useState([]); // liste des SAV (chacun = une commande avec plusieurs articles)
             const [filterStatus, setFilterStatus] = React.useState('tous');
             const [search, setSearch] = React.useState('');
-            const [editId, setEditId] = React.useState(null);
-            const [form, setForm] = React.useState({
-                cliente: '', reference: '', produit: '', couleurTaille: '',
-                description: '', photoUrl: '', status: 'En attente'
-            });
+
+            // Modal création/édition SAV
+            const [showForm, setShowForm] = React.useState(false);
+            const [editSavId, setEditSavId] = React.useState(null);
+            const [formHeader, setFormHeader] = React.useState({ cliente: '', reference: '' });
+            const [formArticles, setFormArticles] = React.useState([{ produit: '', couleurTaille: '', description: '', photoUrl: '', status: 'En attente' }]);
 
             const SAV_STATUTS = ['En attente', 'Reçu', 'Rangé'];
             const STATUS_COLORS = {
@@ -4555,78 +4568,104 @@
                 'Rangé':      { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500' },
             };
 
+            // Permissions
+            const canAdd    = isAdmin || isCommentaires; // Admin + Fatima
+            const canEdit   = isAdmin || isCommentaires; // Admin + Fatima
+            const canStatus = isAdmin || isCommentaires || isOperateur || isSara; // tout le monde sauf lecture
+
             React.useEffect(() => {
                 const r = window.firebaseRef(db, 'sav');
                 const unsub = window.firebaseOnValue(r, snap => {
                     const val = snap.val() || {};
-                    const arr = Object.entries(val).map(([id, v]) => ({ id, ...v }))
-                        .sort((a, b) => b.createdAt - a.createdAt);
-                    setArticles(arr);
+                    const arr = Object.entries(val).map(([id, v]) => {
+                        // Compatibilité ancienne structure (un seul article à plat)
+                        let articles = v.articles;
+                        if (!articles) {
+                            articles = [{ produit: v.produit || '', couleurTaille: v.couleurTaille || '', description: v.description || '', photoUrl: v.photoUrl || '', status: v.status || 'En attente' }];
+                        } else if (!Array.isArray(articles)) {
+                            articles = Object.values(articles);
+                        }
+                        return { id, cliente: v.cliente || '', reference: v.reference || '', createdAt: v.createdAt || 0, updatedAt: v.updatedAt || 0, updatedBy: v.updatedBy || '', articles };
+                    }).sort((a, b) => b.createdAt - a.createdAt);
+                    setSavList(arr);
                 });
                 return () => unsub();
             }, []);
 
             const resetForm = () => {
-                setForm({ cliente: '', reference: '', produit: '', couleurTaille: '', description: '', photoUrl: '', status: 'En attente' });
-                setEditId(null);
+                setFormHeader({ cliente: '', reference: '' });
+                setFormArticles([{ produit: '', couleurTaille: '', description: '', photoUrl: '', status: 'En attente' }]);
+                setEditSavId(null);
                 setShowForm(false);
             };
 
-            const saveArticle = async () => {
-                if (!form.produit.trim()) return;
-                const id = editId || 'sav_' + Date.now();
+            const openEdit = (sav) => {
+                setFormHeader({ cliente: sav.cliente, reference: sav.reference });
+                setFormArticles(sav.articles.map(a => ({ produit: a.produit || '', couleurTaille: a.couleurTaille || '', description: a.description || '', photoUrl: a.photoUrl || '', status: a.status || 'En attente' })));
+                setEditSavId(sav.id);
+                setShowForm(true);
+            };
+
+            const addArticleRow = () => setFormArticles(p => [...p, { produit: '', couleurTaille: '', description: '', photoUrl: '', status: 'En attente' }]);
+            const removeArticleRow = (i) => setFormArticles(p => p.filter((_, idx) => idx !== i));
+            const updateArticleRow = (i, field, val) => setFormArticles(p => p.map((a, idx) => idx === i ? { ...a, [field]: val } : a));
+
+            const saveSAV = async () => {
+                const validArticles = formArticles.filter(a => a.produit.trim());
+                if (validArticles.length === 0) return;
+                const id = editSavId || 'sav_' + Date.now();
+                const existing = savList.find(s => s.id === editSavId);
                 await window.firebaseSet(window.firebaseRef(db, 'sav/' + id), {
-                    ...form,
-                    createdAt: editId ? (articles.find(a => a.id === editId)?.createdAt || Date.now()) : Date.now(),
+                    cliente: formHeader.cliente,
+                    reference: formHeader.reference,
+                    articles: validArticles,
+                    createdAt: editSavId ? (existing?.createdAt || Date.now()) : Date.now(),
                     updatedAt: Date.now(),
                     updatedBy: userName
                 });
                 resetForm();
             };
 
-            const updateStatus = async (id, status) => {
-                await window.firebaseUpdate(window.firebaseRef(db, 'sav/' + id), {
-                    status, updatedAt: Date.now(), updatedBy: userName
+            const updateArticleStatus = async (savId, artIdx, status) => {
+                const sav = savList.find(s => s.id === savId);
+                if (!sav) return;
+                const updated = sav.articles.map((a, i) => i === artIdx ? { ...a, status } : a);
+                await window.firebaseUpdate(window.firebaseRef(db, 'sav/' + savId), {
+                    articles: updated, updatedAt: Date.now(), updatedBy: userName
                 });
             };
 
-            const deleteArticle = async (id) => {
-                if (!confirm('Supprimer cet article SAV ?')) return;
+            const deleteSAV = async (id) => {
+                if (!confirm('Supprimer ce SAV et tous ses articles ?')) return;
                 await window.firebaseRemove(window.firebaseRef(db, 'sav/' + id));
             };
 
-            const openEdit = (article) => {
-                setForm({
-                    cliente: article.cliente || '',
-                    reference: article.reference || '',
-                    produit: article.produit || '',
-                    couleurTaille: article.couleurTaille || '',
-                    description: article.description || '',
-                    photoUrl: article.photoUrl || '',
-                    status: article.status || 'En attente'
-                });
-                setEditId(article.id);
-                setShowForm(true);
-            };
+            // Filtrage : on filtre les SAV dont au moins un article correspond
+            const filtered = savList.filter(sav => {
+                const matchStatus = filterStatus === 'tous' || sav.articles.some(a => a.status === filterStatus);
+                const q = search.toLowerCase();
+                const matchSearch = !q || [sav.cliente, sav.reference, ...sav.articles.map(a => a.produit)].join(' ').toLowerCase().includes(q);
+                return matchStatus && matchSearch;
+            });
 
-            const filtered = articles
-                .filter(a => filterStatus === 'tous' || a.status === filterStatus)
-                .filter(a => !search || [a.produit, a.cliente, a.reference].join(' ').toLowerCase().includes(search.toLowerCase()));
-
+            // Comptages par statut (sur les articles)
             const counts = SAV_STATUTS.reduce((acc, s) => {
-                acc[s] = articles.filter(a => a.status === s).length;
+                acc[s] = savList.reduce((n, sav) => n + sav.articles.filter(a => a.status === s).length, 0);
                 return acc;
             }, {});
+            const totalArticles = savList.reduce((n, sav) => n + sav.articles.length, 0);
 
             return (
                 <div className="p-3">
                     {/* Header */}
                     <div className="flex items-center gap-3 mb-4 flex-wrap">
                         <h2 className="text-lg font-bold text-gray-800">🔧 SAV — Articles à refaire</h2>
-                        <button onClick={() => { resetForm(); setShowForm(true); }}
-                            className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600">
-                            ➕ Ajouter un article
-                        </button>
+                        {canAdd && (
+                            <button onClick={() => { resetForm(); setShowForm(true); }}
+                                className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600">
+                                ➕ Nouveau SAV
+                            </button>
+                        )}
                     </div>
 
                     {/* Stats */}
@@ -4643,7 +4682,7 @@
                         })}
                         <div className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold cursor-pointer"
                             onClick={() => setFilterStatus('tous')}>
-                            Tous <span className="ml-1 text-gray-600 font-bold">{articles.length}</span>
+                            Tous <span className="ml-1 text-gray-600 font-bold">{totalArticles}</span>
                         </div>
                     </div>
 
@@ -4655,114 +4694,137 @@
                         {search && <button onClick={() => setSearch('')} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">✕</button>}
                     </div>
 
-                    {/* Liste articles */}
+                    {/* Liste SAV */}
                     {filtered.length === 0 ? (
                         <div className="text-center text-gray-400 py-12">
-                            {articles.length === 0 ? 'Aucun article SAV pour le moment.' : 'Aucun résultat.'}
+                            {savList.length === 0 ? 'Aucun article SAV pour le moment.' : 'Aucun résultat.'}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-3">
-                            {filtered.map(article => {
-                                const col = STATUS_COLORS[article.status] || STATUS_COLORS['En attente'];
-                                return (
-                                    <div key={article.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                                        <div className="flex items-start gap-3">
-                                            {/* Photo */}
-                                            {article.photoUrl && (
-                                                <img src={article.photoUrl} className="w-16 h-16 object-cover rounded-lg border border-gray-200 flex-shrink-0"
-                                                    onError={e => e.target.style.display='none'} />
+                        <div className="grid grid-cols-1 gap-4">
+                            {filtered.map(sav => (
+                                <div key={sav.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                    {/* En-tête commande */}
+                                    <div className="bg-orange-50 border-b border-orange-100 px-4 py-2 flex items-center justify-between gap-2 flex-wrap">
+                                        <div className="flex items-center gap-3">
+                                            {sav.reference && <span className="font-bold text-orange-800 text-sm">📦 Réf. {sav.reference}</span>}
+                                            {sav.cliente && <span className="text-xs text-orange-600">👤 {sav.cliente}</span>}
+                                            <span className="text-xs text-orange-400">{sav.articles.length} article{sav.articles.length > 1 ? 's' : ''}</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {canEdit && (
+                                                <button onClick={() => openEdit(sav)}
+                                                    className="text-xs px-2 py-1 border border-orange-200 rounded-lg text-orange-600 hover:bg-orange-100">✏️ Modifier</button>
                                             )}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                    <span className="font-bold text-gray-800 text-sm">{article.produit}</span>
-                                                    {article.couleurTaille && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{article.couleurTaille}</span>}
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${col.bg} ${col.text}`}>
-                                                        <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${col.dot}`}></span>
-                                                        {article.status}
-                                                    </span>
-                                                </div>
-                                                {article.cliente && <p className="text-xs text-gray-500 mb-0.5">👤 {article.cliente}</p>}
-                                                {article.reference && <p className="text-xs text-gray-500 mb-0.5">📦 Réf. {article.reference}</p>}
-                                                {article.description && <p className="text-xs text-gray-600 italic mt-1 bg-gray-50 rounded p-2">{article.description}</p>}
-                                                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                    {/* Changement de statut */}
-                                                    <select value={article.status}
-                                                        onChange={e => updateStatus(article.id, e.target.value)}
-                                                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-orange-400">
-                                                        {SAV_STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
-                                                    </select>
-                                                    <button onClick={() => openEdit(article)}
-                                                        className="text-xs px-2 py-1 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">✏️ Modifier</button>
-                                                    {isAdmin && (
-                                                        <button onClick={() => deleteArticle(article.id)}
-                                                            className="text-xs px-2 py-1 border border-red-200 rounded-lg text-red-500 hover:bg-red-50">🗑 Supprimer</button>
-                                                    )}
-                                                    <span className="text-xs text-gray-300 ml-auto">
-                                                        {article.updatedBy && `Modifié par ${article.updatedBy}`}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                            {isAdmin && (
+                                                <button onClick={() => deleteSAV(sav.id)}
+                                                    className="text-xs px-2 py-1 border border-red-200 rounded-lg text-red-500 hover:bg-red-50">🗑</button>
+                                            )}
                                         </div>
                                     </div>
-                                );
-                            })}
+                                    {/* Articles */}
+                                    <div className="divide-y divide-gray-100">
+                                        {sav.articles.map((art, idx) => {
+                                            const col = STATUS_COLORS[art.status] || STATUS_COLORS['En attente'];
+                                            const showThisArticle = filterStatus === 'tous' || art.status === filterStatus;
+                                            if (!showThisArticle) return null;
+                                            return (
+                                                <div key={idx} className="p-3 flex items-start gap-3">
+                                                    {art.photoUrl && (
+                                                        <img src={art.photoUrl} className="w-14 h-14 object-cover rounded-lg border border-gray-200 flex-shrink-0"
+                                                            onError={e => e.target.style.display='none'} />
+                                                    )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                            <span className="font-semibold text-gray-800 text-sm">{art.produit}</span>
+                                                            {art.couleurTaille && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{art.couleurTaille}</span>}
+                                                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${col.bg} ${col.text}`}>
+                                                                <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${col.dot}`}></span>
+                                                                {art.status}
+                                                            </span>
+                                                        </div>
+                                                        {art.description && <p className="text-xs text-gray-600 italic bg-gray-50 rounded p-2 mb-1">{art.description}</p>}
+                                                        {canStatus && (
+                                                            <select value={art.status}
+                                                                onChange={e => updateArticleStatus(sav.id, idx, e.target.value)}
+                                                                className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-orange-400 mt-1">
+                                                                {SAV_STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
+                                                            </select>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {sav.updatedBy && (
+                                        <div className="px-4 py-1 text-xs text-gray-300 border-t border-gray-100">Modifié par {sav.updatedBy}</div>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     )}
 
-                    {/* Modal ajout/édition */}
+                    {/* Modal création/édition SAV */}
                     {showForm && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                                <h3 className="text-lg font-bold mb-4">{editId ? '✏️ Modifier l\'article' : '➕ Nouvel article SAV'}</h3>
-                                <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto">
+                                <h3 className="text-lg font-bold mb-4">{editSavId ? '✏️ Modifier le SAV' : '➕ Nouveau SAV'}</h3>
+
+                                {/* Infos commande */}
+                                <div className="grid grid-cols-2 gap-3 mb-4">
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-600 mb-1">Nom de la cliente</label>
-                                        <input value={form.cliente} onChange={e => setForm(p => ({...p, cliente: e.target.value}))}
+                                        <input value={formHeader.cliente} onChange={e => setFormHeader(p => ({...p, cliente: e.target.value}))}
                                             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" placeholder="Ex: Marie D." />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-600 mb-1">Référence commande</label>
-                                        <input value={form.reference} onChange={e => setForm(p => ({...p, reference: e.target.value}))}
-                                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" placeholder="Ex: #12345" />
+                                        <input value={formHeader.reference} onChange={e => setFormHeader(p => ({...p, reference: e.target.value}))}
+                                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" placeholder="Ex: 32564" />
                                     </div>
                                 </div>
+
+                                {/* Articles */}
                                 <div className="mb-3">
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Nom du produit *</label>
-                                    <input value={form.produit} onChange={e => setForm(p => ({...p, produit: e.target.value}))}
-                                        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" placeholder="Ex: Abaya Alice terracotta" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-3 mb-3">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Couleur / Taille</label>
-                                        <input value={form.couleurTaille} onChange={e => setForm(p => ({...p, couleurTaille: e.target.value}))}
-                                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" placeholder="Ex: Noir / T54" />
+                                    <label className="block text-xs font-semibold text-gray-600 mb-2">Articles *</label>
+                                    <div className="flex flex-col gap-3">
+                                        {formArticles.map((art, i) => (
+                                            <div key={i} className="border border-gray-200 rounded-xl p-3 relative">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-xs font-bold text-orange-600">Article {i + 1}</span>
+                                                    {formArticles.length > 1 && (
+                                                        <button onClick={() => removeArticleRow(i)} className="text-red-400 hover:text-red-600 text-xs">✕ Supprimer</button>
+                                                    )}
+                                                </div>
+                                                <input value={art.produit} onChange={e => updateArticleRow(i, 'produit', e.target.value)}
+                                                    className="w-full border rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:border-orange-400" placeholder="Nom du produit *" />
+                                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                                    <input value={art.couleurTaille} onChange={e => updateArticleRow(i, 'couleurTaille', e.target.value)}
+                                                        className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" placeholder="Couleur / Taille" />
+                                                    <select value={art.status} onChange={e => updateArticleRow(i, 'status', e.target.value)}
+                                                        className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400">
+                                                        {SAV_STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                </div>
+                                                <textarea value={art.description} onChange={e => updateArticleRow(i, 'description', e.target.value)}
+                                                    rows={2} className="w-full border rounded-lg px-3 py-2 text-sm resize-none mb-2 focus:outline-none focus:border-orange-400"
+                                                    placeholder="Description du problème..." />
+                                                <input value={art.photoUrl} onChange={e => updateArticleRow(i, 'photoUrl', e.target.value)}
+                                                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" placeholder="URL photo (https://...)" />
+                                                {art.photoUrl && <img src={art.photoUrl} className="mt-2 h-20 rounded-lg object-cover" onError={e => e.target.style.display='none'} />}
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Statut</label>
-                                        <select value={form.status} onChange={e => setForm(p => ({...p, status: e.target.value}))}
-                                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400">
-                                            {SAV_STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
-                                        </select>
-                                    </div>
+                                    <button onClick={addArticleRow}
+                                        className="mt-3 w-full py-2 border-2 border-dashed border-orange-300 text-orange-500 rounded-xl text-sm font-semibold hover:bg-orange-50">
+                                        ➕ Ajouter un article
+                                    </button>
                                 </div>
-                                <div className="mb-3">
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Description du problème</label>
-                                    <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))}
-                                        rows={3} className="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-orange-400"
-                                        placeholder="Ex: Couture défectueuse sur la manche gauche..." />
-                                </div>
-                                <div className="mb-4">
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">URL photo du défaut</label>
-                                    <input value={form.photoUrl} onChange={e => setForm(p => ({...p, photoUrl: e.target.value}))}
-                                        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
-                                        placeholder="https://..." />
-                                    {form.photoUrl && <img src={form.photoUrl} className="mt-2 h-24 rounded-lg object-cover" onError={e => e.target.style.display='none'} />}
-                                </div>
-                                <div className="flex gap-2 justify-end">
+
+                                <div className="flex gap-2 justify-end mt-4">
                                     <button onClick={resetForm} className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Annuler</button>
-                                    <button onClick={saveArticle} disabled={!form.produit.trim()}
+                                    <button onClick={saveSAV} disabled={!formArticles.some(a => a.produit.trim())}
                                         className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-50">
-                                        {editId ? '✅ Enregistrer' : '➕ Ajouter'}
+                                        {editSavId ? '✅ Enregistrer' : '➕ Créer le SAV'}
                                     </button>
                                 </div>
                             </div>
@@ -4775,6 +4837,6 @@
         // Render
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.3 — 12/03/26</div>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.4 — 12/03/26</div>
 </body>
 </html>
