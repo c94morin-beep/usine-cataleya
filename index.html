@@ -141,6 +141,41 @@
                 const unsub = window.firebaseOnValue(r, snap => setValidations(snap.val() || {}));
                 return () => unsub();
             }, []);
+            // Sauvegarde d'un champ de la commande (client, email, adresse, transporteur, telephone)
+            const saveOrderField = async (ref, field, value) => {
+                const allLists = lists;
+                for (const list of allLists) {
+                    const orderIdx = list.orders ? list.orders.findIndex(o => String(o.reference) === String(ref)) : -1;
+                    if (orderIdx === -1) continue;
+                    // Mettre à jour tous les articles de cette commande dans cette liste
+                    const updatedOrders = list.orders.map(o => String(o.reference) === String(ref) ? { ...o, [field]: value } : o);
+                    await window.firebaseSet(window.firebaseRef(window.db, `lists/${list.id}/orders`), updatedOrders);
+                    break;
+                }
+                // Mettre à jour l'ordre affiché localement
+                setGlobalSelectedOrder(prev => prev ? { ...prev, [field]: value } : prev);
+            };
+
+            // Sauvegarde du nom d'un article spécifique
+            const saveArticleField = async (ref, itemId, field, value) => {
+                const allLists = lists;
+                for (const list of allLists) {
+                    const hasRef = list.orders && list.orders.some(o => String(o.reference) === String(ref));
+                    if (!hasRef) continue;
+                    const updatedOrders = list.orders.map(o =>
+                        String(o.reference) === String(ref) && String(o.id) === String(itemId)
+                            ? { ...o, [field]: value }
+                            : o
+                    );
+                    await window.firebaseSet(window.firebaseRef(window.db, `lists/${list.id}/orders`), updatedOrders);
+                    break;
+                }
+                setGlobalSelectedOrder(prev => prev ? {
+                    ...prev,
+                    items: prev.items.map(i => String(i.id) === String(itemId) ? { ...i, [field]: value } : i)
+                } : prev);
+            };
+
             const toggleValidation = async (ref) => {
                 const already = validations[ref];
                 if (already) {
@@ -158,8 +193,6 @@
                 }
                 setPoidsData(prev => ({ ...prev, [ref]: val.trim() }));
             };
-            const [searchTerm, setSearchTerm] = useState('');
-            const [filterStatus, setFilterStatus] = useState('all');
             const [showImportModal, setShowImportModal] = useState(false);
             const [completionAlert, setCompletionAlert] = useState(null); // {reference, client, autresCommandes[]}
             const [casierAlert, setCasierAlert] = useState(null); // {casierNum, reference}
@@ -657,12 +690,7 @@
             };
 
             // Filtrer les commandes
-            const filteredOrders = activeOrders.filter(order => {
-                const matchSearch = order.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  order.reference.toString().includes(searchTerm);
-                const matchStatus = filterStatus === 'all' || order.status === filterStatus;
-                return matchSearch && matchStatus;
-            }).sort((a, b) => a.name.localeCompare(b.name));
+
 
             if (authLoading) return (
                 <div className="min-h-screen flex items-center justify-center">
@@ -728,12 +756,43 @@
                                         <div className="flex-1">
                                             <h3 className="text-2xl font-bold mb-3">📦 Commande #{globalSelectedOrder.reference}</h3>
                                             {getCasierNum(globalSelectedOrder.reference) && <p className="flex items-center gap-2 mt-1"><span className="text-2xl">📦</span><span className="text-xl font-bold bg-white bg-opacity-20 px-3 py-1 rounded-lg">Box {getCasierNum(globalSelectedOrder.reference)}</span></p>}
-                                            <div className="space-y-2 text-blue-100">
-                                                {globalSelectedOrder.client && <p className="flex items-start gap-2"><span className="text-lg">👤</span><span className="font-semibold">{globalSelectedOrder.client}</span></p>}
-                                                {globalSelectedOrder.adresse_livraison && <p className="flex items-start gap-2"><span className="text-lg">📍</span><span>{globalSelectedOrder.adresse_livraison}</span></p>}
-                                                {globalSelectedOrder.telephone && <p className="flex items-start gap-2"><span className="text-lg">📞</span><a href={`tel:${globalSelectedOrder.telephone}`} className="hover:underline">{globalSelectedOrder.telephone}</a></p>}
-                                                {globalSelectedOrder.email && <p className="flex items-start gap-2"><span className="text-lg">✉️</span><a href={`mailto:${globalSelectedOrder.email}`} className="hover:underline">{globalSelectedOrder.email}</a></p>}
-                                                {globalSelectedOrder.transporteur && <p className="flex items-start gap-2"><span className="text-lg">🚚</span><span>{globalSelectedOrder.transporteur}</span></p>}
+                                            {(() => {
+                                                const EditableField = ({ icon, field, value, multiline, href }) => {
+                                                    const [editing, setEditing] = React.useState(false);
+                                                    const [val, setVal] = React.useState(value || '');
+                                                    const save = async () => {
+                                                        await saveOrderField(globalSelectedOrder.reference, field, val);
+                                                        setEditing(false);
+                                                    };
+                                                    return (
+                                                        <p className="flex items-start gap-2">
+                                                            <span className="text-lg mt-1">{icon}</span>
+                                                            {editing ? (
+                                                                <span className="flex items-start gap-1 flex-1">
+                                                                    {multiline
+                                                                        ? <textarea value={val} onChange={e => setVal(e.target.value)} rows={3} autoFocus className="bg-white bg-opacity-20 text-white text-sm px-2 py-0.5 rounded-lg border border-white border-opacity-60 focus:outline-none w-full resize-none" />
+                                                                        : <input type="text" value={val} onChange={e => setVal(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && save()} className="bg-white bg-opacity-20 text-white text-sm font-semibold px-2 py-0.5 rounded-lg border border-white border-opacity-60 focus:outline-none w-full" />}
+                                                                    <button onClick={save} className="text-green-300 hover:text-green-100 text-lg mt-0.5 flex-shrink-0">✅</button>
+                                                                    <button onClick={() => { setVal(value || ''); setEditing(false); }} className="text-red-300 hover:text-red-100 text-lg mt-0.5 flex-shrink-0">✕</button>
+                                                                </span>
+                                                            ) : (
+                                                                <span className="flex items-start gap-1 flex-1">
+                                                                    <span className="font-semibold flex-1">
+                                                                        {href ? <a href={href} className="hover:underline">{val}</a> : val}
+                                                                    </span>
+                                                                    {isAdmin && <button onClick={() => setEditing(true)} className="text-white text-opacity-50 hover:text-opacity-100 text-sm flex-shrink-0 opacity-60 hover:opacity-100" title="Modifier">🖊️</button>}
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                    );
+                                                };
+                                                return (
+                                                <div className="space-y-2 text-blue-100">
+                                                    <EditableField icon="👤" field="client" value={globalSelectedOrder.client} />
+                                                    <EditableField icon="📍" field="adresse_livraison" value={globalSelectedOrder.adresse_livraison} multiline={true} />
+                                                    <EditableField icon="📞" field="telephone" value={globalSelectedOrder.telephone} href={`tel:${globalSelectedOrder.telephone}`} />
+                                                    <EditableField icon="✉️" field="email" value={globalSelectedOrder.email} href={`mailto:${globalSelectedOrder.email}`} />
+                                                    <EditableField icon="🚚" field="transporteur" value={globalSelectedOrder.transporteur} />
                                                 {(() => {
                                                     const lines = (globalSelectedOrder.adresse_livraison || '').trim().split('\n').map(l => l.trim()).filter(Boolean);
                                                     const paysLine = lines.length >= 2 ? lines[lines.length - 2] : lines[lines.length - 1];
@@ -781,7 +840,8 @@
                                                     </div>
                                                 )}
                                                 {globalSelectedOrder.loadingShipping && <p className="text-blue-200 text-xs mt-2">⏳ Recherche bordereau...</p>}
-                                            </div>
+                                                </div>
+                                                );})()}
                                         </div>
                                         <button onClick={() => setGlobalSelectedOrder(null)} className="text-white hover:text-gray-200 text-2xl font-bold">✕</button>
                                     </div>
@@ -793,7 +853,29 @@
                                             <div key={item.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
                                                 {item.url_image && <img src={item.url_image} alt={item.name} className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition" onClick={() => setZoomedImage({url: item.url_image, name: item.name})} onError={e => e.target.style.display='none'} />}
                                                 <div className="flex-1">
-                                                    <h5 className="font-semibold text-gray-900">{item.name}</h5>
+                                                    {(() => {
+                                                        const ArticleNameEdit = () => {
+                                                            const [editing, setEditing] = React.useState(false);
+                                                            const [val, setVal] = React.useState(item.name || '');
+                                                            const save = async () => {
+                                                                await saveArticleField(globalSelectedOrder.reference, item.id, 'name', val);
+                                                                setEditing(false);
+                                                            };
+                                                            return editing ? (
+                                                                <span className="flex items-center gap-1">
+                                                                    <input type="text" value={val} onChange={e => setVal(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && save()} className="font-semibold text-gray-900 border border-blue-400 rounded px-1 focus:outline-none w-full text-sm" />
+                                                                    <button onClick={save} className="text-green-600 hover:text-green-800 text-base flex-shrink-0">✅</button>
+                                                                    <button onClick={() => { setVal(item.name || ''); setEditing(false); }} className="text-red-400 hover:text-red-600 text-base flex-shrink-0">✕</button>
+                                                                </span>
+                                                            ) : (
+                                                                <span className="flex items-center gap-1">
+                                                                    <h5 className="font-semibold text-gray-900 flex-1">{val}</h5>
+                                                                    {isAdmin && <button onClick={() => setEditing(true)} className="text-gray-300 hover:text-blue-400 text-sm flex-shrink-0" title="Modifier">🖊️</button>}
+                                                                </span>
+                                                            );
+                                                        };
+                                                        return <ArticleNameEdit />;
+                                                    })()}
                                                     <div className="mt-2 flex flex-wrap items-center gap-2">
                                                         <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">Qté: {item.quantity || 1}</span>
                                                         <span className={`px-3 py-1 rounded-full text-sm font-semibold ${item.status === 'Rangé' ? 'bg-purple-100 text-purple-700' : item.status === 'Reçu' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.status}</span>
@@ -1085,11 +1167,7 @@
                                 )}
                                 {activeTab === 'production' && (
                                     <ProductionTab
-                                        orders={filteredOrders}
-                                        searchTerm={searchTerm}
-                                        setSearchTerm={setSearchTerm}
-                                        filterStatus={filterStatus}
-                                        setFilterStatus={setFilterStatus}
+                                        orders={activeOrders}
                                         updateStatus={updateStatus}
                                         updateComment={updateComment}
                                         isAdmin={isAdmin}
@@ -1929,7 +2007,20 @@
         }
 
         // ProductionTab
-        function ProductionTab({ orders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, updateStatus, updateComment, isAdmin, isOperateur, isSara, isCommentaires, canEditStatus, canEditComment, userName, getCasierNum, openOrderRecap }) {
+        function ProductionTab({ orders, updateStatus, updateComment, isAdmin, isOperateur, isSara, isCommentaires, canEditStatus, canEditComment, userName, getCasierNum, openOrderRecap }) {
+            const [searchTerm, setSearchTerm] = React.useState('');
+            const [filterStatus, setFilterStatus] = React.useState('all');
+            const filteredOrders = orders.filter(order => {
+                const q = (searchTerm || '').toLowerCase().trim();
+                const matchSearch = !q ||
+                    (order.name || '').toLowerCase().includes(q) ||
+                    (order.reference || '').toString().includes(q) ||
+                    (order.client || '').toLowerCase().includes(q) ||
+                    (order.email || '').toLowerCase().includes(q) ||
+                    (order.telephone || '').toLowerCase().includes(q);
+                const matchStatus = filterStatus === 'all' || order.status === filterStatus;
+                return matchSearch && matchStatus;
+            });
             const statutsDisponibles = isSara 
                 ? [STATUTS.EN_ATTENTE]
                 : isOperateur 
@@ -1960,7 +2051,7 @@
                         .filter(o => o.status === STATUTS.RANGE)
                         .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
                 }
-                return [...orders].sort((a, b) => {
+                return [...filteredOrders].sort((a, b) => {
                     let aVal = a[sortColumn] || '';
                     let bVal = b[sortColumn] || '';
                     if (sortColumn === 'reference') {
@@ -2022,9 +2113,8 @@
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                                 />
                                 {searchTerm.trim() !== '' && (() => {
-                                    const matchedOrders = orders.filter(o => o.name && o.name.toLowerCase().includes(searchTerm.toLowerCase()));
-                                    const total = matchedOrders.length;
-                                    const refs = new Set(matchedOrders.map(o => o.reference));
+                                    const total = filteredOrders.length;
+                                    const refs = new Set(filteredOrders.map(o => o.reference));
                                     return (
                                         <div className="mt-1.5 flex gap-2 flex-wrap">
                                             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
