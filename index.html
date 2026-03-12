@@ -1225,6 +1225,59 @@
         // Dashboard
         function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum, isSara, isCommentaires, isAdmin, isOperateur, isLecteur, setActiveTab, updateStatus, canEditStatus, validations, toggleValidation }) {
             const [showSAVModal, setShowSAVModal] = useState(false);
+            const [globalSearch, setGlobalSearch] = useState('');
+            const [searchResults, setSearchResults] = useState([]);
+            const [searchShipping, setSearchShipping] = useState({}); // { ref: {labelUrl, packlinkUrl, ...} }
+
+            const doGlobalSearch = (q) => {
+                setGlobalSearch(q);
+                if (!q.trim()) { setSearchResults([]); return; }
+                const query = q.toLowerCase().trim();
+                const allRefs = [...new Set(orders.map(o => o.reference))];
+                const results = [];
+                allRefs.forEach(ref => {
+                    const items = orders.filter(o => o.reference === ref);
+                    const first = items[0];
+                    const match = ref.toString().includes(query) ||
+                        (first.client || '').toLowerCase().includes(query) ||
+                        (first.email || '').toLowerCase().includes(query) ||
+                        (first.telephone || '').toLowerCase().includes(query) ||
+                        (first.adresse_livraison || '').toLowerCase().includes(query);
+                    if (!match) return;
+                    const allDone = items.every(o => o.status === STATUTS.RANGE);
+                    const allRange = items.every(o => o.status === STATUTS.RANGE);
+                    const enAttente = items.filter(o => o.status === STATUTS.EN_ATTENTE).length;
+                    const ranges = items.filter(o => o.status === STATUTS.RANGE).length;
+                    let statut, statutColor;
+                    if (validations[ref]) { statut = '📦✅ Validée'; statutColor = 'text-emerald-600'; }
+                    else if (allDone) { statut = '✅ Terminée'; statutColor = 'text-green-600'; }
+                    else if (ranges > 0) { statut = `📦 ${ranges}/${items.length} rangés`; statutColor = 'text-teal-600'; }
+                    else { statut = `⏳ En attente (${enAttente}/${items.length})`; statutColor = 'text-yellow-600'; }
+                    results.push({ ref, client: first.client, email: first.email, transporteur: first.transporteur, adresse: first.adresse_livraison, total: items.length, statut, statutColor });
+                });
+                setSearchResults(results.slice(0, 10));
+            };
+
+            const fetchShippingForRef = async (ref) => {
+                if (searchShipping[ref]) return;
+                setSearchShipping(prev => ({ ...prev, [ref]: { loading: true } }));
+                try {
+                    const [relayRes, packlinkRes] = await Promise.all([
+                        fetch(`https://cataleyaparis.com/get_relay_token.php?id_order=${ref}`).then(r => r.json()).catch(() => null),
+                        fetch(`https://cataleyaparis.com/get_packlink_label.php?id_order=${ref}`).then(r => r.json()).catch(() => null)
+                    ]);
+                    setSearchShipping(prev => ({ ...prev, [ref]: {
+                        loading: false,
+                        labelUrl: relayRes?.success ? relayRes.label_url : null,
+                        trackingUrl: relayRes?.success ? relayRes.tracking_url : null,
+                        packlinkUrl: packlinkRes?.success ? packlinkRes.label_url : null,
+                        packlinkTrackingUrl: packlinkRes?.success ? packlinkRes.tracking_url : null,
+                        packlinkCarrier: packlinkRes?.success ? packlinkRes.carrier : null,
+                    }}));
+                } catch(e) {
+                    setSearchShipping(prev => ({ ...prev, [ref]: { loading: false } }));
+                }
+            };
             const [savArticles, setSavArticles] = useState([]);
             const [showTerminesModal, setShowTerminesModal] = useState(false);
             const [showValidésModal, setShowValidésModal] = useState(false);
@@ -1300,8 +1353,55 @@
 
             return (
                 <div className="space-y-6">
-                    <h2 className="text-2xl font-bold">Dashboard - {listName}</h2>
-                    
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <h2 className="text-2xl font-bold">Dashboard - {listName}</h2>
+                        <div className="relative w-full md:w-96">
+                            <input
+                                type="text"
+                                value={globalSearch}
+                                onChange={e => doGlobalSearch(e.target.value)}
+                                placeholder="🔍 Rechercher une commande, cliente, email..."
+                                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 shadow-sm"
+                            />
+                            {globalSearch && <button onClick={() => { setGlobalSearch(''); setSearchResults([]); }} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">✕</button>}
+                            {searchResults.length > 0 && (
+                                <div className="absolute top-12 left-0 right-0 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-[70vh] overflow-y-auto">
+                                    {searchResults.map(r => {
+                                        const ship = searchShipping[r.ref];
+                                        return (
+                                            <div key={r.ref} className="p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                                                onMouseEnter={() => fetchShippingForRef(r.ref)}>
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <button onClick={() => { openOrderRecap(r.ref); setGlobalSearch(''); setSearchResults([]); }}
+                                                                className="font-bold text-blue-600 hover:underline text-base">#{r.ref}</button>
+                                                            <span className={`text-sm font-semibold ${r.statutColor}`}>{r.statut}</span>
+                                                        </div>
+                                                        {r.client && <p className="text-sm text-gray-700 mt-0.5">👤 {r.client}</p>}
+                                                        {r.email && <p className="text-xs text-gray-400">{r.email}</p>}
+                                                        {r.transporteur && <p className="text-xs text-gray-500 mt-0.5">🚚 {r.transporteur}</p>}
+                                                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                                            <a href={`https://cataleyaparis.fr/FIEdit.php?secure_key=ed3fa1ce558e1cfbaa3f99403&id_order=${r.ref}`}
+                                                                target="_blank" rel="noopener noreferrer"
+                                                                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-semibold">🧾 Facture</a>
+                                                            {ship?.loading && <span className="text-xs text-gray-400">⏳ Chargement...</span>}
+                                                            {ship?.labelUrl && <a href={ship.labelUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-600 font-semibold">📄 Étiquette MR</a>}
+                                                            {ship?.trackingUrl && <a href={ship.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-600 font-semibold">🔍 Suivi MR</a>}
+                                                            {ship?.packlinkUrl && <a href={ship.packlinkUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-orange-50 hover:bg-orange-100 rounded-lg text-orange-600 font-semibold">📄 Étiquette {ship.packlinkCarrier || 'Packlink'}</a>}
+                                                            {ship?.packlinkTrackingUrl && <a href={ship.packlinkTrackingUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-orange-50 hover:bg-orange-100 rounded-lg text-orange-600 font-semibold">🔍 Suivi Packlink</a>}
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-xs text-gray-400 whitespace-nowrap">{r.total} article(s)</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {/* Cartes visibles par tous */}
                         {!isSara && !isCommentaires && <StatCard title="Total / En attente" value={stats.total} subtitle={`${stats.enAttente} en attente`} color="blue" icon="📦" />}
