@@ -1027,6 +1027,17 @@ function setupUserBadge() {
   avatarEl.textContent = info.avatar;
   avatarEl.style.background = info.color;
   nameEl.textContent = info.label;
+  // Bouton switcher visible pour admin (toujours) ou en mode DEV
+  const btnSwitch = document.getElementById('btn-dev-switch');
+  if (btnSwitch) {
+    if (DEV_MODE || currentRole === 'admin') {
+      btnSwitch.style.display = 'inline-block';
+      // S'assurer que le panneau existe pour l'admin en mode prod
+      if (!document.getElementById('dev-role-panel')) initDevMode();
+    } else {
+      btnSwitch.style.display = 'none';
+    }
+  }
 }
 
 // ══════════════════════════════════════════════
