@@ -969,20 +969,22 @@ if (DEV_MODE) {
     { email: 'abderrahim@usine-cataleyaparis.com',    label: '🔧 Chef Atelier' },
   ];
   // Injecter les boutons dans l'écran login
-  document.addEventListener('DOMContentLoaded', () => {
-    // Afficher le bouton DEV dans le header
+  // Initialisation DEV après chargement DOM
+  function initDevMode() {
     const btnSwitch = document.getElementById('btn-dev-switch');
     if (btnSwitch) btnSwitch.style.display = 'inline-block';
 
-    // Créer le panneau flottant de sélection de rôle
     const panel = document.createElement('div');
     panel.id = 'dev-role-panel';
     panel.style.cssText = 'display:flex;flex-direction:column;gap:8px;position:fixed;top:64px;right:16px;z-index:9999;background:#0f172a;border:1.5px dashed #f59e0b;border-radius:14px;padding:16px;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
-    panel.innerHTML = '<div style="font-size:12px;font-weight:700;color:#f59e0b;letter-spacing:1px;margin-bottom:4px;text-align:center;">⚡ MODE DEV — Choisir un rôle</div>';
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:12px;font-weight:700;color:#f59e0b;letter-spacing:1px;margin-bottom:4px;text-align:center;';
+    title.textContent = '⚡ MODE DEV — Choisir un rôle';
+    panel.appendChild(title);
     devRoles.forEach(r => {
       const btn = document.createElement('button');
       btn.textContent = r.label;
-      btn.style.cssText = 'width:100%;padding:8px 14px;border:none;border-radius:8px;background:#1e293b;color:#f1f5f9;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background 0.15s;';
+      btn.style.cssText = 'width:100%;padding:8px 14px;border:none;border-radius:8px;background:#1e293b;color:#f1f5f9;font-size:13px;font-weight:600;cursor:pointer;text-align:left;';
       btn.onmouseover = () => btn.style.background = '#334155';
       btn.onmouseout  = () => btn.style.background = '#1e293b';
       btn.onclick = () => doDevLogin(r.email);
@@ -990,11 +992,21 @@ if (DEV_MODE) {
     });
     document.body.appendChild(panel);
 
-    // Écran login simplifié (juste un fond avec message)
     const container = document.getElementById('screen-login');
-    container.innerHTML = '<div style="color:#f59e0b;font-size:16px;font-weight:700;">⚡ MODE DEV — Clique sur un rôle →</div>';
+    const msg = document.createElement('div');
+    msg.style.cssText = 'color:#f59e0b;font-size:16px;font-weight:700;';
+    msg.textContent = '⚡ MODE DEV — Choisir un rôle ci-dessus';
+    container.innerHTML = '';
+    container.appendChild(msg);
     container.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0f172a;';
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDevMode);
+  } else {
+    initDevMode();
+  }
+
 } else {
   auth.onAuthStateChanged(user => {
     if (user) {
@@ -1514,7 +1526,8 @@ function renderCAO(main) {
     ${lots.map(([lid, lot]) => {
       const listeCourante = lot.listeId ? (allListes[lot.listeId]?.name || lot.listeId) : null;
       // Récupérer les commentaires du lot depuis listescoupe
-      const lignesLot = liste ? Object.values(liste.lignes || {}).filter(row => getModele((row.c||'').split('||')[0]||'') === lot.name) : [];
+      const listeData = lot.listeId ? allListes[lot.listeId] : null;
+      const lignesLot = listeData ? Object.values(listeData.lignes || {}).filter(row => getModele((row.c||'').split('||')[0]||'') === lot.name) : [];
       const lotComments = lignesLot.flatMap(row => {
         const fc = Object.values(row.comments||{}).map(co=>typeof co==='object'?co.text:co).filter(Boolean);
         const h2 = (row.h||'').split('||');
