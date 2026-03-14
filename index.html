@@ -1124,10 +1124,6 @@
                                 {(isAdmin || isOperateur || isLecteur) && (
                                     <TabButton active={activeTab === 'multiorders'} onClick={() => setActiveTab('multiorders')} icon="👯" label="Multi-Commandes" />
                                 )}
-                                {/* Prêt à expédier — Admin seulement */}
-                                {(isAdmin || isLecteur) && (
-                                    <TabButton active={activeTab === 'ready'} onClick={() => setActiveTab('ready')} icon="🎯" label="Prêt à expédier" />
-                                )}
                                 {/* Casiers — Admin seulement */}
                                 {(isAdmin || isLecteur) && (
                                     <TabButton active={activeTab === 'casiers'} onClick={() => setActiveTab('casiers')} icon="💡" label="Casiers" />
@@ -1177,11 +1173,8 @@
                                 {activeTab === 'multiorders' && (
                                     <MultiOrdersTab orders={activeOrders} openOrderRecap={openGlobalOrderRecap} />
                                 )}
-                                {activeTab === 'ready' && (
-                                    <ReadyToShipTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} casiersData={globalCasiers} setBoxPopup={setBoxPopup} />
-                                )}
                                 {activeTab === 'casiers' && (
-                                    <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} />
+                                    <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} lists={lists} />
                                 )}
                                 {activeTab === 'listecoupe' && (
                                     <ListeCoupeTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} activeTheme={activeTheme} listThemes={LIST_THEMES} activeListId={activeListId} parentLists={lists} />
@@ -1190,7 +1183,7 @@
                                     <SAVTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} isOperateur={isOperateur} userName={userName} />
                                 )}
                                 {activeTab === 'reception' && (
-                                    <ReceptionTab orders={activeOrders} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} lists={lists} activeListId={activeListId} />
+                                    <ReceptionTab orders={activeOrders} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} lists={lists} activeListId={activeListId} casiersData={globalCasiers} />
                                 )}
 
 
@@ -2845,7 +2838,7 @@
         }
 
         // CasiersTab
-        function ReceptionTab({ orders, updateStatus, userName, openOrderRecap, lists, activeListId }) {
+        function ReceptionTab({ orders, updateStatus, userName, openOrderRecap, lists, activeListId, casiersData }) {
             const [searchBase, setSearchBase] = React.useState('');
             const [selectedBase, setSelectedBase] = React.useState(null);
             const [selectedAttrs, setSelectedAttrs] = React.useState({});
@@ -3068,6 +3061,7 @@
                                                                 <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">Dernière pièce !</span>
                                                                 {taille && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">T.{taille}</span>}
                                                                 {activeListId === 'global' && lists && (() => { const l = lists.find(li => li.orders.some(o => o.id === order.id)); return l ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">📋 {l.name}</span> : null; })()}
+                                                                {(() => { const entry = Object.entries(casiersData || {}).find(([, v]) => String(v.commande) === String(order.reference)); return entry ? <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">📦 Box {entry[1].casierNum || entry[0]}</span> : null; })()}
                                                             </div>
                                                             <p className="text-sm text-gray-600 mt-0.5">{order.client}</p>
                                                             <p className="text-xs text-green-600 mt-0.5">✅ {tousArticles.length - 1} autre(s) article(s) déjà prêt(s)</p>
@@ -3096,6 +3090,7 @@
                                                                 <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline">#{order.reference}</button>
                                                                 {taille && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">T.{taille}</span>}
                                                                 {activeListId === 'global' && lists && (() => { const l = lists.find(li => li.orders.some(o => o.id === order.id)); return l ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">📋 {l.name}</span> : null; })()}
+                                                                {(() => { const entry = Object.entries(casiersData || {}).find(([, v]) => String(v.commande) === String(order.reference)); return entry ? <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">📦 Box {entry[1].casierNum || entry[0]}</span> : null; })()}
                                                             </div>
                                                             <p className="text-sm text-gray-600">{order.client || '—'}</p>
                                                             <p className="text-xs text-gray-400">{order.transporteur || '—'}</p>
@@ -3130,7 +3125,7 @@
             );
         }
 
-        function CasiersTab({ orders, isAdmin, canEditStatus, openOrderRecap, updateStatus, setCasierAlert }) {
+        function CasiersTab({ orders, isAdmin, canEditStatus, openOrderRecap, updateStatus, setCasierAlert, lists }) {
             const CONFIG = {
                 colonneGauche: { etageres: 5, etages: 5, casiersParEtage: 4 },
                 rangeesMilieu: { nb: 3, etageresParRangee: 10, etages: 5, casiersParEtage: 4 },
@@ -3407,6 +3402,7 @@
                                             <th className="px-4 py-2 text-left text-gray-600">Casier #</th>
                                             <th className="px-4 py-2 text-left text-gray-600">Commande</th>
                                             <th className="px-4 py-2 text-left text-gray-600">Client</th>
+                                            <th className="px-4 py-2 text-left text-gray-600">Liste</th>
                                             <th className="px-4 py-2 text-left text-gray-600">Statut</th>
                                             <th className="px-4 py-2 text-left text-gray-600">LED</th>
                                         </tr>
@@ -3425,6 +3421,9 @@
                                                         <span className="text-blue-600 cursor-pointer hover:underline font-semibold" onClick={() => openOrderRecap(val.commande)}>#{val.commande}</span>
                                                     </td>
                                                     <td className="px-4 py-2 text-gray-600">{client}</td>
+                                                    <td className="px-4 py-2">
+                                                        {(() => { const l = lists && lists.find(li => li.orders.some(o => String(o.reference) === String(val.commande))); return l ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">📋 {l.name}</span> : <span className="text-xs text-gray-400">—</span>; })()}
+                                                    </td>
                                                     <td className="px-4 py-2">
                                                         <div className="flex items-center gap-2">
                                                             <div className="flex-1 bg-gray-200 rounded-full h-2 w-20">
