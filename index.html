@@ -865,7 +865,7 @@
                                             return <button onClick={() => setBoxPopup({articleName: item.name, casierNum: entry[1].casierNum || entry[0], reference: globalSelectedOrder.reference})} className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full text-sm font-semibold transition">📦 Box {entry[1].casierNum || entry[0]}</button>;
                                         })()}
                                                     </div>
-                                                    {item.commentaires && <p className="mt-2 text-sm text-purple-600 italic">💬 {item.commentaires}{item.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-400">— {item.commentAuthor}</span>}</p>}
+
                                                 </div>
                                             </div>
                                         ))}
@@ -874,9 +874,9 @@
                                         <div className="mt-4 pt-4 border-t border-gray-200">
                                             <p className="text-xs font-semibold text-gray-500 mb-2">💬 Commentaires</p>
                                             {[...new Map(globalSelectedOrder.items.filter(i => i.commentaires && i.commentaires.trim()).map(i => [i.commentaires, i])).values()].map((i, idx) => (
-                                                <div key={idx} className="bg-purple-50 border border-purple-100 rounded-lg px-3 py-2 mb-2">
-                                                    <p className="text-sm text-purple-700 italic">💬 {i.commentaires}</p>
-                                                    {i.commentAuthor && <p className="text-xs text-purple-400 mt-0.5">— {i.commentAuthor}</p>}
+                                                <div key={idx} className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-2">
+                                                    <p className="text-sm text-red-700 italic font-semibold">💬 {i.commentaires}</p>
+                                                    {i.commentAuthor && <p className="text-xs text-red-400 mt-0.5">— {i.commentAuthor}</p>}
                                                 </div>
                                             ))}
                                         </div>
