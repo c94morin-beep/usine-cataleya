@@ -1116,10 +1116,6 @@
                                 {(isAdmin || isOperateur || isSara || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'production'} onClick={() => setActiveTab('production')} icon="🧵" label="Suivi Production" />
                                 )}
-                                {/* Par Commande — Admin seulement */}
-                                {(isAdmin || isLecteur) && (
-                                    <TabButton active={activeTab === 'orders'} onClick={() => setActiveTab('orders')} icon="🔍" label="Par Commande" />
-                                )}
                                 {/* Multi-Commandes — Admin + Achraf */}
                                 {(isAdmin || isOperateur || isLecteur) && (
                                     <TabButton active={activeTab === 'multiorders'} onClick={() => setActiveTab('multiorders')} icon="👯" label="Multi-Commandes" />
@@ -1166,9 +1162,6 @@
                                         getCasierNum={getCasierNum}
                                         openOrderRecap={openGlobalOrderRecap}
                                     />
-                                )}
-                                {activeTab === 'orders' && (
-                                    <OrdersTab orders={activeOrders} updateStatus={updateStatus} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} />
                                 )}
                                 {activeTab === 'multiorders' && (
                                     <MultiOrdersTab orders={activeOrders} openOrderRecap={openGlobalOrderRecap} />
@@ -1351,6 +1344,7 @@
             const [savArticles, setSavArticles] = useState([]);
             const [showTerminesModal, setShowTerminesModal] = useState(false);
             const [showValidésModal, setShowValidésModal] = useState(false);
+            const [validésSortMode, setValidésSortMode] = useState('date'); // 'date' | 'transporteur'
             const [bordereaux, setBordereaux] = useState({}); // { ref: timestamp }
             const [selectedRefs, setSelectedRefs] = useState(new Set());
 
@@ -1885,29 +1879,61 @@
                                     <h3 className="text-xl font-bold text-emerald-700">📦✅ Commandes validées ({validéesRefs.length})</h3>
                                     <button onClick={() => setShowValidésModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
                                 </div>
+                                {validéesRefs.length > 0 && (
+                                    <div className="flex gap-2 px-6 pt-4">
+                                        <button onClick={() => setValidésSortMode('date')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${validésSortMode === 'date' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>🕐 Date récente</button>
+                                        <button onClick={() => setValidésSortMode('transporteur')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${validésSortMode === 'transporteur' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>🚚 Transporteur</button>
+                                        <button onClick={() => setValidésSortMode('commande')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${validésSortMode === 'commande' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>🔢 Commande</button>
+                                    </div>
+                                )}
                                 <div className="overflow-y-auto p-6">
                                     {validéesRefs.length === 0 ? (
                                         <p className="text-gray-500 text-center py-8">Aucune commande validée pour l'instant</p>
                                     ) : (
                                         <div className="space-y-2">
-                                            {validéesRefs.map((ref, index) => {
-                                                const item = orders.find(o => o.reference === ref);
-                                                const validatedAt = validations[ref];
-                                                const dateStr = validatedAt ? (() => {
-                                                    const d = new Date(validatedAt);
-                                                    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} à ${String(d.getHours()).padStart(2,'0')}h${String(d.getMinutes()).padStart(2,'0')}`;
-                                                })() : null;
-                                                return (
-                                                    <div key={ref} className={`py-2 px-3 flex items-center gap-2 rounded-lg ${index % 2 === 0 ? 'bg-emerald-50' : 'bg-white'}`}>
-                                                        <button onClick={() => openOrderRecap(ref)} className="font-mono text-emerald-900 text-base hover:text-blue-600 hover:underline cursor-pointer text-left flex-1">
-                                                            {ref}
-                                                        </button>
-                                                        {item?.client && <span className="text-xs text-gray-400 truncate max-w-32">{item.client}</span>}
-                                                        {dateStr && <span className="text-xs text-gray-400 whitespace-nowrap">✅ {dateStr}</span>}
-                                                        {(isAdmin || isOperateur) && <button onClick={() => toggleValidation(ref)} title="Annuler la validation" className="text-xs text-red-400 hover:text-red-600">✕</button>}
-                                                    </div>
-                                                );
-                                            })}
+                                            {(() => {
+                                                const sorted = [...validéesRefs].sort((a, b) => {
+                                                    if (validésSortMode === 'date') {
+                                                        return (validations[b] || 0) - (validations[a] || 0);
+                                                    } else if (validésSortMode === 'transporteur') {
+                                                        const tA = (orders.find(o => o.reference === a)?.transporteur || '').toLowerCase();
+                                                        const tB = (orders.find(o => o.reference === b)?.transporteur || '').toLowerCase();
+                                                        return tA.localeCompare(tB);
+                                                    } else {
+                                                        return b - a;
+                                                    }
+                                                });
+                                                let lastTransporteur = null;
+                                                return sorted.map((ref, index) => {
+                                                    const item = orders.find(o => o.reference === ref);
+                                                    const transporteur = item?.transporteur || '—';
+                                                    const validatedAt = validations[ref];
+                                                    const dateStr = validatedAt ? (() => {
+                                                        const d = new Date(validatedAt);
+                                                        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} à ${String(d.getHours()).padStart(2,'0')}h${String(d.getMinutes()).padStart(2,'0')}`;
+                                                    })() : null;
+                                                    const showGroupHeader = validésSortMode === 'transporteur' && transporteur !== lastTransporteur;
+                                                    if (showGroupHeader) lastTransporteur = transporteur;
+                                                    return (
+                                                        <React.Fragment key={ref}>
+                                                            {showGroupHeader && (
+                                                                <div className="pt-2 pb-1 px-1">
+                                                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">🚚 {transporteur}</span>
+                                                                </div>
+                                                            )}
+                                                            <div className={`py-2 px-3 flex items-center gap-2 rounded-lg ${index % 2 === 0 ? 'bg-emerald-50' : 'bg-white'}`}>
+                                                                <button onClick={() => openOrderRecap(ref)} className="font-mono text-emerald-900 text-base hover:text-blue-600 hover:underline cursor-pointer text-left">
+                                                                    {ref}
+                                                                </button>
+                                                                {item?.client && <span className="text-xs text-gray-400 truncate max-w-28">{item.client}</span>}
+                                                                <span className="text-xs text-blue-500 whitespace-nowrap">🚚 {transporteur}</span>
+                                                                {dateStr && <span className="text-xs text-gray-400 whitespace-nowrap ml-auto">✅ {dateStr}</span>}
+                                                                {(isAdmin || isOperateur) && <button onClick={() => toggleValidation(ref)} title="Annuler la validation" className="text-xs text-red-400 hover:text-red-600">✕</button>}
+                                                            </div>
+                                                        </React.Fragment>
+                                                    );
+                                                });
+                                            })()}
                                         </div>
                                     )}
                                 </div>
@@ -2875,7 +2901,13 @@
             // Noms de base uniques
             const basesUniques = [...new Set(produitsEnAttente.map(o => parseProduct(o.name).base))]
                 .filter(b => b.toLowerCase().includes(searchBase.toLowerCase()))
-                .sort((a, b) => a.localeCompare(b));
+                .sort((a, b) => {
+                    const aAmana = produitsEnAttente.some(o => parseProduct(o.name).base === a && (o.transporteur || '').toLowerCase().includes('amana'));
+                    const bAmana = produitsEnAttente.some(o => parseProduct(o.name).base === b && (o.transporteur || '').toLowerCase().includes('amana'));
+                    if (aAmana && !bAmana) return -1;
+                    if (!aAmana && bAmana) return 1;
+                    return a.localeCompare(b);
+                });
 
             // Articles filtrés par base sélectionnée
             const articlesDeBase = selectedBase 
@@ -3049,15 +3081,17 @@
                                             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{urgentes.length}</span>
                                         </div>
                                         <div className="space-y-2">
-                                            {urgentes.sort((a,b) => a.reference - b.reference).map(order => {
+                                            {urgentes.sort((a,b) => { const aA = (a.transporteur||'').toLowerCase().includes('amana'); const bA = (b.transporteur||'').toLowerCase().includes('amana'); if (aA && !bA) return -1; if (!aA && bA) return 1; return a.reference - b.reference; }).map(order => {
                                                 const tousArticles = orders.filter(a => a.reference === order.reference);
                                                 const active = isActive(order);
                                                 const taille = getTailleOrder(order);
+                                                const isAmana = (order.transporteur || '').toLowerCase().includes('amana');
                                                 return (
-                                                    <div key={order.id} className={`flex items-center justify-between rounded-xl p-4 shadow-sm border-2 transition-all ${active ? 'bg-green-50 border-green-400' : 'bg-gray-50 border-gray-200 opacity-40'}`}>
+                                                    <div key={order.id} className={`flex items-center justify-between rounded-xl p-4 shadow-sm border-2 transition-all ${isAmana ? 'bg-red-50 border-red-400' : active ? 'bg-green-50 border-green-400' : 'bg-gray-50 border-gray-200 opacity-40'}`}>
                                                         <div>
                                                             <div className="flex items-center gap-2 flex-wrap">
                                                                 <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline text-lg">#{order.reference}</button>
+                                                                {isAmana && <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">🇲🇦 Amana — PRIORITÉ</span>}
                                                                 <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">Dernière pièce !</span>
                                                                 {taille && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">T.{taille}</span>}
                                                                 {activeListId === 'global' && lists && (() => { const l = lists.find(li => li.orders.some(o => o.id === order.id)); return l ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">📋 {l.name}</span> : null; })()}
@@ -3080,14 +3114,16 @@
                                     <div>
                                         {urgentes.length > 0 && <p className="text-xs text-gray-400 uppercase font-semibold mb-2 tracking-wide">Autres commandes</p>}
                                         <div className="space-y-2">
-                                            {normales.sort((a,b) => a.reference - b.reference).map(order => {
+                                            {normales.sort((a,b) => { const aA = (a.transporteur||'').toLowerCase().includes('amana'); const bA = (b.transporteur||'').toLowerCase().includes('amana'); if (aA && !bA) return -1; if (!aA && bA) return 1; return a.reference - b.reference; }).map(order => {
                                                 const active = isActive(order);
                                                 const taille = getTailleOrder(order);
+                                                const isAmana = (order.transporteur || '').toLowerCase().includes('amana');
                                                 return (
-                                                    <div key={order.id} className={`flex items-center justify-between rounded-xl p-4 border transition-all ${active ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200 opacity-40'}`}>
+                                                    <div key={order.id} className={`flex items-center justify-between rounded-xl p-4 border transition-all ${isAmana ? 'bg-red-50 border-red-300' : active ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200 opacity-40'}`}>
                                                         <div>
                                                             <div className="flex items-center gap-2 flex-wrap">
                                                                 <button onClick={() => openOrderRecap(order.reference)} className="font-bold text-blue-600 hover:underline">#{order.reference}</button>
+                                                                {isAmana && <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">🇲🇦 Amana — PRIORITÉ</span>}
                                                                 {taille && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">T.{taille}</span>}
                                                                 {activeListId === 'global' && lists && (() => { const l = lists.find(li => li.orders.some(o => o.id === order.id)); return l ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">📋 {l.name}</span> : null; })()}
                                                                 {(() => { const entry = Object.entries(casiersData || {}).find(([, v]) => String(v.commande) === String(order.reference)); return entry ? <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">📦 Box {entry[1].casierNum || entry[0]}</span> : null; })()}
@@ -3207,7 +3243,12 @@
 
             // Initialiser la collection — assigner les commandes aux casiers
             const initialiserCollection = async () => {
-                const refs = [...new Set(orders.map(o => o.reference))].sort((a, b) => a - b);
+                const refs = [...new Set(orders.map(o => o.reference))].sort((a, b) => {
+                    const listIdxA = lists ? lists.findIndex(l => l.orders.some(o => String(o.reference) === String(a))) : -1;
+                    const listIdxB = lists ? lists.findIndex(l => l.orders.some(o => String(o.reference) === String(b))) : -1;
+                    if (listIdxA !== listIdxB) return listIdxA - listIdxB;
+                    return a - b;
+                });
                 
                 // Relire Firebase pour avoir les données les plus récentes
                 const currentCasiers = await window.firebaseGetCasiers();
@@ -3422,7 +3463,7 @@
                                                     </td>
                                                     <td className="px-4 py-2 text-gray-600">{client}</td>
                                                     <td className="px-4 py-2">
-                                                        {(() => { const l = lists && lists.find(li => li.orders.some(o => String(o.reference) === String(val.commande))); return l ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">📋 {l.name}</span> : <span className="text-xs text-gray-400">—</span>; })()}
+                                                        {(() => { const l = lists && lists.find(li => li.orders.some(o => String(o.reference) === String(val.commande))); if (!l) return <span className="text-xs text-gray-400">—</span>; const theme = getTheme(l.id, lists); return <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{backgroundColor: theme.accent + '20', color: theme.accent}}>📋 {l.name}</span>; })()}
                                                     </td>
                                                     <td className="px-4 py-2">
                                                         <div className="flex items-center gap-2">
