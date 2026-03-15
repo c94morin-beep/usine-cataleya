@@ -392,9 +392,7 @@
                 return {
                     total: orders.length,
                     enAttente: orders.filter(o => o.status === STATUTS.EN_ATTENTE).length,
-                    termines: [...new Set(orders.map(o => o.reference))].filter(ref => 
-                        orders.filter(o => o.reference === ref).every(o => o.status === STATUTS.RANGE)
-                    ).length,
+                    termines: orders.filter(o => o.status === STATUTS.RECU || o.status === STATUTS.RANGE).length,
                     avecCommentaire: [...new Set(orders.filter(o => o.commentaires && o.commentaires.trim() !== '').map(o => o.reference))].length
                 };
             };
@@ -1523,14 +1521,21 @@
 
                     <div className="bg-white rounded-lg shadow p-6">
                         <h3 className="text-lg font-semibold mb-3">Articles terminés</h3>
-                        <div className="w-full bg-gray-200 rounded-full h-6">
-                            <div
-                                className="bg-gradient-to-r from-green-500 to-emerald-500 h-6 rounded-full flex items-center justify-center text-white text-sm font-semibold transition-all"
-                                style={{ width: `${stats.total > 0 ? Math.round((stats.termines / stats.total) * 100) : 0}%` }}
-                            >
-                                {stats.total > 0 ? Math.round((stats.termines / stats.total) * 100) : 0}%
-                            </div>
-                        </div>
+                        {(() => {
+                            const totalRefs = [...new Set(orders.map(o => o.reference))].length;
+                            const doneRefs = terminesRefs.length + validéesRefs.length;
+                            const pct = totalRefs > 0 ? Math.round((doneRefs / totalRefs) * 100) : 0;
+                            return (
+                                <div className="w-full bg-gray-200 rounded-full h-6">
+                                    <div
+                                        className="bg-gradient-to-r from-green-500 to-emerald-500 h-6 rounded-full flex items-center justify-center text-white text-sm font-semibold transition-all"
+                                        style={{ width: `${pct}%` }}
+                                    >
+                                        {pct}% ({doneRefs}/{totalRefs} commandes)
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* Top Produits — Admin + Lecture */}
