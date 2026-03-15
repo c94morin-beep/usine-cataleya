@@ -48,7 +48,7 @@
                     window.qzReady = true;
                 }
                 // Fetch PDF via proxy PHP (CORS bloque le fetch direct depuis MR)
-                const proxyUrl = 'www.cataleyaparis.com/proxy-label' + encodeURIComponent(labelUrl);
+                const proxyUrl = 'https://www.cataleyaparis.com/proxy-label.php?url=' + encodeURIComponent(labelUrl);
                 const response = await fetch(proxyUrl);
                 if (!response.ok) throw new Error('Fetch PDF échoué: ' + response.status);
                 const blob = await response.blob();
