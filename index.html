@@ -27,7 +27,6 @@
                         setTimeout(() => {
                             win.focus();
                             win.print();
-                            setTimeout(() => { win.close(); URL.revokeObjectURL(blobUrl); }, 3000);
                         }, 800);
                     };
                 } else { fallbackFn(); }
