@@ -12,7 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.5/qz-tray.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js"></script>
     <script>
         // QZ Tray - impression auto étiquettes
         window.QZ_PRINTER_NAME = 'PM-241-BT';
@@ -47,8 +47,9 @@
                     await qz.websocket.connect();
                     window.qzReady = true;
                 }
-                // Fetch PDF en base64 (QZ Tray ne supporte pas les URLs distantes directement)
-                const response = await fetch(labelUrl);
+                // Fetch PDF via proxy PHP (CORS bloque le fetch direct depuis MR)
+                const proxyUrl = 'https://cataleyaparis.fr/proxy-label.php?url=' + encodeURIComponent(labelUrl);
+                const response = await fetch(proxyUrl);
                 if (!response.ok) throw new Error('Fetch PDF échoué: ' + response.status);
                 const blob = await response.blob();
                 const base64 = await new Promise((resolve, reject) => {
