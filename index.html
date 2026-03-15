@@ -54,8 +54,7 @@ if (!response.ok) throw new Error('Fetch PDF échoué: ' + response.status);
 const blob = await response.blob();
                 const config = qz.configs.create(window.QZ_PRINTER_NAME);
                 const data = [{
-                    type: 'pixel',
-                    format: 'pdf',
+                    type: 'pdf',
                     flavor: 'blob',
                     data: blob
                 }];
