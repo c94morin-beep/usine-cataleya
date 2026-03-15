@@ -47,9 +47,8 @@
                     await qz.websocket.connect();
                     window.qzReady = true;
                 }
-                // Fetch PDF via proxy PHP (CORS bloque le fetch direct depuis MR)
-                const proxyUrl = 'https://www.cataleyaparis.com/proxy-label.php?url=' + encodeURIComponent(labelUrl);
-                const response = await fetch(proxyUrl);
+                // Fetch PDF en base64 (QZ Tray ne supporte pas les URLs distantes directement)
+                const response = await fetch(labelUrl);
                 if (!response.ok) throw new Error('Fetch PDF échoué: ' + response.status);
                 const blob = await response.blob();
                 const base64 = await new Promise((resolve, reject) => {
@@ -58,11 +57,7 @@
                     reader.onerror = reject;
                     reader.readAsDataURL(blob);
                 });
-                const config = qz.configs.create(window.QZ_PRINTER_NAME, {
-                    size: { width: 100, height: 150 },
-                    units: 'mm',
-                    orientation: 'portrait'
-                });
+                const config = qz.configs.create(window.QZ_PRINTER_NAME);
                 const data = [{
                     type: 'pixel',
                     format: 'pdf',
