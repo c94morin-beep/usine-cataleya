@@ -12,56 +12,31 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js"></script>
     <script>
-        // QZ Tray - impression auto étiquettes
-        window.QZ_PRINTER_NAME = 'PM-241-BT';
-        window.qzReady = false;
-
-        async function initQZ() {
-            if (!window.qz || window.qzReady) return;
+        // Impression étiquette via proxy PHP + window.print()
+        window.printLabel = async function(labelUrl, fallbackFn) {
             try {
-                if (!qz.websocket.isActive()) {
-                    await qz.websocket.connect();
-                }
-                window.qzReady = true;
-                console.log('[QZ] Connecté ✓');
-            } catch (e) {
-                window.qzReady = false;
-                console.log('[QZ] Non disponible sur ce PC (normal sur tablettes)');
-            }
-        }
-
-        // Certificat QZ (non signé = OK pour usage local interne)
-        if (window.qz) {
-            qz.security.setCertificatePromise(() => Promise.resolve(''));
-            qz.security.setSignatureAlgorithm('SHA512');
-            qz.security.setSignaturePromise(() => Promise.resolve(''));
-            initQZ();
-        }
-
-        window.printLabelWithQZ = async function(labelUrl, fallbackFn) {
-            if (!window.qz) { fallbackFn(); return; }
-            try {
-                if (!qz.websocket.isActive()) {
-                    await qz.websocket.connect();
-                    window.qzReady = true;
-                }
-				// Fetch PDF via proxy PHP (CORS bloque le fetch direct depuis MR)
-const proxyUrl = 'https://www.cataleyaparis.com/proxy-label.php?url=' + encodeURIComponent(labelUrl);
-const response = await fetch(proxyUrl);
-if (!response.ok) throw new Error('Fetch PDF échoué: ' + response.status);
-const blob = await response.blob();
-                const config = qz.configs.create(window.QZ_PRINTER_NAME);
-                const data = [{
-                    type: 'pdf',
-                    flavor: 'blob',
-                    data: blob
-                }];
-                await qz.print(config, data);
-                console.log('[QZ] Impression envoyée ✓');
-            } catch (e) {
-                console.warn('[QZ] Erreur impression, fallback navigateur:', e);
+                const proxyUrl = 'https://www.cataleyaparis.com/proxy-label.php?url=' + encodeURIComponent(labelUrl);
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error('Fetch PDF échoué: ' + response.status);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const iframe = document.createElement('iframe');
+                iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;';
+                iframe.src = blobUrl;
+                document.body.appendChild(iframe);
+                iframe.onload = function() {
+                    setTimeout(() => {
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                        setTimeout(() => {
+                            document.body.removeChild(iframe);
+                            URL.revokeObjectURL(blobUrl);
+                        }, 3000);
+                    }, 500);
+                };
+            } catch(e) {
+                console.warn('[Print] Erreur, fallback:', e);
                 fallbackFn();
             }
         };
@@ -859,7 +834,7 @@ const blob = await response.blob();
                                                             const url = globalSelectedOrder.labelUrl;
                                                             if (ref) window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [ref]: Date.now() });
                                                             const fallback = () => window.open(url, '_blank');
-                                                            if (window.qz) { window.printLabelWithQZ(url, fallback); } else { fallback(); }
+                                                            window.printLabel(url, fallback);
                                                         }} className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette MR</button>}
                                                         {globalSelectedOrder.trackingUrl && <a href={globalSelectedOrder.trackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🔍 Suivi MR</a>}
                                                         {globalSelectedOrder.packlinkUrl && <button onClick={() => {
@@ -867,7 +842,7 @@ const blob = await response.blob();
                                                             const url = globalSelectedOrder.packlinkUrl;
                                                             if (ref) window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [ref]: Date.now() });
                                                             const fallback = () => window.open(url, '_blank');
-                                                            if (window.qz) { window.printLabelWithQZ(url, fallback); } else { fallback(); }
+                                                            window.printLabel(url, fallback);
                                                         }} className="flex items-center gap-1 px-3 py-1.5 bg-orange-400 hover:bg-orange-500 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette {globalSelectedOrder.packlinkCarrier || 'Packlink'}</button>}
                                                         {globalSelectedOrder.packlinkTrackingUrl && <a href={globalSelectedOrder.packlinkTrackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🔍 Suivi {globalSelectedOrder.packlinkTrackingNumber || 'colis'}</a>}
                                                         <a href={`https://cataleyaparis.fr/FIEdit.php.php?secure_key=ed3fa1ce558e1cfbaa3f99403&id_order=${globalSelectedOrder.reference}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🧾 Facture</a>
