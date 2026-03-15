@@ -1337,11 +1337,15 @@
                 allRefs.forEach(ref => {
                     const items = orders.filter(o => o.reference === ref);
                     const first = items[0];
-                    const match = ref.toString().includes(query) ||
-                        (first.client || '').toLowerCase().includes(query) ||
-                        (first.email || '').toLowerCase().includes(query) ||
-                        (first.telephone || '').toLowerCase().includes(query) ||
-                        (first.adresse_livraison || '').toLowerCase().includes(query);
+                    // Si la query est numérique, chercher uniquement dans le numéro de commande
+                    const isNumeric = /^\d+$/.test(query);
+                    const match = isNumeric
+                        ? ref.toString().includes(query)
+                        : ref.toString().includes(query) ||
+                          (first.client || '').toLowerCase().includes(query) ||
+                          (first.email || '').toLowerCase().includes(query) ||
+                          (first.telephone || '').toLowerCase().includes(query) ||
+                          (first.adresse_livraison || '').toLowerCase().includes(query);
                     if (!match) return;
                     const allDone = items.every(o => o.status === STATUTS.RANGE);
                     const allRange = items.every(o => o.status === STATUTS.RANGE);
