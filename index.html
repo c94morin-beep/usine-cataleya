@@ -36,6 +36,98 @@
             }
         };
     </script>
+    <script>
+        // Génération étiquette Amana 10x15 cm
+        window.printAmanaLabel = function(order) {
+            const { jsPDF } = window.jspdf;
+            // Format 10x15 cm = 100x150 mm
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [100, 150] });
+
+            const W = 100, H = 150;
+            const margin = 8;
+
+            // ── Fond bleu Amana (comme la fiche commande dans l'app) ──
+            doc.setFillColor(30, 100, 200);
+            doc.rect(0, 0, W, H, 'F');
+
+            // ── Carré blanc arrondi simulé (contenu centré) ──
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(margin, margin, W - margin * 2, H - margin * 2, 4, 4, 'F');
+
+            const innerX = margin + 6;
+            const innerW = W - margin * 2 - 12;
+
+            // ── En-tête : icône colis + "Commande #XXXXX" ──
+            doc.setTextColor(30, 100, 200);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.text('Commande', innerX, margin + 14);
+            doc.setFontSize(17);
+            doc.text('#' + (order.reference || ''), innerX, margin + 24);
+
+            // ── Ligne de séparation ──
+            doc.setDrawColor(220, 230, 245);
+            doc.setLineWidth(0.4);
+            doc.line(innerX, margin + 28, innerX + innerW, margin + 28);
+
+            // ── Nom de la cliente ──
+            let y = margin + 38;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(40, 40, 40);
+            const clientName = (order.client || '').trim();
+            const nameParts = doc.splitTextToSize(clientName, innerW);
+            nameParts.forEach(line => { doc.text(line, innerX, y); y += 7; });
+
+            // ── Adresse ──
+            y += 2;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(60, 60, 60);
+            const adresseLines = (order.adresse_livraison || '')
+                .trim().split('\n').map(l => l.trim()).filter(Boolean);
+            adresseLines.forEach(line => {
+                const wrapped = doc.splitTextToSize(line, innerW);
+                wrapped.forEach(wl => { doc.text(wl, innerX, y); y += 5.5; });
+            });
+
+            // ── Ligne de séparation ──
+            y += 3;
+            doc.setDrawColor(220, 230, 245);
+            doc.line(innerX, y, innerX + innerW, y);
+            y += 8;
+
+            // ── Téléphone ──
+            if (order.telephone) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(30, 100, 200);
+                doc.text(order.telephone, innerX, y);
+                y += 7;
+            }
+
+            // ── Email ──
+            if (order.email) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(100, 100, 100);
+                const emailParts = doc.splitTextToSize(order.email, innerW);
+                emailParts.forEach(line => { doc.text(line, innerX, y); y += 5; });
+            }
+
+            // ── Ouvrir dans un nouvel onglet et imprimer ──
+            const pdfBlob = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            const win = window.open(pdfUrl, '_blank');
+            if (win) {
+                win.onload = function() {
+                    setTimeout(() => { win.focus(); win.print(); }, 600);
+                };
+            } else {
+                doc.save('etiquette-amana-' + (order.reference || 'commande') + '.pdf');
+            }
+        };
+    </script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -850,6 +942,23 @@
                                                                 : <button onClick={() => toggleValidation(ref)} className="flex items-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white text-xs font-semibold rounded-lg transition">📦 Valider</button>;
                                                         })()}
                                                         {globalSelectedOrder.loadingShipping === false && !globalSelectedOrder.labelUrl && !globalSelectedOrder.packlinkUrl && null}
+                                                        {/* Bouton étiquette Amana — visible uniquement si transporteur = Amana */}
+                                                        {(globalSelectedOrder.transporteur || '').toLowerCase().includes('amana') && (
+                                                            <button
+                                                                onClick={() => window.printAmanaLabel({
+                                                                    client: globalSelectedOrder.client,
+                                                                    adresse_livraison: globalSelectedOrder.adresse_livraison,
+                                                                    telephone: globalSelectedOrder.telephone,
+                                                                    email: globalSelectedOrder.email,
+                                                                    reference: globalSelectedOrder.reference,
+                                                                    transporteur: globalSelectedOrder.transporteur,
+                                                                })}
+                                                                className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition"
+                                                                title="Générer une étiquette Amana 10x15 cm"
+                                                            >
+                                                                🏷️ Étiquette Amana
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 )}
                                                 {globalSelectedOrder.loadingShipping && <p className="text-blue-200 text-xs mt-2">⏳ Recherche bordereau...</p>}
