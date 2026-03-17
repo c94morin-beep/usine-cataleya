@@ -1228,7 +1228,7 @@
 
                                 {isAdmin && <button onClick={() => setShowImportModal(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition whitespace-nowrap">➕ Nouvelle liste</button>}
                                 {isAdmin && <button onClick={exportBackup} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition whitespace-nowrap" title="Sauvegarder toutes les données">💾 Sauvegarder</button>}
-                                {(isAdmin || isLecteur) && lists.some(l => l.archived) && (
+                                {(isAdmin || isLecteur || isOperateur || isSara || isCommentaires) && lists.some(l => l.archived) && (
                                     <button onClick={() => setShowArchives(true)} className="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition whitespace-nowrap">
                                         🗂️ Archives ({lists.filter(l => l.archived).length})
                                     </button>
