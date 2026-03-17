@@ -141,6 +141,9 @@
             const activeListId = activeListIdRaw;
             const activeTheme = getTheme(activeListId, lists);
             const activeListName = activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name || '';
+            const [showArchives, setShowArchives] = useState(false);
+            const [editingArchiveListId, setEditingArchiveListId] = useState(null);
+            const [editingArchiveListName, setEditingArchiveListName] = useState('');
             React.useEffect(() => {
                 if (isSara) setActiveTab('dashboard');
                 else if (isCommentaires) setActiveTab('production');
@@ -391,7 +394,7 @@
 
             // Obtenir toutes les commandes (pour la vue globale)
             const getAllOrders = () => {
-                return lists.flatMap(list => list.orders);
+                return lists.filter(l => !l.archived).flatMap(list => list.orders);
             };
 
             // Obtenir les commandes de la liste active
@@ -504,6 +507,27 @@
                         setActiveListId('global');
                     }
                 }
+            };
+
+            const archiveList = (listId) => {
+                if (confirm('Archiver cette liste ? Elle sera masquée de la vue principale et mise en lecture seule.')) {
+                    const updatedLists = lists.map(l => l.id === listId ? { ...l, archived: true } : l);
+                    saveLists(updatedLists);
+                    if (activeListId === listId) setActiveListId('global');
+                }
+            };
+
+            const unarchiveList = (listId) => {
+                const updatedLists = lists.map(l => l.id === listId ? { ...l, archived: false } : l);
+                saveLists(updatedLists);
+            };
+
+            const renameArchivedList = (listId, newName) => {
+                if (!newName || !newName.trim()) return;
+                const updatedLists = lists.map(l => l.id === listId ? { ...l, name: newName.trim() } : l);
+                saveLists(updatedLists);
+                setEditingArchiveListId(null);
+                setEditingArchiveListName('');
             };
 
             // Mettre à jour un statut
@@ -1181,8 +1205,8 @@
                                     📂 GLOBAL ({getAllOrders().length})
                                 </button>
 
-                                {/* Onglets des listes */}
-                                {lists.map((list, idx) => {
+                                {/* Onglets des listes actives uniquement */}
+                                {lists.filter(l => !l.archived).map((list, idx) => {
                                     const theme = LIST_THEMES[idx + 1] || LIST_THEMES[((idx + 1) % (LIST_THEMES.length - 1)) + 1];
                                     return (
                                     <div key={list.id} className="flex items-center gap-1">
@@ -1196,6 +1220,7 @@
                                         >
                                             📋 {list.name} ({list.orders.length})
                                         </button>
+                                        {isAdmin && <button onClick={() => archiveList(list.id)} className="px-2 py-2 text-amber-500 hover:bg-amber-50 rounded" title="Archiver cette liste">🗃️</button>}
                                         {isAdmin && <button onClick={() => deleteList(list.id)} className="px-2 py-2 text-red-600 hover:bg-red-50 rounded" title="Supprimer cette liste">✕</button>}
                                     </div>
                                     );
@@ -1203,9 +1228,105 @@
 
                                 {isAdmin && <button onClick={() => setShowImportModal(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition whitespace-nowrap">➕ Nouvelle liste</button>}
                                 {isAdmin && <button onClick={exportBackup} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition whitespace-nowrap" title="Sauvegarder toutes les données">💾 Sauvegarder</button>}
+                                {(isAdmin || isLecteur) && lists.some(l => l.archived) && (
+                                    <button onClick={() => setShowArchives(true)} className="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition whitespace-nowrap">
+                                        🗂️ Archives ({lists.filter(l => l.archived).length})
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </nav>
+
+                    {/* Modal Archives */}
+                    {showArchives && (
+                        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[80] p-4" onClick={() => setShowArchives(false)}>
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                                {/* Header */}
+                                <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-xl font-bold">🗂️ Archives</h2>
+                                        <p className="text-gray-300 text-sm mt-0.5">{lists.filter(l => l.archived).length} liste(s) archivée(s) — lecture seule</p>
+                                    </div>
+                                    <button onClick={() => setShowArchives(false)} className="text-white hover:text-gray-300 text-2xl font-bold">✕</button>
+                                </div>
+                                {/* Contenu */}
+                                <div className="flex-1 overflow-y-auto p-6">
+                                    {lists.filter(l => l.archived).length === 0 ? (
+                                        <p className="text-center text-gray-400 py-12">Aucune liste archivée pour le moment.</p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {lists.filter(l => l.archived).map(list => {
+                                                const totalArticles = list.orders.length;
+                                                const termines = list.orders.filter(o => o.status === 'Rangé' || o.status === 'Reçu').length;
+                                                const commandes = [...new Set(list.orders.map(o => o.reference))].length;
+                                                return (
+                                                    <div key={list.id} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex-1">
+                                                                {/* Nom — éditable admin */}
+                                                                {isAdmin && editingArchiveListId === list.id ? (
+                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                        <input
+                                                                            type="text"
+                                                                            value={editingArchiveListName}
+                                                                            onChange={e => setEditingArchiveListName(e.target.value)}
+                                                                            onKeyDown={e => { if (e.key === 'Enter') renameArchivedList(list.id, editingArchiveListName); if (e.key === 'Escape') { setEditingArchiveListId(null); } }}
+                                                                            autoFocus
+                                                                            className="font-bold text-gray-800 border border-blue-400 rounded-lg px-2 py-1 focus:outline-none text-sm flex-1"
+                                                                        />
+                                                                        <button onClick={() => renameArchivedList(list.id, editingArchiveListName)} className="text-green-600 hover:text-green-800 font-bold text-sm px-2 py-1 bg-green-50 rounded-lg">✅</button>
+                                                                        <button onClick={() => setEditingArchiveListId(null)} className="text-gray-400 hover:text-gray-600 text-sm px-2 py-1">✕</button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                        <h3 className="font-bold text-gray-800">📋 {list.name}</h3>
+                                                                        {isAdmin && <button onClick={() => { setEditingArchiveListId(list.id); setEditingArchiveListName(list.name); }} className="text-gray-400 hover:text-blue-500 text-sm" title="Renommer">✏️</button>}
+                                                                    </div>
+                                                                )}
+                                                                {/* Stats */}
+                                                                <div className="flex flex-wrap gap-2 text-xs">
+                                                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">{commandes} commande(s)</span>
+                                                                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">{totalArticles} articles</span>
+                                                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full font-semibold">{termines} terminés</span>
+                                                                    {totalArticles > 0 && <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full font-semibold">{Math.round(termines / totalArticles * 100)}%</span>}
+                                                                </div>
+                                                            </div>
+                                                            {/* Actions admin */}
+                                                            {isAdmin && (
+                                                                <button
+                                                                    onClick={() => unarchiveList(list.id)}
+                                                                    className="flex-shrink-0 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold text-xs rounded-lg transition"
+                                                                    title="Remettre dans les listes actives"
+                                                                >
+                                                                    ↩️ Désarchiver
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        {/* Aperçu commandes */}
+                                                        <div className="mt-3 max-h-40 overflow-y-auto space-y-1">
+                                                            {[...new Set(list.orders.map(o => o.reference))].map(ref => {
+                                                                const items = list.orders.filter(o => o.reference === ref);
+                                                                const allDone = items.every(o => o.status === 'Rangé');
+                                                                return (
+                                                                    <div key={ref} className="flex items-center justify-between px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs">
+                                                                        <span className="font-mono font-semibold text-gray-700">#{ref}</span>
+                                                                        <span className="text-gray-500">{items[0]?.client || '—'}</span>
+                                                                        <span className={`px-2 py-0.5 rounded-full font-semibold ${allDone ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                                            {items.filter(o => o.status === 'Rangé').length}/{items.length} ✅
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Modal Import */}
                     {showImportModal && (
