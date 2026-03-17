@@ -1293,13 +1293,22 @@
                                                             </div>
                                                             {/* Actions admin */}
                                                             {isAdmin && (
-                                                                <button
-                                                                    onClick={() => unarchiveList(list.id)}
-                                                                    className="flex-shrink-0 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold text-xs rounded-lg transition"
-                                                                    title="Remettre dans les listes actives"
-                                                                >
-                                                                    ↩️ Désarchiver
-                                                                </button>
+                                                                <div className="flex flex-col gap-2 flex-shrink-0">
+                                                                    <button
+                                                                        onClick={() => unarchiveList(list.id)}
+                                                                        className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold text-xs rounded-lg transition"
+                                                                        title="Remettre dans les listes actives"
+                                                                    >
+                                                                        ↩️ Désarchiver
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => { if (confirm(`Supprimer définitivement "${list.name}" ? Cette action est irréversible.`)) deleteList(list.id); }}
+                                                                        className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 font-semibold text-xs rounded-lg transition"
+                                                                        title="Supprimer définitivement"
+                                                                    >
+                                                                        🗑️ Supprimer
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                         {/* Aperçu commandes */}
