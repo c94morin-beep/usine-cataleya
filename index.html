@@ -1184,6 +1184,18 @@
                                         )}
                                     </div>
                                 )}
+                                {isAdmin && lists.filter(l => !l.archived).length > 0 && (
+                                    <button onClick={() => {
+                                        const nbListes = lists.filter(l => !l.archived).length;
+                                        if (confirm(`Archiver les ${nbListes} liste(s) actives ? Elles seront masquées de la vue principale et consultables dans la section Archives.`)) {
+                                            const updatedLists = lists.map(l => l.archived ? l : { ...l, archived: true });
+                                            saveLists(updatedLists);
+                                            setActiveListId('global');
+                                        }
+                                    }} className="px-2 md:px-3 py-1 md:py-2 bg-amber-400 hover:bg-amber-300 text-amber-900 rounded-lg text-xs md:text-sm font-semibold transition whitespace-nowrap" title="Archiver toutes les listes actives">
+                                        🗂️ Archiver tout
+                                    </button>
+                                )}
                                 <button onClick={() => window.firebaseSignOut()} className="px-2 md:px-3 py-1 md:py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs md:text-sm font-semibold transition">
                                     Déconnexion
                                 </button>
