@@ -578,7 +578,7 @@ document.getElementById('btn-logout').onclick = () => signOut(auth);
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        const snap = await get(ref(db, 'roles/' + user.uid));
+        const snap = await get(ref(db, 'users/' + user.uid + '/role'));
         userRole = snap.exists() ? snap.val() : 'lecture';
         initApp();
     } else {
