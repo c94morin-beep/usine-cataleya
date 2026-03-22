@@ -527,6 +527,57 @@
 <!-- TOAST -->
 <div id="toast"></div>
 
+<!-- MODAL RECONFECTION -->
+<div class="modal-overlay" id="modal-reconfection">
+    <div class="modal" style="max-width:560px">
+        <div class="modal-header">
+            <span class="modal-title">🧵 Lancer une reconfection</span>
+            <button class="modal-close" onclick="closeModal('modal-reconfection')">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Cette commande sera ajoutée dans la liste <strong>♻️ Reconfections SAV</strong> de l'app production.</p>
+            <div class="form-group">
+                <label class="form-label">Nom de l'article *</label>
+                <input type="text" class="form-input" id="rec-nom" placeholder="ex: Ensemble Lilia Burgundy" />
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Taille personnalisée</label>
+                    <input type="text" class="form-input" id="rec-taille" placeholder="ex: 56" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quantité</label>
+                    <input type="number" class="form-input" id="rec-qty" value="1" min="1" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Option 1</label>
+                <input type="text" class="form-input" id="rec-opt1" placeholder="ex: Palazzo" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Option 2</label>
+                <input type="text" class="form-input" id="rec-opt2" placeholder="ex: 3XL ou +" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Option 3</label>
+                <input type="text" class="form-input" id="rec-opt3" placeholder="ex: Avec ceinture" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">URL image</label>
+                <input type="text" class="form-input" id="rec-img" placeholder="https://cataleyaparis.com/..." />
+            </div>
+            <div class="form-group" style="margin-top:16px">
+                <label class="form-label">Aperçu du nom généré</label>
+                <div id="rec-preview" style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text);min-height:40px;font-weight:500;"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-success" id="btn-confirm-reconfection">🧵 Envoyer en production</button>
+            <button class="btn btn-ghost" onclick="closeModal('modal-reconfection')">Annuler</button>
+        </div>
+    </div>
+</div>
+
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -825,7 +876,13 @@ function renderDetailFooter(d) {
             btns += `<button class="btn btn-purple" onclick="actionChoisirResolution()">🎯 Enregistrer résolution</button>`;
         }
         if (d.statut === 'En traitement') {
-            btns += `<button class="btn btn-success" onclick="actionResoudre()">✓ Marquer résolu</button>`;
+            if (d.resolution === 'Reconfection' && !d.reconfectionLancee) {
+                btns += `<button class="btn btn-success" onclick="openReconfectionModal()">🧵 Lancer reconfection</button>`;
+            }
+            if (d.reconfectionLancee) {
+                btns += `<span style="font-size:13px;color:var(--accent2);font-weight:600">✓ Reconfection envoyée en production</span>`;
+            }
+            btns += `<button class="btn btn-primary" onclick="actionResoudre()">✓ Marquer résolu</button>`;
             btns += `<button class="btn btn-ghost" onclick="actionSaveNotes()">💾 Sauvegarder notes</button>`;
         }
         if (d.statut === 'Rejeté') {
@@ -885,6 +942,113 @@ async function updateDossier(updates, logAction) {
     const newSnap = await get(dosRef);
     renderDetail({ id: currentDossierId, ...newSnap.val() });
 }
+
+// ── RECONFECTION ──
+window.openReconfectionModal = () => {
+    const d = savDossiers[currentDossierId];
+    if (!d) return;
+    // Pré-remplir avec les articles du dossier
+    document.getElementById('rec-nom').value = d.articles || '';
+    document.getElementById('rec-taille').value = '';
+    document.getElementById('rec-opt1').value = '';
+    document.getElementById('rec-opt2').value = '';
+    document.getElementById('rec-opt3').value = '';
+    document.getElementById('rec-img').value = '';
+    document.getElementById('rec-qty').value = '1';
+    updateRecPreview();
+    openModal('modal-reconfection');
+};
+
+function buildArticleName() {
+    const nom = document.getElementById('rec-nom').value.trim();
+    const taille = document.getElementById('rec-taille').value.trim();
+    const opt1 = document.getElementById('rec-opt1').value.trim();
+    const opt2 = document.getElementById('rec-opt2').value.trim();
+    const opt3 = document.getElementById('rec-opt3').value.trim();
+    if (!nom) return '';
+    let parts = [];
+    if (taille) parts.push(`Taille personnalisée: Taille personnalisée: ${taille}`);
+    if (opt1) parts.push(`Option: ${opt1}`);
+    if (opt2) parts.push(`Option2: ${opt2}`);
+    if (opt3) parts.push(`Option3: ${opt3}`);
+    return parts.length ? `${nom} (${parts.join(', ')})` : nom;
+}
+
+function updateRecPreview() {
+    document.getElementById('rec-preview').textContent = buildArticleName() || '—';
+}
+
+['rec-nom','rec-taille','rec-opt1','rec-opt2','rec-opt3'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updateRecPreview);
+});
+
+document.getElementById('btn-confirm-reconfection').onclick = async () => {
+    const nom = buildArticleName();
+    if (!nom) { toast('⚠️ Renseignez le nom de l\'article'); return; }
+    const d = savDossiers[currentDossierId];
+    if (!d) return;
+
+    const qty = parseInt(document.getElementById('rec-qty').value) || 1;
+    const urlImage = document.getElementById('rec-img').value.trim();
+
+    // Chercher ou créer la liste "♻️ Reconfections SAV"
+    const listsSnap = await get(ref(db, 'lists'));
+    let lists = listsSnap.exists() ? listsSnap.val() : [];
+    if (!Array.isArray(lists)) lists = Object.values(lists);
+
+    let savList = lists.find(l => l.name && l.name.includes('Reconfections SAV'));
+    let savListId;
+
+    if (!savList) {
+        // Créer la liste
+        const newList = {
+            id: 'sav-reconfection-' + Date.now(),
+            name: '♻️ Reconfections SAV',
+            orders: [],
+            archived: false,
+            createdAt: new Date().toISOString()
+        };
+        lists.push(newList);
+        savListId = newList.id;
+        savList = newList;
+    } else {
+        savListId = savList.id;
+    }
+
+    // Créer la commande
+    const newOrder = {
+        id: Date.now() + '-SAV',
+        reference: 'SAV-' + d.commande,
+        client: d.client || '',
+        email: d.email || '',
+        telephone: d.tel || '',
+        adresse_livraison: '',
+        transporteur: '♻️ SAV — Reconfection',
+        name: nom,
+        quantity: qty,
+        status: 'En attente',
+        url_image: urlImage || '',
+        commentaires: `♻️ Reconfection SAV — Dossier #${d.commande} — ${d.type || ''}`,
+        commentAuthor: 'SAV',
+        updatedAt: Date.now()
+    };
+
+    // Injecter dans la liste
+    const updatedLists = lists.map(l => {
+        if (l.id === savListId) {
+            return { ...l, orders: [...(l.orders || []), newOrder] };
+        }
+        return l;
+    });
+
+    await set(ref(db, 'lists'), updatedLists);
+
+    // Marquer le dossier SAV comme reconfection lancée
+    await updateDossier({ reconfectionLancee: true }, `Reconfection lancée en production — article : ${nom}`);
+
+    closeModal('modal-reconfection');
+    toast('🧵 Reconfection ajoutée dans la liste production !');
+};
 
 // ── EMAIL TEMPLATES ──
 window.showEmailTemplate = (type) => {
