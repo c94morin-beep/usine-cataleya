@@ -446,11 +446,13 @@
                                     name: values[1]?.replace(/"/g, '').trim() || '',
                                     url_image: values[2]?.replace(/"/g, '').trim() || '',
                                     total: values[3]?.replace(/"/g, '').trim() || '1',
-                                    client: values[4]?.replace(/"/g, '').trim() || '',
-                                    adresse_livraison: values[5]?.replace(/"/g, '').trim() || '',
-                                    telephone: values[6]?.replace(/"/g, '').trim() || '',
-                                    email: values[7]?.replace(/"/g, '').trim() || '',
-                                    transporteur: values[8]?.replace(/"/g, '').trim() || ''
+                                    ref_produit: values[4]?.replace(/"/g, '').trim() || '',
+                                    ref_declinaison: values[5]?.replace(/"/g, '').trim() || '',
+                                    client: values[6]?.replace(/"/g, '').trim() || '',
+                                    adresse_livraison: values[7]?.replace(/"/g, '').trim() || '',
+                                    telephone: values[8]?.replace(/"/g, '').trim() || '',
+                                    email: values[9]?.replace(/"/g, '').trim() || '',
+                                    transporteur: values[10]?.replace(/"/g, '').trim() || ''
                                 };
                                 data.push(row);
                             }
@@ -466,6 +468,8 @@
                                     reference: row.reference,
                                     name: row.name,
                                     url_image: row.url_image,
+                                    ref_produit: row.ref_produit,
+                                    ref_declinaison: row.ref_declinaison,
                                     commentaires: '',
                                     quantity: 1,
                                     status: STATUTS.EN_ATTENTE,
@@ -2364,6 +2368,11 @@
                 return [...filteredOrders].sort((a, b) => {
                     let aVal = a[sortColumn] || '';
                     let bVal = b[sortColumn] || '';
+                    if (sortColumn === 'no_article') {
+                        const aVal = a.ref_declinaison || a.ref_produit || '';
+                        const bVal = b.ref_declinaison || b.ref_produit || '';
+                        return sortDirection === 'asc' ? aVal.localeCompare(bVal, undefined, {numeric: true}) : bVal.localeCompare(aVal, undefined, {numeric: true});
+                    }
                     if (sortColumn === 'reference') {
                         aVal = parseInt(aVal) || 0;
                         bVal = parseInt(bVal) || 0;
@@ -2556,6 +2565,9 @@
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>
                                         Produit {sortColumn === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
                                     </th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('no_article')}>
+                                        N° Article {sortColumn === 'no_article' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('client')}>
                                         Client {sortColumn === 'client' && (sortDirection === 'asc' ? '↑' : '↓')}
                                     </th>
@@ -2593,6 +2605,7 @@
                                             {getCasierNum && getCasierNum(order.reference) && <div className="mt-1"><span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">📦 Box {getCasierNum(order.reference)}</span></div>}
                                         </td>
                                         <td className="px-4 py-3">{order.name}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">{order.ref_declinaison || order.ref_produit || '-'}</td>
                                         <td className="px-4 py-3 text-sm">{order.client || '-'}</td>
                                         <td className="px-4 py-3 text-sm">{order.transporteur || '-'}</td>
                                         <td className={`px-4 py-3 ${order.commentaires ? 'bg-red-500' : ''}`}>
