@@ -1823,6 +1823,17 @@
 
                     {showCommandesModal && (() => {
                         const allRefs = [...new Set(orders.map(o => o.reference))].sort((a,b) => a - b);
+                        // Logique facture douane (même que modal Terminées)
+                        const PAYS_UE_C = ['france','allemagne','belgique','espagne','italie','pays-bas','netherlands','portugal','autriche','suède','sweden','danemark','denmark','finlande','finland','irlande','ireland','grèce','greece','pologne','poland','tchéquie','czech','hongrie','hungary','roumanie','romania','bulgarie','bulgaria','croatie','croatia','slovaquie','slovakia','slovénie','slovenia','lituanie','lithuania','lettonie','latvia','estonie','estonia','luxembourg','malte','malta','chypre','cyprus','maroc','morocco'];
+                        const needsInvoice = (ref) => {
+                            const item = orders.find(o => o.reference === ref);
+                            if (!item || !item.adresse_livraison) return false;
+                            const lines = item.adresse_livraison.trim().split('\n').map(l => l.trim()).filter(Boolean);
+                            const paysLine = lines.length >= 2 ? lines[lines.length - 2] : lines[lines.length - 1];
+                            if (!paysLine) return false;
+                            const pays = paysLine.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            return !PAYS_UE_C.some(p => pays.includes(p.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+                        };
                         // Grouper par transporteur
                         const byTransporteur = {};
                         allRefs.forEach(ref => {
@@ -1884,11 +1895,24 @@
                                                                 const total = items.length;
                                                                 const pct = total > 0 ? Math.round(termines/total*100) : 0;
                                                                 const client = items[0]?.client || '';
+                                                                const invoice = needsInvoice(ref);
                                                                 return (
                                                                     <div key={ref} className={`py-2 px-3 flex items-center justify-between gap-3 ${index % 2 === 0 ? 'bg-indigo-50' : 'bg-white'}`}>
-                                                                        <div>
-                                                                            <button onClick={() => { setShowCommandesModal(false); openOrderRecap(ref); }} className="font-mono text-indigo-800 font-semibold hover:text-blue-600 hover:underline">#{ref}</button>
-                                                                            {client && <p className="text-xs text-gray-400">{client}</p>}
+                                                                        <div className="flex items-center gap-2 min-w-0">
+                                                                            <div>
+                                                                                <button onClick={() => { setShowCommandesModal(false); openOrderRecap(ref); }} className="font-mono text-indigo-800 font-semibold hover:text-blue-600 hover:underline">#{ref}</button>
+                                                                                {client && <p className="text-xs text-gray-400">{client}</p>}
+                                                                            </div>
+                                                                            {invoice && (
+                                                                                <a
+                                                                                    href={`https://cataleyaparis.fr/FIEdit.php?secure_key=ed3fa1ce558e1cfbaa3f99403&id_order=${ref}`}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    title="Facture douane requise — cliquer pour ouvrir"
+                                                                                    onClick={e => e.stopPropagation()}
+                                                                                    className="text-base hover:scale-110 transition-transform flex-shrink-0"
+                                                                                >🧾</a>
+                                                                            )}
                                                                         </div>
                                                                         <div className="flex items-center gap-2">
                                                                             <div className="w-20 bg-gray-200 rounded-full h-1.5">
@@ -5239,6 +5263,6 @@
         // Render
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.4 — 12/03/26</div>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.5 — 27/03/26</div>
 </body>
 </html>
