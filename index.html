@@ -2605,6 +2605,7 @@
                                             </select>}
                                         </div>
                                         <p className="text-sm font-medium text-gray-800 mt-1">{order.name}</p>
+                                        {(order.ref_declinaison || order.ref_produit) && <p className="text-xs text-indigo-500 font-semibold mt-0.5">N° {order.ref_declinaison || order.ref_produit}</p>}
                                         <p className="text-xs text-gray-500 mt-0.5">{order.client || ''}</p>
                                         <p className="text-xs text-gray-500 md:block hidden">🚚 {order.transporteur || '-'}</p>
                                     </div>
