@@ -24,12 +24,12 @@
   --text: #f0ede8;
   --text2: #9a9590;
   --text3: #5a5550;
-  --accent: #c8f542;        /* lime vif */
-  --accent2: #e8a030;       /* ambre */
-  --accent3: #5bb8e8;       /* bleu */
-  --accent4: #e85580;       /* corail */
-  --accent5: #9b7fe8;       /* violet */
-  --accent6: #3dd6a0;       /* teal */
+  --accent: #c8f542;
+  --accent2: #e8a030;
+  --accent3: #5bb8e8;
+  --accent4: #e85580;
+  --accent5: #9b7fe8;
+  --accent6: #3dd6a0;
   --danger: #e85555;
   --r: 10px;
   --r2: 16px;
@@ -48,7 +48,6 @@ body {
   overscroll-behavior: none;
 }
 
-/* LAYOUT */
 #app { display: flex; flex-direction: column; height: 100dvh; }
 #header {
   padding: 16px 20px 12px;
@@ -114,12 +113,10 @@ body {
 .nav-btn svg { width: 22px; height: 22px; stroke-width: 1.8; fill: none; stroke: currentColor; }
 .nav-btn span { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; }
 
-/* SECTIONS */
 .section { display: none; padding: 16px 16px 24px; animation: fadeIn 0.2s ease; }
 .section.active { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-/* CARDS */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -144,7 +141,6 @@ body {
 .card-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
 .card-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
 
-/* SECTION TITLE */
 .section-title {
   font-family: 'Bebas Neue', sans-serif;
   font-size: 32px;
@@ -160,7 +156,6 @@ body {
   font-weight: 300;
 }
 
-/* WEEK PLANNER */
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -177,7 +172,7 @@ body {
   transition: all 0.2s;
 }
 .day-cell.today { border-color: var(--accent); }
-.day-cell.selected { background: var(--surface3); }
+.day-cell.selected { background: var(--surface3); border-color: var(--accent); }
 .day-name { font-size: 10px; color: var(--text3); font-weight: 500; margin-bottom: 6px; }
 .day-dot {
   width: 22px; height: 22px;
@@ -193,7 +188,6 @@ body {
 .dot-rest { background: rgba(90,85,80,0.3); color: var(--text3); }
 .dot-stretch { background: rgba(232,85,128,0.2); color: var(--accent4); }
 
-/* TAGS / BADGES */
 .tag {
   display: inline-block;
   font-size: 10px;
@@ -210,7 +204,6 @@ body {
 .tag-teal { background: rgba(61,214,160,0.15); color: var(--accent6); }
 .tag-danger { background: rgba(232,85,85,0.15); color: var(--danger); }
 
-/* BLOCKS */
 .block {
   border-left: 2px solid var(--border2);
   padding: 10px 12px;
@@ -228,7 +221,6 @@ body {
 .block-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
 .block-body { font-size: 12px; color: var(--text2); line-height: 1.6; }
 
-/* STATS */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -245,7 +237,6 @@ body {
 .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1px; line-height: 1; }
 .stat-label { font-size: 10px; color: var(--text3); margin-top: 3px; font-weight: 300; letter-spacing: 0.5px; }
 
-/* TIMER */
 .timer-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -286,7 +277,6 @@ body {
 .btn-secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
 .btn-sm { padding: 8px 16px; font-size: 12px; }
 
-/* BREATH PATTERNS */
 .breath-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .breath-opt {
   background: var(--surface2);
@@ -300,7 +290,6 @@ body {
 .breath-opt-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
 .breath-opt-desc { font-size: 11px; color: var(--text3); }
 
-/* BREATH CIRCLE */
 .breath-circle-wrap {
   display: flex;
   justify-content: center;
@@ -339,7 +328,6 @@ body {
   font-weight: 300;
 }
 
-/* CHECKLIST */
 .check-item {
   display: flex;
   align-items: flex-start;
@@ -367,7 +355,6 @@ body {
 .check-text { font-size: 13px; color: var(--text); flex: 1; }
 .check-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
-/* NUTRITION MEALS */
 .meal-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -404,7 +391,6 @@ body {
 .meal-card.open .meal-caret { transform: rotate(180deg); }
 .meal-card.open .meal-body { display: block; }
 
-/* PROGRESS */
 .progress-bar {
   height: 6px;
   background: var(--surface3);
@@ -419,7 +405,6 @@ body {
   transition: width 0.5s ease;
 }
 
-/* PHASE CARD */
 .phase-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -444,7 +429,6 @@ body {
 .phase-title { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
 .phase-body { font-size: 12px; color: var(--text2); line-height: 1.6; }
 
-/* TOGGLE */
 .toggle-row {
   display: flex;
   background: var(--surface2);
@@ -470,7 +454,6 @@ body {
   border: 1px solid var(--border2);
 }
 
-/* TABS */
 .tabs-row {
   display: flex;
   gap: 6px;
@@ -494,7 +477,6 @@ body {
 }
 .tab-pill.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); }
 
-/* ALERT BOX */
 .alert {
   border-radius: var(--r);
   padding: 12px 14px;
@@ -506,7 +488,6 @@ body {
 .alert-amber { background: rgba(232,160,48,0.08); border-color: rgba(232,160,48,0.25); color: var(--accent2); }
 .alert-danger { background: rgba(232,85,85,0.08); border-color: rgba(232,85,85,0.25); color: var(--danger); }
 
-/* SUPPLEMENT GRID */
 .supp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .supp-card {
   background: var(--surface2);
@@ -518,7 +499,6 @@ body {
 .supp-dose { font-size: 11px; color: var(--accent2); margin-bottom: 4px; }
 .supp-when { font-size: 10px; color: var(--text3); }
 
-/* RULE ITEM */
 .rule-item {
   display: flex;
   align-items: flex-start;
@@ -531,7 +511,6 @@ body {
 .rule-item:last-child { border-bottom: none; }
 .rule-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
 
-/* DAILY TRACKER */
 .tracker-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 10px; }
 .hydration-bar {
   display: flex;
@@ -553,7 +532,6 @@ body {
 }
 .hydration-glass.filled { background: rgba(91,184,232,0.25); border-color: var(--accent3); }
 
-/* INSTALL BANNER */
 .install-banner {
   background: linear-gradient(135deg, rgba(200,245,66,0.12), rgba(61,214,160,0.06));
   border: 1px solid rgba(200,245,66,0.2);
@@ -583,7 +561,8 @@ body {
 
     <!-- ========== HOME ========== -->
     <div class="section active" id="sec-home">
-      <div id="install-banner" class="install-banner">
+      <!-- BUG #6 FIX: install banner hidden by default, shown only if not in standalone mode -->
+      <div id="install-banner" class="install-banner" style="display:none;">
         <div class="install-icon">📲</div>
         <div class="install-text">
           <b>Installer l'app</b>
@@ -610,7 +589,6 @@ body {
         </div>
       </div>
 
-      <!-- Today's session card -->
       <div class="card" id="today-card">
         <div class="card-header">
           <div class="card-icon" id="today-icon">🥋</div>
@@ -622,55 +600,52 @@ body {
         <div class="card-body" id="today-desc">–</div>
       </div>
 
-      <!-- Morning routine checklist -->
       <div class="card">
         <div class="card-header">
           <div class="card-icon" style="background:rgba(200,245,66,0.1);">🌅</div>
           <div><div class="card-title">Routine matinale</div><div class="card-sub">Chaque matin · 20 min</div></div>
         </div>
         <div id="morning-checks">
-          <div class="check-item" onclick="toggle(this)">
+          <div class="check-item" onclick="toggle(this, 'morning_0')">
             <div class="check-box"></div>
             <div><div class="check-text">Respirations (box breathing ou Wim Hof)</div><div class="check-sub">5 min</div></div>
           </div>
-          <div class="check-item" onclick="toggle(this)">
+          <div class="check-item" onclick="toggle(this, 'morning_1')">
             <div class="check-box"></div>
             <div><div class="check-text">Mobilité articulaire (hanches, épaules, cou)</div><div class="check-sub">10 min</div></div>
           </div>
-          <div class="check-item" onclick="toggle(this)">
+          <div class="check-item" onclick="toggle(this, 'morning_2')">
             <div class="check-box"></div>
             <div><div class="check-text">Activation (bird-dog, glute bridge)</div><div class="check-sub">5 min</div></div>
           </div>
         </div>
       </div>
 
-      <!-- Evening routine -->
       <div class="card">
         <div class="card-header">
           <div class="card-icon" style="background:rgba(155,127,232,0.1);">🌙</div>
           <div><div class="card-title">Routine soir</div><div class="card-sub">Avant 22h30</div></div>
         </div>
         <div id="evening-checks">
-          <div class="check-item" onclick="toggle(this)">
+          <div class="check-item" onclick="toggle(this, 'evening_0')">
             <div class="check-box"></div>
             <div><div class="check-text">Stretching passif (hips, ischio, épaules)</div><div class="check-sub">10 min</div></div>
           </div>
-          <div class="check-item" onclick="toggle(this)">
+          <div class="check-item" onclick="toggle(this, 'evening_1')">
             <div class="check-box"></div>
             <div><div class="check-text">Cohérence cardiaque 4-7-8</div><div class="check-sub">5 min</div></div>
           </div>
-          <div class="check-item" onclick="toggle(this)">
+          <div class="check-item" onclick="toggle(this, 'evening_2')">
             <div class="check-box"></div>
             <div><div class="check-text">Journal de bord — 3 points positifs</div><div class="check-sub">2 min</div></div>
           </div>
-          <div class="check-item" onclick="toggle(this)">
+          <div class="check-item" onclick="toggle(this, 'evening_3')">
             <div class="check-box"></div>
             <div><div class="check-text">Couché avant 22h30</div><div class="check-sub">7h30–8h de sommeil</div></div>
           </div>
         </div>
       </div>
 
-      <!-- Hydration tracker -->
       <div class="card">
         <div class="tracker-title">💧 Hydratation du jour</div>
         <div class="hydration-bar" id="hydration-bar"></div>
@@ -695,7 +670,6 @@ body {
         </div>
       </div>
 
-      <!-- Session details by day -->
       <div id="session-details"></div>
 
       <div class="card">
@@ -721,7 +695,6 @@ body {
         <div class="toggle-opt" onclick="showTraining('regles', this)">⚠️ Règles</div>
       </div>
 
-      <!-- FORCE -->
       <div id="t-force">
         <div class="alert alert-blue" style="background:rgba(91,184,232,0.08);border-color:rgba(91,184,232,0.25);color:var(--accent3);">Mardi & Samedi · 60–70 min · Focus fonctionnel BJJ</div>
         <div class="card">
@@ -733,7 +706,6 @@ body {
         </div>
       </div>
 
-      <!-- CARDIO -->
       <div id="t-cardio" style="display:none">
         <div class="alert alert-amber">Jeudi · 50 min · Filières énergétiques BJJ</div>
         <div class="card">
@@ -746,7 +718,6 @@ body {
         </div>
       </div>
 
-      <!-- MOBILITÉ -->
       <div id="t-mobilite" style="display:none">
         <div class="alert" style="background:rgba(232,85,128,0.08);border-color:rgba(232,85,128,0.25);color:var(--accent4);">Samedi après force + routine matin quotidienne</div>
         <div class="card">
@@ -756,7 +727,6 @@ body {
         </div>
       </div>
 
-      <!-- RÈGLES ANTI-BLESSURE -->
       <div id="t-regles" style="display:none">
         <div class="alert alert-danger">⚠️ Priorité absolue à 38 ans — Préserver pour durer</div>
         <div class="card">
@@ -783,7 +753,6 @@ body {
         <div class="toggle-opt" onclick="showNutrition('supps', this)">💊 Suppléments</div>
       </div>
 
-      <!-- REPAS -->
       <div id="n-repas">
         <div class="stats-row">
           <div class="stat"><div class="stat-val" style="color:var(--accent);">160g</div><div class="stat-label">Protéines/j</div></div>
@@ -839,7 +808,6 @@ body {
         </div>
       </div>
 
-      <!-- ALIMENTS -->
       <div id="n-aliments" style="display:none">
         <div class="card">
           <div class="card-header"><div class="card-icon" style="background:rgba(61,214,160,0.1);">🥩</div><div><div class="card-title">Protéines prioritaires</div></div></div>
@@ -860,7 +828,6 @@ body {
         <div class="alert alert-danger">Limiter : alcool, sucres raffinés, friture, ultra-transformés — augmentent l'inflammation et dégradent le sommeil</div>
       </div>
 
-      <!-- SUPPLÉMENTS -->
       <div id="n-supps" style="display:none">
         <div class="alert alert-lime">Suppléments validés scientifiquement pour l'athlète de 35–45 ans</div>
         <div class="supp-grid">
@@ -951,12 +918,11 @@ body {
         </div>
       </div>
 
-      <!-- Progress global -->
       <div class="card">
         <div class="card-title">Avancement du programme</div>
         <div style="margin-top:10px;">
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px;">
-            <span>Phase 1 — Base</span><span id="prog-pct">0%</span>
+            <span id="prog-phase-label">Phase 1 — Base</span><span id="prog-pct">0%</span>
           </div>
           <div class="progress-bar"><div class="progress-fill" id="prog-bar" style="width:0%"></div></div>
         </div>
@@ -983,7 +949,6 @@ body {
         <div class="phase-body">Conditionnement spécifique BJJ. Force maximale + endurance de force. Programme affiné selon les retours du corps. Évaluation douleurs et ajustements.</div>
       </div>
 
-      <!-- KPIs -->
       <div class="card">
         <div class="card-title" style="margin-bottom:10px;">📊 Indicateurs à suivre</div>
         <div class="block blue"><div class="block-title">Performance</div><div class="block-body">Tractions max en 1 série · Temps de planche · FC récup à 1 min post-effort · Grip strength</div></div>
@@ -994,7 +959,6 @@ body {
 
   </div>
 
-  <!-- BOTTOM NAV -->
   <nav id="nav">
     <button class="nav-btn active" onclick="navigate('home', this)">
       <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -1024,8 +988,15 @@ body {
 </div>
 
 <script>
-// ===== STATE =====
-const START_DATE = new Date(2025, 0, 6); // Start week Monday Jan 6 2025
+// ===== CONFIG =====
+// BUG #3 FIX: START_DATE est maintenant dynamique — basée sur la date courante moins les semaines déjà effectuées
+// L'utilisateur peut configurer sa semaine de départ ici (1 = début du programme)
+const PROGRAM_START_WEEK = 1; // Changer cette valeur pour indiquer à quelle semaine du programme tu es
+const now_init = new Date();
+// On recalcule START_DATE depuis maintenant en reculant du nb de semaines déjà passées
+const START_DATE = new Date(now_init);
+START_DATE.setDate(START_DATE.getDate() - ((PROGRAM_START_WEEK - 1) * 7) - ((now_init.getDay() + 6) % 7));
+START_DATE.setHours(0, 0, 0, 0);
 
 const WEEK_PLAN = [
   { name: 'Lun', type: 'bjj', dot: 'dot-bjj', label: 'BJJ', title: 'BJJ — Technique', icon: '🥋', color: 'var(--accent6)',
@@ -1055,13 +1026,26 @@ const BREATH_PATTERNS = {
     guide:'Inspire 5s → Expire 5s. 6 cycles (5 min). Synchronise le rythme cardiaque. Protocole 365 : 3 fois/jour, 6 cycles, pendant 5 min.' }
 };
 
+// ===== STATE =====
 let currentPattern = 'box';
 let breathInterval = null;
 let breathRunning = false;
 let currentPhaseIdx = 0;
 let currentCount = 0;
 let currentCycle = 0;
-let hydration = 0;
+
+// ===== PERSISTENCE HELPERS (BUG #2 FIX) =====
+const TODAY_KEY = new Date().toISOString().slice(0, 10); // "2026-04-03"
+
+function saveState(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {}
+}
+function loadState(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v !== null ? JSON.parse(v) : fallback;
+  } catch(e) { return fallback; }
+}
 
 // ===== INIT =====
 window.addEventListener('load', () => {
@@ -1070,7 +1054,18 @@ window.addEventListener('load', () => {
   initSessionDetails();
   initHydration();
   initProgress();
+  restoreChecklists();
+  initInstallBanner(); // BUG #6 FIX
 });
+
+// BUG #6 FIX: Show install banner only if NOT already in standalone/installed mode
+function initInstallBanner() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+  if (!isStandalone) {
+    document.getElementById('install-banner').style.display = 'flex';
+  }
+}
 
 function initDate() {
   const now = new Date();
@@ -1082,8 +1077,7 @@ function initDate() {
   document.getElementById('home-date').textContent = dateStr;
   document.getElementById('today-badge').innerHTML = `<b>${dayName.substring(0,3).toUpperCase()}</b> ${now.getDate()}/${now.getMonth()+1}`;
 
-  // Current day of week (0=Sun→6=Sat, remap to Mon=0)
-  const dow = (now.getDay() + 6) % 7; // Mon=0
+  const dow = (now.getDay() + 6) % 7;
   const session = WEEK_PLAN[dow];
   document.getElementById('today-title').textContent = session.title;
   document.getElementById('today-type').textContent = `${session.type.toUpperCase()} · Aujourd'hui`;
@@ -1091,11 +1085,11 @@ function initDate() {
   document.getElementById('today-icon').textContent = session.icon;
   document.getElementById('today-icon').style.background = `${session.color}22`;
 
-  // Week number from start
   const diff = Math.floor((now - START_DATE) / (7 * 86400000));
-  const wk = Math.max(1, diff + 1);
+  const wk = Math.max(1, Math.min(diff + 1, 26));
   document.getElementById('stat-week').textContent = `S${wk}`;
-  document.getElementById('stat-day').textContent = `J${Math.min(((now - START_DATE) / 86400000 | 0) + 1, 182)}`;
+  const dayNum = Math.min(Math.floor((now - START_DATE) / 86400000) + 1, 182);
+  document.getElementById('stat-day').textContent = `J${Math.max(1, dayNum)}`;
   const phase = wk <= 8 ? 'P1' : wk <= 16 ? 'P2' : 'P3';
   document.getElementById('stat-phase').textContent = phase;
 }
@@ -1105,12 +1099,13 @@ function initWeekGrid() {
   const dow = (now.getDay() + 6) % 7;
   const grid = document.getElementById('week-grid');
   grid.innerHTML = WEEK_PLAN.map((d, i) => `
-    <div class="day-cell ${i === dow ? 'today' : ''}" onclick="selectDay(${i})">
+    <div class="day-cell ${i === dow ? 'today selected' : ''}" onclick="selectDay(${i})">
       <div class="day-name">${d.name}</div>
       <div class="day-dot ${d.dot}">${d.icon}</div>
       <div class="day-label">${d.label}</div>
     </div>
   `).join('');
+  // BUG #4 FIX: today is already selected visually via 'today selected' classes above
 }
 
 function initSessionDetails() {
@@ -1119,9 +1114,7 @@ function initSessionDetails() {
   showDaySession(dow);
 }
 
-let selectedDay = -1;
 function selectDay(i) {
-  selectedDay = i;
   document.querySelectorAll('.day-cell').forEach((el, idx) => {
     el.classList.toggle('selected', idx === i);
   });
@@ -1142,25 +1135,44 @@ function showDaySession(i) {
   `;
 }
 
+// BUG #2 FIX: Hydration persisted to localStorage, reset daily
 function initHydration() {
+  const saved = loadState(`hydration_${TODAY_KEY}`, 0);
+  renderHydration(saved);
+}
+
+function renderHydration(count) {
   const bar = document.getElementById('hydration-bar');
-  const glasses = 5; // 5 glasses = 2.5L (500ml chacun)
-  bar.innerHTML = Array.from({length: glasses}, (_, i) =>
-    `<div class="hydration-glass ${i < hydration ? 'filled' : ''}" onclick="drinkGlass(${i})">💧</div>`
+  bar.innerHTML = Array.from({length: 5}, (_, i) =>
+    `<div class="hydration-glass ${i < count ? 'filled' : ''}" onclick="drinkGlass(${i})">💧</div>`
   ).join('');
-  updateHydrationCount();
+  document.getElementById('hydration-count').textContent = `${count * 0.5}L / 2.5L`;
+  saveState(`hydration_${TODAY_KEY}`, count);
 }
 
 function drinkGlass(i) {
-  hydration = (i < hydration) ? i : i + 1;
-  document.querySelectorAll('.hydration-glass').forEach((g, idx) => {
-    g.classList.toggle('filled', idx < hydration);
-  });
-  updateHydrationCount();
+  const current = loadState(`hydration_${TODAY_KEY}`, 0);
+  const next = (i < current) ? i : i + 1;
+  renderHydration(next);
 }
 
-function updateHydrationCount() {
-  document.getElementById('hydration-count').textContent = `${hydration * 0.5}L / 2.5L`;
+// BUG #2 FIX: Checklists persisted to localStorage, reset daily
+function restoreChecklists() {
+  document.querySelectorAll('.check-item[onclick]').forEach(item => {
+    const onclickAttr = item.getAttribute('onclick');
+    const match = onclickAttr.match(/'([^']+)'/);
+    if (match) {
+      const key = `check_${TODAY_KEY}_${match[1]}`;
+      if (loadState(key, false)) {
+        item.classList.add('done');
+      }
+    }
+  });
+}
+
+function toggle(el, id) {
+  el.classList.toggle('done');
+  saveState(`check_${TODAY_KEY}_${id}`, el.classList.contains('done'));
 }
 
 function initProgress() {
@@ -1169,10 +1181,14 @@ function initProgress() {
   const week = Math.min(diff + 1, 26);
   const pct = Math.round((week / 26) * 100);
   const phase = week <= 8 ? 'Phase 1' : week <= 16 ? 'Phase 2' : 'Phase 3';
+  const phaseLabel = week <= 8 ? 'Phase 1 — Base' : week <= 16 ? 'Phase 2 — Force' : 'Phase 3 — Performance';
   document.getElementById('prog-week').textContent = `S${week}`;
   document.getElementById('prog-phase-num').textContent = phase;
   document.getElementById('prog-pct').textContent = `${pct}%`;
   document.getElementById('prog-bar').style.width = `${pct}%`;
+  if (document.getElementById('prog-phase-label')) {
+    document.getElementById('prog-phase-label').textContent = phaseLabel;
+  }
 }
 
 // ===== NAVIGATION =====
@@ -1182,11 +1198,6 @@ function navigate(section, btn) {
   document.getElementById('sec-' + section).classList.add('active');
   btn.classList.add('active');
   document.getElementById('content').scrollTop = 0;
-}
-
-// ===== CHECKLIST =====
-function toggle(el) {
-  el.classList.toggle('done');
 }
 
 // ===== MEAL ACCORDION =====
@@ -1225,44 +1236,43 @@ function selectBreath(el, pattern) {
 }
 
 function toggleBreath() {
-  if (breathRunning) pauseBreath();
-  else startBreath();
+  if (breathRunning) {
+    pauseBreath();
+  } else {
+    // BUG #5 FIX: If session was completed (btn says Recommencer), reset before starting
+    const btn = document.getElementById('breath-btn');
+    if (btn.textContent.includes('Recommencer')) {
+      resetBreathState();
+    }
+    startBreath();
+  }
+}
+
+// BUG #1 FIX: Separated state reset from UI reset to avoid double-tick on start
+function resetBreathState() {
+  currentPhaseIdx = 0;
+  currentCount = 0;
+  currentCycle = 0;
 }
 
 function startBreath() {
   breathRunning = true;
   document.getElementById('breath-btn').textContent = '⏸ Pause';
-  if (currentPhaseIdx === 0 && currentCount === 0 && currentCycle === 0) {
-    runBreathTick();
-  }
-  breathInterval = setInterval(runBreathTick, 1000);
+
+  // BUG #1 FIX: Only use setInterval, no manual first call
+  // The interval fires after 1 second — show initial state first, then tick
+  updateBreathUI(); // show initial state immediately without advancing
+  breathInterval = setInterval(() => {
+    advanceBreath();
+    updateBreathUI();
+  }, 1000);
 }
 
-function runBreathTick() {
+function advanceBreath() {
   const p = BREATH_PATTERNS[currentPattern];
   const phase = p.phases[currentPhaseIdx];
-  const circle = document.getElementById('breath-circle');
-  const countEl = document.getElementById('breath-count');
-  const phaseEl = document.getElementById('breath-phase-text');
-  const phaseLabel = document.getElementById('breath-phase-label');
-  const cyclesEl = document.getElementById('breath-cycles');
 
   currentCount++;
-  const remaining = phase.d - currentCount + 1;
-  countEl.textContent = remaining;
-  phaseLabel.textContent = phase.n;
-  phaseEl.textContent = phase.n === 'INSPIRE' ? 'Inspire doucement...' : phase.n === 'EXPIRE' ? 'Expire lentement...' : 'Retiens...';
-  cyclesEl.textContent = `Cycles : ${currentCycle} / ${p.cycles}`;
-
-  // Circle scale
-  const progress = currentCount / phase.d;
-  if (phase.n === 'INSPIRE') {
-    circle.style.transform = `scale(${1 + progress * 0.35})`;
-  } else if (phase.n === 'EXPIRE') {
-    circle.style.transform = `scale(${1.35 - progress * 0.35})`;
-  } else {
-    circle.style.transform = phase.n === 'RETIENS' && currentPhaseIdx === 1 ? 'scale(1.35)' : 'scale(1)';
-  }
 
   if (currentCount >= phase.d) {
     currentCount = 0;
@@ -1272,9 +1282,33 @@ function runBreathTick() {
       currentCycle++;
       if (currentCycle >= p.cycles) {
         completeBreath();
-        return;
       }
     }
+  }
+}
+
+function updateBreathUI() {
+  if (!breathRunning && currentCycle >= BREATH_PATTERNS[currentPattern].cycles) return;
+
+  const p = BREATH_PATTERNS[currentPattern];
+  const phase = p.phases[currentPhaseIdx];
+  const circle = document.getElementById('breath-circle');
+
+  const remaining = phase.d - currentCount;
+  document.getElementById('breath-count').textContent = remaining;
+  document.getElementById('breath-phase-label').textContent = phase.n;
+  document.getElementById('breath-phase-text').textContent =
+    phase.n === 'INSPIRE' ? 'Inspire doucement...' :
+    phase.n === 'EXPIRE'  ? 'Expire lentement...' : 'Retiens...';
+  document.getElementById('breath-cycles').textContent = `Cycles : ${currentCycle} / ${p.cycles}`;
+
+  const progress = currentCount / phase.d;
+  if (phase.n === 'INSPIRE') {
+    circle.style.transform = `scale(${1 + progress * 0.35})`;
+  } else if (phase.n === 'EXPIRE') {
+    circle.style.transform = `scale(${1.35 - progress * 0.35})`;
+  } else {
+    circle.style.transform = currentPhaseIdx === 1 ? 'scale(1.35)' : 'scale(1)';
   }
 }
 
@@ -1287,9 +1321,7 @@ function pauseBreath() {
 function resetBreath() {
   breathRunning = false;
   clearInterval(breathInterval);
-  currentPhaseIdx = 0;
-  currentCount = 0;
-  currentCycle = 0;
+  resetBreathState();
   const p = BREATH_PATTERNS[currentPattern];
   document.getElementById('breath-count').textContent = p.phases[0].d;
   document.getElementById('breath-phase-text').textContent = 'Prêt à commencer';
@@ -1302,17 +1334,16 @@ function resetBreath() {
 function completeBreath() {
   breathRunning = false;
   clearInterval(breathInterval);
-  document.getElementById('breath-phase-text').textContent = '✓ Session terminée';
+  document.getElementById('breath-phase-text').textContent = '✓ Session terminée !';
   document.getElementById('breath-btn').textContent = '▶ Recommencer';
   document.getElementById('breath-circle').style.transform = 'scale(1)';
-  currentPhaseIdx = 0; currentCount = 0; currentCycle = 0;
+  document.getElementById('breath-count').textContent = '✓';
+  document.getElementById('breath-phase-label').textContent = 'TERMINÉ';
 }
 
 // ===== SERVICE WORKER =====
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').then(() => {
-    console.log('SW registered');
-  }).catch(err => console.log('SW failed:', err));
+  navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
 }
 </script>
 </body>
