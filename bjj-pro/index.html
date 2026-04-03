@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BJJ PRO">
+<meta name="description" content="Programme personnalisé BJJ — Force, Nutrition, Mental, Récupération">
+<title>BJJ PRO — Ton Programme</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface2: #1e1e1e;
+  --surface3: #252525;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0ede8;
+  --text2: #9a9590;
+  --text3: #5a5550;
+  --accent: #c8f542;        /* lime vif */
+  --accent2: #e8a030;       /* ambre */
+  --accent3: #5bb8e8;       /* bleu */
+  --accent4: #e85580;       /* corail */
+  --accent5: #9b7fe8;       /* violet */
+  --accent6: #3dd6a0;       /* teal */
+  --danger: #e85555;
+  --r: 10px;
+  --r2: 16px;
+  --nav-h: 64px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  overscroll-behavior: none;
+}
+
+/* LAYOUT */
+#app { display: flex; flex-direction: column; height: 100dvh; }
+#header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  position: relative;
+  z-index: 10;
+}
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  line-height: 1;
+}
+.logo span { color: var(--text2); font-size: 11px; display: block; letter-spacing: 3px; font-family: 'DM Sans', sans-serif; font-weight: 300; margin-top: 2px; }
+.day-badge {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text2);
+  font-weight: 500;
+}
+.day-badge b { color: var(--accent); font-weight: 500; }
+
+#content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+#content::-webkit-scrollbar { display: none; }
+
+#nav {
+  flex-shrink: 0;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bottom);
+}
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border: none;
+  background: none;
+  color: var(--text3);
+  cursor: pointer;
+  transition: color 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.nav-btn.active { color: var(--accent); }
+.nav-btn svg { width: 22px; height: 22px; stroke-width: 1.8; fill: none; stroke: currentColor; }
+.nav-btn span { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; }
+
+/* SECTIONS */
+.section { display: none; padding: 16px 16px 24px; animation: fadeIn 0.2s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* CARDS */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.card-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.card-title { font-size: 15px; font-weight: 500; color: var(--text); }
+.card-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+.card-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+
+/* SECTION TITLE */
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  letter-spacing: 1.5px;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1;
+}
+.section-desc {
+  font-size: 12px;
+  color: var(--text3);
+  margin-bottom: 16px;
+  font-weight: 300;
+}
+
+/* WEEK PLANNER */
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.day-cell {
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 8px 4px;
+  text-align: center;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.day-cell.today { border-color: var(--accent); }
+.day-cell.selected { background: var(--surface3); }
+.day-name { font-size: 10px; color: var(--text3); font-weight: 500; margin-bottom: 6px; }
+.day-dot {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  margin: 0 auto 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+.day-label { font-size: 9px; color: var(--text3); line-height: 1.2; }
+.dot-bjj { background: rgba(61,214,160,0.2); color: var(--accent6); }
+.dot-gym { background: rgba(91,184,232,0.2); color: var(--accent3); }
+.dot-cardio { background: rgba(232,160,48,0.2); color: var(--accent2); }
+.dot-rest { background: rgba(90,85,80,0.3); color: var(--text3); }
+.dot-stretch { background: rgba(232,85,128,0.2); color: var(--accent4); }
+
+/* TAGS / BADGES */
+.tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 20px;
+  margin: 2px;
+}
+.tag-lime { background: rgba(200,245,66,0.15); color: var(--accent); }
+.tag-amber { background: rgba(232,160,48,0.15); color: var(--accent2); }
+.tag-blue { background: rgba(91,184,232,0.15); color: var(--accent3); }
+.tag-coral { background: rgba(232,85,128,0.15); color: var(--accent4); }
+.tag-violet { background: rgba(155,127,232,0.15); color: var(--accent5); }
+.tag-teal { background: rgba(61,214,160,0.15); color: var(--accent6); }
+.tag-danger { background: rgba(232,85,85,0.15); color: var(--danger); }
+
+/* BLOCKS */
+.block {
+  border-left: 2px solid var(--border2);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 0 8px 8px 0;
+  background: var(--surface2);
+}
+.block.lime { border-color: var(--accent); }
+.block.amber { border-color: var(--accent2); }
+.block.blue { border-color: var(--accent3); }
+.block.coral { border-color: var(--accent4); }
+.block.violet { border-color: var(--accent5); }
+.block.teal { border-color: var(--accent6); }
+.block.danger { border-color: var(--danger); }
+.block-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.block-body { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+/* STATS */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.stat {
+  background: var(--surface2);
+  border-radius: var(--r);
+  padding: 12px 10px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+.stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1px; line-height: 1; }
+.stat-label { font-size: 10px; color: var(--text3); margin-top: 3px; font-weight: 300; letter-spacing: 0.5px; }
+
+/* TIMER */
+.timer-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 24px 16px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.timer-display {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 72px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  line-height: 1;
+  margin: 8px 0;
+}
+.timer-label { font-size: 11px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; font-weight: 300; }
+.timer-phase {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text2);
+  margin: 8px 0;
+  min-height: 28px;
+}
+.timer-btns { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+.btn {
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+.btn:active { transform: scale(0.96); }
+.btn-primary { background: var(--accent); color: #0a0a0a; }
+.btn-secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+.btn-sm { padding: 8px 16px; font-size: 12px; }
+
+/* BREATH PATTERNS */
+.breath-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.breath-opt {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.breath-opt.selected { border-color: var(--accent); background: rgba(200,245,66,0.08); }
+.breath-opt-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.breath-opt-desc { font-size: 11px; color: var(--text3); }
+
+/* BREATH CIRCLE */
+.breath-circle-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 24px 0;
+  position: relative;
+}
+.breath-circle {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,245,66,0.15) 0%, rgba(200,245,66,0.03) 100%);
+  border: 2px solid rgba(200,245,66,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.05s linear;
+  position: relative;
+}
+.breath-inner {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 40px;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+.breath-phase-label {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--text3);
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-weight: 300;
+}
+
+/* CHECKLIST */
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.check-item:last-child { border-bottom: none; }
+.check-box {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border2);
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.check-item.done .check-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.check-item.done .check-box::after { content: '✓'; font-size: 13px; color: #0a0a0a; font-weight: 700; }
+.check-item.done .check-text { text-decoration: line-through; color: var(--text3); }
+.check-text { font-size: 13px; color: var(--text); flex: 1; }
+.check-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* NUTRITION MEALS */
+.meal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.meal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+.meal-time {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: var(--accent2);
+  width: 60px;
+  flex-shrink: 0;
+}
+.meal-name { font-size: 14px; font-weight: 500; color: var(--text); flex: 1; }
+.meal-caret { color: var(--text3); font-size: 18px; transition: transform 0.2s; }
+.meal-body {
+  display: none;
+  padding: 0 16px 14px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.meal-card.open .meal-caret { transform: rotate(180deg); }
+.meal-card.open .meal-body { display: block; }
+
+/* PROGRESS */
+.progress-bar {
+  height: 6px;
+  background: var(--surface3);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.5s ease;
+}
+
+/* PHASE CARD */
+.phase-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.phase-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 72px;
+  position: absolute;
+  right: 12px;
+  top: -8px;
+  color: rgba(255,255,255,0.04);
+  letter-spacing: 0;
+  line-height: 1;
+  pointer-events: none;
+}
+.phase-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; margin-bottom: 6px; }
+.phase-title { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.phase-body { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+/* TOGGLE */
+.toggle-row {
+  display: flex;
+  background: var(--surface2);
+  border-radius: 50px;
+  padding: 3px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+}
+.toggle-opt {
+  flex: 1;
+  text-align: center;
+  padding: 7px 4px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text3);
+  transition: all 0.2s;
+}
+.toggle-opt.active {
+  background: var(--surface3);
+  color: var(--text);
+  border: 1px solid var(--border2);
+}
+
+/* TABS */
+.tabs-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+}
+.tabs-row::-webkit-scrollbar { display: none; }
+.tab-pill {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text3);
+  transition: all 0.2s;
+}
+.tab-pill.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); }
+
+/* ALERT BOX */
+.alert {
+  border-radius: var(--r);
+  padding: 12px 14px;
+  font-size: 13px;
+  margin-bottom: 10px;
+  border: 1px solid;
+}
+.alert-lime { background: rgba(200,245,66,0.08); border-color: rgba(200,245,66,0.25); color: var(--accent); }
+.alert-amber { background: rgba(232,160,48,0.08); border-color: rgba(232,160,48,0.25); color: var(--accent2); }
+.alert-danger { background: rgba(232,85,85,0.08); border-color: rgba(232,85,85,0.25); color: var(--danger); }
+
+/* SUPPLEMENT GRID */
+.supp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.supp-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px;
+}
+.supp-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.supp-dose { font-size: 11px; color: var(--accent2); margin-bottom: 4px; }
+.supp-when { font-size: 10px; color: var(--text3); }
+
+/* RULE ITEM */
+.rule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text2);
+}
+.rule-item:last-child { border-bottom: none; }
+.rule-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+
+/* DAILY TRACKER */
+.tracker-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 10px; }
+.hydration-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.hydration-glass {
+  flex: 1;
+  height: 40px;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.hydration-glass.filled { background: rgba(91,184,232,0.25); border-color: var(--accent3); }
+
+/* INSTALL BANNER */
+.install-banner {
+  background: linear-gradient(135deg, rgba(200,245,66,0.12), rgba(61,214,160,0.06));
+  border: 1px solid rgba(200,245,66,0.2);
+  border-radius: var(--r2);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.install-icon { font-size: 28px; }
+.install-text { flex: 1; }
+.install-text b { font-size: 14px; font-weight: 500; color: var(--accent); display: block; }
+.install-text span { font-size: 11px; color: var(--text3); }
+.install-close { font-size: 20px; color: var(--text3); cursor: pointer; padding: 4px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="header">
+    <div class="logo">BJJ PRO<span>PROGRAMME PERSONNALISÉ</span></div>
+    <div class="day-badge" id="today-badge">Chargement…</div>
+  </div>
+
+  <div id="content">
+
+    <!-- ========== HOME ========== -->
+    <div class="section active" id="sec-home">
+      <div id="install-banner" class="install-banner">
+        <div class="install-icon">📲</div>
+        <div class="install-text">
+          <b>Installer l'app</b>
+          <span>Ajouter à l'écran d'accueil pour accès hors ligne</span>
+        </div>
+        <div class="install-close" onclick="document.getElementById('install-banner').style.display='none'">×</div>
+      </div>
+
+      <div class="section-title">AUJOURD'HUI</div>
+      <p class="section-desc" id="home-date">Chargement…</p>
+
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-val" style="color:var(--accent6);" id="stat-week">W1</div>
+          <div class="stat-label">Semaine</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" style="color:var(--accent);" id="stat-day">J1</div>
+          <div class="stat-label">Jour programme</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" style="color:var(--accent2);" id="stat-phase">P1</div>
+          <div class="stat-label">Phase</div>
+        </div>
+      </div>
+
+      <!-- Today's session card -->
+      <div class="card" id="today-card">
+        <div class="card-header">
+          <div class="card-icon" id="today-icon">🥋</div>
+          <div>
+            <div class="card-title" id="today-title">Séance du jour</div>
+            <div class="card-sub" id="today-type">Chargement…</div>
+          </div>
+        </div>
+        <div class="card-body" id="today-desc">–</div>
+      </div>
+
+      <!-- Morning routine checklist -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(200,245,66,0.1);">🌅</div>
+          <div><div class="card-title">Routine matinale</div><div class="card-sub">Chaque matin · 20 min</div></div>
+        </div>
+        <div id="morning-checks">
+          <div class="check-item" onclick="toggle(this)">
+            <div class="check-box"></div>
+            <div><div class="check-text">Respirations (box breathing ou Wim Hof)</div><div class="check-sub">5 min</div></div>
+          </div>
+          <div class="check-item" onclick="toggle(this)">
+            <div class="check-box"></div>
+            <div><div class="check-text">Mobilité articulaire (hanches, épaules, cou)</div><div class="check-sub">10 min</div></div>
+          </div>
+          <div class="check-item" onclick="toggle(this)">
+            <div class="check-box"></div>
+            <div><div class="check-text">Activation (bird-dog, glute bridge)</div><div class="check-sub">5 min</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evening routine -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(155,127,232,0.1);">🌙</div>
+          <div><div class="card-title">Routine soir</div><div class="card-sub">Avant 22h30</div></div>
+        </div>
+        <div id="evening-checks">
+          <div class="check-item" onclick="toggle(this)">
+            <div class="check-box"></div>
+            <div><div class="check-text">Stretching passif (hips, ischio, épaules)</div><div class="check-sub">10 min</div></div>
+          </div>
+          <div class="check-item" onclick="toggle(this)">
+            <div class="check-box"></div>
+            <div><div class="check-text">Cohérence cardiaque 4-7-8</div><div class="check-sub">5 min</div></div>
+          </div>
+          <div class="check-item" onclick="toggle(this)">
+            <div class="check-box"></div>
+            <div><div class="check-text">Journal de bord — 3 points positifs</div><div class="check-sub">2 min</div></div>
+          </div>
+          <div class="check-item" onclick="toggle(this)">
+            <div class="check-box"></div>
+            <div><div class="check-text">Couché avant 22h30</div><div class="check-sub">7h30–8h de sommeil</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hydration tracker -->
+      <div class="card">
+        <div class="tracker-title">💧 Hydratation du jour</div>
+        <div class="hydration-bar" id="hydration-bar"></div>
+        <div style="font-size:11px; color:var(--text3); text-align:center;" id="hydration-count">0 / 2.5L</div>
+      </div>
+
+    </div>
+
+    <!-- ========== PLANNING ========== -->
+    <div class="section" id="sec-planning">
+      <div class="section-title">PLANNING</div>
+      <p class="section-desc">Semaine type · 6 jours actifs</p>
+
+      <div class="card">
+        <div class="week-grid" id="week-grid"></div>
+        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">
+          <span class="tag tag-teal">🥋 BJJ</span>
+          <span class="tag tag-blue">💪 Salle</span>
+          <span class="tag tag-amber">🏃 Cardio</span>
+          <span class="tag tag-coral">🧘 Mobilité</span>
+          <span class="tag" style="background:rgba(90,85,80,0.3);color:var(--text3);">😴 Repos</span>
+        </div>
+      </div>
+
+      <!-- Session details by day -->
+      <div id="session-details"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(200,245,66,0.1);">⏰</div>
+          <div><div class="card-title">Routine matin · Tous les jours</div><div class="card-sub">20 min · 7h00–8h00</div></div>
+        </div>
+        <div class="block lime"><div class="block-title">Respirations</div><div class="block-body">Box breathing ou Wim Hof · 5 min</div></div>
+        <div class="block lime"><div class="block-title">Mobilité articulaire</div><div class="block-body">Hanches, épaules, cou · Hip circles · 10 min</div></div>
+        <div class="block lime"><div class="block-title">Activation musculaire</div><div class="block-body">Bird-dog 2×10 · Glute bridge 2×15 · 5 min</div></div>
+      </div>
+    </div>
+
+    <!-- ========== ENTRAÎNEMENT ========== -->
+    <div class="section" id="sec-training">
+      <div class="section-title">ENTRAÎNEMENT</div>
+      <p class="section-desc">Séances détaillées · Salle, Cardio, Mobilité</p>
+
+      <div class="toggle-row">
+        <div class="toggle-opt active" onclick="showTraining('force', this)">💪 Force</div>
+        <div class="toggle-opt" onclick="showTraining('cardio', this)">🏃 Cardio</div>
+        <div class="toggle-opt" onclick="showTraining('mobilite', this)">🧘 Mobilité</div>
+        <div class="toggle-opt" onclick="showTraining('regles', this)">⚠️ Règles</div>
+      </div>
+
+      <!-- FORCE -->
+      <div id="t-force">
+        <div class="alert alert-blue" style="background:rgba(91,184,232,0.08);border-color:rgba(91,184,232,0.25);color:var(--accent3);">Mardi & Samedi · 60–70 min · Focus fonctionnel BJJ</div>
+        <div class="card">
+          <div class="block blue"><div class="block-title">Échauffement · 10 min</div><div class="block-body">Vélo ou rameur faible intensité · Hip circles · Shoulder dislocates avec bâton · Neck rolls progressifs</div></div>
+          <div class="block blue"><div class="block-title">Bloc 1 — Tirage · 15 min</div><div class="block-body">Tractions pronation 4×6 · Rowing barre 4×8 · Face pulls 3×15<br><span style="color:var(--text3);">→ Équilibre épaules, contre la cyphose BJJ</span></div></div>
+          <div class="block blue"><div class="block-title">Bloc 2 — Jambes & hanches · 15 min</div><div class="block-body">Goblet squat 4×10 · Romanian Deadlift 4×8 · Hip thrust 3×12<br><span style="color:var(--text3);">→ Puissance de garde, projections, escapes</span></div></div>
+          <div class="block blue"><div class="block-title">Bloc 3 — Core anti-rotation · 10 min</div><div class="block-body">Pallof press 3×12 · Planche avec rotation 3×30s · Ab wheel 3×8<br><span style="color:var(--text3);">→ Stabilité position au sol, protection lombaire</span></div></div>
+          <div class="block teal"><div class="block-title">Retour au calme · 10 min</div><div class="block-body">Foam roller dos + IT band · Pigeon pose 2 min/côté · Doorway chest stretch</div></div>
+        </div>
+      </div>
+
+      <!-- CARDIO -->
+      <div id="t-cardio" style="display:none">
+        <div class="alert alert-amber">Jeudi · 50 min · Filières énergétiques BJJ</div>
+        <div class="card">
+          <div class="block amber"><div class="block-title">Option A — HIIT BJJ-spécifique</div><div class="block-body">3×(2 min rameur max effort → 2 min récup active) + 3×(30s burpees → 90s marche) + Core 5 min<br><span style="color:var(--text3);">Simule les échanges intenses du combat</span></div></div>
+          <div class="block amber"><div class="block-title">Option B — Zone 2 aérobie</div><div class="block-body">40 min vélo ou corde à sauter · 65–70% FC max · Travail de fond · Améliore récupération entre les rounds<br><span style="color:var(--text3);">Cible : ~130–145 bpm</span></div></div>
+          <div class="alert alert-amber" style="margin-top:8px;">Alterner Option A et B chaque semaine</div>
+        </div>
+        <div class="card">
+          <div class="block teal"><div class="block-title">Dimanche — Récup active</div><div class="block-body">Marche 30 min en nature · ou nage faible intensité · ou yoga restoratif · Stimule la circulation sans stress mécanique</div></div>
+        </div>
+      </div>
+
+      <!-- MOBILITÉ -->
+      <div id="t-mobilite" style="display:none">
+        <div class="alert" style="background:rgba(232,85,128,0.08);border-color:rgba(232,85,128,0.25);color:var(--accent4);">Samedi après force + routine matin quotidienne</div>
+        <div class="card">
+          <div class="block coral"><div class="block-title">Hanches · 10 min — Priorité #1 BJJ</div><div class="block-body">90/90 stretch · Frog stretch · Pigeon passif 3 min/côté · Butterfly stretch avec bascule</div></div>
+          <div class="block coral"><div class="block-title">Colonne & épaules · 10 min</div><div class="block-body">Cat-cow 2×10 · Thread the needle · Thoracic rotations avec bâton · Overhead band stretch</div></div>
+          <div class="block coral"><div class="block-title">Ischio-jambiers & chevilles · 10 min</div><div class="block-body">Hamstring floss · Calf raises excentriques 3×15 · Ankle CARs · Doorway hamstring stretch</div></div>
+        </div>
+      </div>
+
+      <!-- RÈGLES ANTI-BLESSURE -->
+      <div id="t-regles" style="display:none">
+        <div class="alert alert-danger">⚠️ Priorité absolue à 38 ans — Préserver pour durer</div>
+        <div class="card">
+          <div class="rule-item"><div class="rule-dot" style="background:var(--danger)"></div>Jamais 2 sparrings intenses consécutifs</div>
+          <div class="rule-item"><div class="rule-dot" style="background:var(--danger)"></div>Pas de force lourde la veille d'un sparring</div>
+          <div class="rule-item"><div class="rule-dot" style="background:var(--accent2)"></div>Toujours s'échauffer minimum 15 min avant</div>
+          <div class="rule-item"><div class="rule-dot" style="background:var(--accent2)"></div>Tapper avant la douleur articulaire — toujours</div>
+          <div class="rule-item"><div class="rule-dot" style="background:var(--accent)"></div>1 semaine légère (−40% volume) toutes les 4 semaines</div>
+          <div class="rule-item"><div class="rule-dot" style="background:var(--accent)"></div>Signaux d'alarme : FC repos +10 bpm, sommeil dégradé, irritabilité, perf en baisse 2+ séances</div>
+          <div class="rule-item"><div class="rule-dot" style="background:var(--accent3)"></div>Foam roller après chaque séance BJJ ou salle</div>
+          <div class="rule-item"><div class="rule-dot" style="background:var(--accent3)"></div>Douche froide post-entraînement (sauf après force lourde)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== NUTRITION ========== -->
+    <div class="section" id="sec-nutrition">
+      <div class="section-title">NUTRITION</div>
+      <p class="section-desc">Alimentation optimisée performance & récupération</p>
+
+      <div class="toggle-row">
+        <div class="toggle-opt active" onclick="showNutrition('repas', this)">🍽️ Repas</div>
+        <div class="toggle-opt" onclick="showNutrition('aliments', this)">🥦 Aliments</div>
+        <div class="toggle-opt" onclick="showNutrition('supps', this)">💊 Suppléments</div>
+      </div>
+
+      <!-- REPAS -->
+      <div id="n-repas">
+        <div class="stats-row">
+          <div class="stat"><div class="stat-val" style="color:var(--accent);">160g</div><div class="stat-label">Protéines/j</div></div>
+          <div class="stat"><div class="stat-val" style="color:var(--accent3);">2.5L</div><div class="stat-label">Eau/j</div></div>
+          <div class="stat"><div class="stat-val" style="color:var(--accent2);">3–4</div><div class="stat-label">Repas/j</div></div>
+        </div>
+
+        <div class="alert alert-lime">⚡ Jours de BJJ — Timing critique pour la récupération</div>
+
+        <div class="meal-card" onclick="toggleMeal(this)">
+          <div class="meal-header">
+            <div class="meal-time">3H AV.</div>
+            <div class="meal-name">Repas pré-entraînement</div>
+            <div class="meal-caret">⌄</div>
+          </div>
+          <div class="meal-body">150g riz basmati + 150g poulet ou thon + légumes colorés + ½ avocat. Faible en fibres si tendance à être nerveux avant le cours. Digestion assurée.</div>
+        </div>
+
+        <div class="meal-card" onclick="toggleMeal(this)">
+          <div class="meal-header">
+            <div class="meal-time">45 MIN</div>
+            <div class="meal-name">Snack pré-cours</div>
+            <div class="meal-caret">⌄</div>
+          </div>
+          <div class="meal-body">Si faim : banane + 1 cuillère de beurre de cajou. Ou 2–3 dattes + eau. Énergie rapide sans alourdir la digestion.</div>
+        </div>
+
+        <div class="meal-card" onclick="toggleMeal(this)">
+          <div class="meal-header">
+            <div class="meal-time">30 MIN</div>
+            <div class="meal-name">Post-entraînement ⚡</div>
+            <div class="meal-caret">⌄</div>
+          </div>
+          <div class="meal-body">Dans les 30 min après — fenêtre anabolique clé à 38 ans. Shake protéiné 30–40g + glucides rapides. Ou yaourt grec + fruits + miel. Reconstruction musculaire prioritaire.</div>
+        </div>
+
+        <div class="meal-card" onclick="toggleMeal(this)">
+          <div class="meal-header">
+            <div class="meal-time">DÎNER</div>
+            <div class="meal-name">Repas récupération</div>
+            <div class="meal-caret">⌄</div>
+          </div>
+          <div class="meal-body">Protéine complète + glucides complexes + légumes colorés + bonne graisse. Exemple : saumon + quinoa + épinards + huile d'olive + citron. Anti-inflammatoire naturel.</div>
+        </div>
+
+        <div class="meal-card" onclick="toggleMeal(this)">
+          <div class="meal-header">
+            <div class="meal-time">REPOS</div>
+            <div class="meal-name">Jours sans entraînement</div>
+            <div class="meal-caret">⌄</div>
+          </div>
+          <div class="meal-body">Réduire légèrement les glucides (−20%). Maintenir protéines et graisses. Privilégier légumes, légumineuses, poissons gras. Toujours 2.5L d'eau minimum.</div>
+        </div>
+      </div>
+
+      <!-- ALIMENTS -->
+      <div id="n-aliments" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="card-icon" style="background:rgba(61,214,160,0.1);">🥩</div><div><div class="card-title">Protéines prioritaires</div></div></div>
+          <span class="tag tag-teal">Sardines / Maquereau</span><span class="tag tag-teal">Saumon</span><span class="tag tag-teal">Œufs entiers</span><span class="tag tag-teal">Bœuf maigre</span><span class="tag tag-teal">Poulet cuisse</span><span class="tag tag-teal">Yaourt grec</span><span class="tag tag-teal">Fromage blanc</span>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-icon" style="background:rgba(232,160,48,0.1);">🌾</div><div><div class="card-title">Glucides complexes</div></div></div>
+          <span class="tag tag-amber">Riz basmati</span><span class="tag tag-amber">Patate douce</span><span class="tag tag-amber">Flocons d'avoine</span><span class="tag tag-amber">Quinoa</span><span class="tag tag-amber">Légumineuses</span><span class="tag tag-amber">Pain complet</span>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-icon" style="background:rgba(91,184,232,0.1);">🥦</div><div><div class="card-title">Légumes anti-inflammatoires</div></div></div>
+          <span class="tag tag-blue">Brocoli</span><span class="tag tag-blue">Épinards</span><span class="tag tag-blue">Myrtilles</span><span class="tag tag-blue">Cerise</span><span class="tag tag-blue">Tomates</span><span class="tag tag-blue">Betterave</span><span class="tag tag-blue">Ail</span><span class="tag tag-blue">Oignon</span>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-icon" style="background:rgba(155,127,232,0.1);">🫒</div><div><div class="card-title">Bonnes graisses & épices</div></div></div>
+          <span class="tag tag-violet">Avocat</span><span class="tag tag-violet">Huile d'olive</span><span class="tag tag-violet">Noix / amandes</span><span class="tag tag-violet">Curcuma</span><span class="tag tag-violet">Gingembre</span><span class="tag tag-violet">Cannelle</span>
+        </div>
+        <div class="alert alert-danger">Limiter : alcool, sucres raffinés, friture, ultra-transformés — augmentent l'inflammation et dégradent le sommeil</div>
+      </div>
+
+      <!-- SUPPLÉMENTS -->
+      <div id="n-supps" style="display:none">
+        <div class="alert alert-lime">Suppléments validés scientifiquement pour l'athlète de 35–45 ans</div>
+        <div class="supp-grid">
+          <div class="supp-card"><div class="supp-name">Oméga-3</div><div class="supp-dose">2–3g EPA/DHA</div><div class="supp-when">Au repas · chaque jour</div></div>
+          <div class="supp-card"><div class="supp-name">Magnésium bisglycinate</div><div class="supp-dose">400mg</div><div class="supp-when">Le soir avant de dormir</div></div>
+          <div class="supp-card"><div class="supp-name">Vitamine D3</div><div class="supp-dose">2000–4000 UI</div><div class="supp-when">Le matin au repas</div></div>
+          <div class="supp-card"><div class="supp-name">Collagène + Vit. C</div><div class="supp-dose">10–15g + 200mg</div><div class="supp-when">30 min avant entraînement</div></div>
+          <div class="supp-card"><div class="supp-name">Créatine monohydrate</div><div class="supp-dose">5g/jour</div><div class="supp-when">N'importe quand · quotidien</div></div>
+          <div class="supp-card"><div class="supp-name">Caféine naturelle</div><div class="supp-dose">100–200mg</div><div class="supp-when">60 min avant si besoin</div></div>
+        </div>
+        <div class="alert alert-amber" style="margin-top:10px;">Consulter un médecin avant toute supplémentation, notamment si tu prends un traitement.</div>
+      </div>
+    </div>
+
+    <!-- ========== RESPIRATION ========== -->
+    <div class="section" id="sec-breath">
+      <div class="section-title">MENTAL & SOUFFLE</div>
+      <p class="section-desc">Respiration · Visualisation · Préparation combat</p>
+
+      <div class="breath-options">
+        <div class="breath-opt selected" onclick="selectBreath(this, 'box')" data-pattern="box">
+          <div class="breath-opt-name">Box Breathing</div>
+          <div class="breath-opt-desc">4–4–4–4 · Pré-combat</div>
+        </div>
+        <div class="breath-opt" onclick="selectBreath(this, '478')" data-pattern="478">
+          <div class="breath-opt-name">4-7-8</div>
+          <div class="breath-opt-desc">Calme · Sommeil</div>
+        </div>
+        <div class="breath-opt" onclick="selectBreath(this, 'wimhof')" data-pattern="wimhof">
+          <div class="breath-opt-name">Wim Hof</div>
+          <div class="breath-opt-desc">Énergie · Matin</div>
+        </div>
+        <div class="breath-opt" onclick="selectBreath(this, 'cohere')" data-pattern="cohere">
+          <div class="breath-opt-name">Cohérence</div>
+          <div class="breath-opt-desc">5–5 · Équilibre</div>
+        </div>
+      </div>
+
+      <div class="timer-card">
+        <div class="timer-label" id="breath-name">BOX BREATHING</div>
+        <div class="breath-circle-wrap">
+          <div class="breath-circle" id="breath-circle">
+            <div class="breath-inner" id="breath-count">4</div>
+            <div class="breath-phase-label" id="breath-phase-label">INSPIRE</div>
+          </div>
+        </div>
+        <div class="timer-phase" id="breath-phase-text">Prêt à commencer</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px;" id="breath-cycles">Cycles : 0 / 5</div>
+        <div class="timer-btns">
+          <button class="btn btn-secondary btn-sm" onclick="resetBreath()">Reset</button>
+          <button class="btn btn-primary" id="breath-btn" onclick="toggleBreath()">▶ Démarrer</button>
+        </div>
+      </div>
+
+      <div id="breath-guide" class="card">
+        <div class="card-title" style="margin-bottom:8px;">📖 Box Breathing — Pré-combat</div>
+        <div class="card-body">Inspire 4s → Retiens 4s → Expire 4s → Retiens 4s. Répète 5–8 cycles. Activé par les Navy SEAL avant les opérations. Calme le système nerveux sans endormir les réflexes.</div>
+      </div>
+
+      <div class="card" style="margin-top:0;">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(155,127,232,0.1);">🧘</div>
+          <div><div class="card-title">Préparation mentale BJJ</div></div>
+        </div>
+        <div class="block violet"><div class="block-title">Visualisation · 5 min/soir, 3×/semaine</div><div class="block-body">Visualise une séquence technique précise avec tous les détails sensoriels. Ressens les résistances, les transitions. Le cerveau ne distingue pas simulation et réel.</div></div>
+        <div class="block violet"><div class="block-title">Respiration pendant le sparring</div><div class="block-body">Expire à chaque effort (sweep, projection, escape). Ne retiens jamais sous pression. Expire par le nez au sol = baisse le cortisol en temps réel.</div></div>
+        <div class="block violet"><div class="block-title">Gestion de l'ego à 38 ans</div><div class="block-body">Tapper = sagesse, pas faiblesse. 1 objectif technique par séance, pas de résultat. Chaque soumission = information. Le long terme prime toujours.</div></div>
+      </div>
+    </div>
+
+    <!-- ========== PROGRESSION ========== -->
+    <div class="section" id="sec-progress">
+      <div class="section-title">PROGRESSION</div>
+      <p class="section-desc">Phases · Suivi · Indicateurs clés</p>
+
+      <div class="stats-row" id="prog-stats">
+        <div class="stat">
+          <div class="stat-val" style="color:var(--accent);" id="prog-week">S1</div>
+          <div class="stat-label">Semaine en cours</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" style="color:var(--accent2);" id="prog-phase-num">Phase 1</div>
+          <div class="stat-label">Phase active</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" style="color:var(--accent6);">26</div>
+          <div class="stat-label">Semaines total</div>
+        </div>
+      </div>
+
+      <!-- Progress global -->
+      <div class="card">
+        <div class="card-title">Avancement du programme</div>
+        <div style="margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px;">
+            <span>Phase 1 — Base</span><span id="prog-pct">0%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="prog-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-num">1</div>
+        <div class="phase-label" style="color:var(--accent3);">Mois 1–2</div>
+        <div class="phase-title">Base & adaptation</div>
+        <div class="phase-body">Routines matin/soir, sommeil, alimentation. Poids modérés (70% 1RM). Cardio zone 2 exclusivement. Le corps apprend à récupérer avant de forcer.</div>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-num">2</div>
+        <div class="phase-label" style="color:var(--accent2);">Mois 3–4</div>
+        <div class="phase-title">Construction de la force</div>
+        <div class="phase-body">Intensité salle 80–85% 1RM. Introduire HIIT 1×/sem. Wim Hof et visualisation réguliers. Évaluation récupération hebdomadaire.</div>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-num">3</div>
+        <div class="phase-label" style="color:var(--accent);">Mois 5–6</div>
+        <div class="phase-title">Pic de performance</div>
+        <div class="phase-body">Conditionnement spécifique BJJ. Force maximale + endurance de force. Programme affiné selon les retours du corps. Évaluation douleurs et ajustements.</div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px;">📊 Indicateurs à suivre</div>
+        <div class="block blue"><div class="block-title">Performance</div><div class="block-body">Tractions max en 1 série · Temps de planche · FC récup à 1 min post-effort · Grip strength</div></div>
+        <div class="block teal"><div class="block-title">Santé & bien-être</div><div class="block-body">Douleurs articulaires (note /10) · Qualité sommeil · Énergie matinale · Ratio bonnes/mauvaises séances BJJ</div></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav id="nav">
+    <button class="nav-btn active" onclick="navigate('home', this)">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>ACCUEIL</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('planning', this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>PLANNING</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('training', this)">
+      <svg viewBox="0 0 24 24"><path d="M6.5 6.5 17.5 17.5M6.5 17.5 17.5 6.5"/><circle cx="12" cy="12" r="9"/></svg>
+      <span>TRAINING</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('nutrition', this)">
+      <svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      <span>NUTRITION</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('breath', this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+      <span>MENTAL</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('progress', this)">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>PROGRÈS</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+// ===== STATE =====
+const START_DATE = new Date(2025, 0, 6); // Start week Monday Jan 6 2025
+
+const WEEK_PLAN = [
+  { name: 'Lun', type: 'bjj', dot: 'dot-bjj', label: 'BJJ', title: 'BJJ — Technique', icon: '🥋', color: 'var(--accent6)',
+    desc: 'Session technique. Focus sur positions de contrôle, transitions et finitions. Échauffement complet avant tout sparring.' },
+  { name: 'Mar', type: 'gym', dot: 'dot-gym', label: 'Force', title: 'Salle — Force', icon: '💪', color: 'var(--accent3)',
+    desc: 'Tirage + Jambes + Core. 4 blocs de 15 min. Poids fonctionnel, mouvements multi-articulaires. Retour calme avec foam roller.' },
+  { name: 'Mer', type: 'bjj', dot: 'dot-bjj', label: 'BJJ', title: 'BJJ — Sparring', icon: '🥋', color: 'var(--accent6)',
+    desc: 'Sparring technique. Objectif : appliquer 1 chose précise travaillée lundi. Respiration consciente tout au long du sparring.' },
+  { name: 'Jeu', type: 'cardio', dot: 'dot-cardio', label: 'Cardio', title: 'Cardio + Core', icon: '🏃', color: 'var(--accent2)',
+    desc: 'HIIT BJJ-spécifique ou Zone 2 selon la semaine. 50 min. Alterner A et B chaque semaine pour varier la filière énergétique.' },
+  { name: 'Ven', type: 'bjj', dot: 'dot-bjj', label: 'BJJ', title: 'BJJ — Sparring', icon: '🥋', color: 'var(--accent6)',
+    desc: 'Sparring compétitif. Mettre en pratique tout ce qui a été travaillé. Écouter le corps. Tapper avant toute douleur articulaire.' },
+  { name: 'Sam', type: 'gym', dot: 'dot-stretch', label: 'Mobilité', title: 'Salle — Mobilité', icon: '🧘', color: 'var(--accent4)',
+    desc: 'Force légère + mobilité approfondie. Hanches 10 min, colonne & épaules 10 min, ischio & chevilles 10 min. Session récupérative.' },
+  { name: 'Dim', type: 'rest', dot: 'dot-rest', label: 'Repos', title: 'Repos actif', icon: '😴', color: 'var(--text3)',
+    desc: 'Récupération active. Marche 30 min en nature, ou nage légère, ou yoga restoratif. Pas d\'effort intense. Préparer la semaine suivante.' }
+];
+
+const BREATH_PATTERNS = {
+  box: { name: 'BOX BREATHING', phases: [{n:'INSPIRE',d:4},{n:'RETIENS',d:4},{n:'EXPIRE',d:4},{n:'RETIENS',d:4}], cycles:5,
+    guide:'Inspire 4s → Retiens 4s → Expire 4s → Retiens 4s. Répète 5–8 cycles. Calme le système nerveux sans éteindre les réflexes. Idéal pré-combat.' },
+  '478': { name: '4-7-8 BREATHING', phases: [{n:'INSPIRE',d:4},{n:'RETIENS',d:7},{n:'EXPIRE',d:8}], cycles:4,
+    guide:'Inspire 4s → Retiens 7s → Expire 8s. 4 cycles. Éteint la réponse au stress. Idéal après sparring intense ou avant de dormir.' },
+  wimhof: { name: 'WIM HOF', phases: [{n:'INSPIRE',d:2},{n:'EXPIRE',d:1}], cycles:30,
+    guide:'30 respirations profondes rapides → expire et retiens poumons vides 60s → inspire profond 15s. 3 séries. Boost O2, réduit inflammation, renforce immunité.' },
+  cohere: { name: 'COHÉRENCE CARDIAQUE', phases: [{n:'INSPIRE',d:5},{n:'EXPIRE',d:5}], cycles:6,
+    guide:'Inspire 5s → Expire 5s. 6 cycles (5 min). Synchronise le rythme cardiaque. Protocole 365 : 3 fois/jour, 6 cycles, pendant 5 min.' }
+};
+
+let currentPattern = 'box';
+let breathInterval = null;
+let breathRunning = false;
+let currentPhaseIdx = 0;
+let currentCount = 0;
+let currentCycle = 0;
+let hydration = 0;
+
+// ===== INIT =====
+window.addEventListener('load', () => {
+  initDate();
+  initWeekGrid();
+  initSessionDetails();
+  initHydration();
+  initProgress();
+});
+
+function initDate() {
+  const now = new Date();
+  const days = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const months = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const dayName = days[now.getDay()];
+  const dateStr = `${dayName} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+  document.getElementById('home-date').textContent = dateStr;
+  document.getElementById('today-badge').innerHTML = `<b>${dayName.substring(0,3).toUpperCase()}</b> ${now.getDate()}/${now.getMonth()+1}`;
+
+  // Current day of week (0=Sun→6=Sat, remap to Mon=0)
+  const dow = (now.getDay() + 6) % 7; // Mon=0
+  const session = WEEK_PLAN[dow];
+  document.getElementById('today-title').textContent = session.title;
+  document.getElementById('today-type').textContent = `${session.type.toUpperCase()} · Aujourd'hui`;
+  document.getElementById('today-desc').textContent = session.desc;
+  document.getElementById('today-icon').textContent = session.icon;
+  document.getElementById('today-icon').style.background = `${session.color}22`;
+
+  // Week number from start
+  const diff = Math.floor((now - START_DATE) / (7 * 86400000));
+  const wk = Math.max(1, diff + 1);
+  document.getElementById('stat-week').textContent = `S${wk}`;
+  document.getElementById('stat-day').textContent = `J${Math.min(((now - START_DATE) / 86400000 | 0) + 1, 182)}`;
+  const phase = wk <= 8 ? 'P1' : wk <= 16 ? 'P2' : 'P3';
+  document.getElementById('stat-phase').textContent = phase;
+}
+
+function initWeekGrid() {
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7;
+  const grid = document.getElementById('week-grid');
+  grid.innerHTML = WEEK_PLAN.map((d, i) => `
+    <div class="day-cell ${i === dow ? 'today' : ''}" onclick="selectDay(${i})">
+      <div class="day-name">${d.name}</div>
+      <div class="day-dot ${d.dot}">${d.icon}</div>
+      <div class="day-label">${d.label}</div>
+    </div>
+  `).join('');
+}
+
+function initSessionDetails() {
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7;
+  showDaySession(dow);
+}
+
+let selectedDay = -1;
+function selectDay(i) {
+  selectedDay = i;
+  document.querySelectorAll('.day-cell').forEach((el, idx) => {
+    el.classList.toggle('selected', idx === i);
+  });
+  showDaySession(i);
+}
+
+function showDaySession(i) {
+  const d = WEEK_PLAN[i];
+  const el = document.getElementById('session-details');
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:${d.color}22; font-size:20px;">${d.icon}</div>
+        <div><div class="card-title">${d.title}</div><div class="card-sub" style="color:${d.color};">${d.type.toUpperCase()}</div></div>
+      </div>
+      <div class="card-body">${d.desc}</div>
+    </div>
+  `;
+}
+
+function initHydration() {
+  const bar = document.getElementById('hydration-bar');
+  const glasses = 5; // 5 glasses = 2.5L (500ml chacun)
+  bar.innerHTML = Array.from({length: glasses}, (_, i) =>
+    `<div class="hydration-glass ${i < hydration ? 'filled' : ''}" onclick="drinkGlass(${i})">💧</div>`
+  ).join('');
+  updateHydrationCount();
+}
+
+function drinkGlass(i) {
+  hydration = (i < hydration) ? i : i + 1;
+  document.querySelectorAll('.hydration-glass').forEach((g, idx) => {
+    g.classList.toggle('filled', idx < hydration);
+  });
+  updateHydrationCount();
+}
+
+function updateHydrationCount() {
+  document.getElementById('hydration-count').textContent = `${hydration * 0.5}L / 2.5L`;
+}
+
+function initProgress() {
+  const now = new Date();
+  const diff = Math.max(0, Math.floor((now - START_DATE) / (7 * 86400000)));
+  const week = Math.min(diff + 1, 26);
+  const pct = Math.round((week / 26) * 100);
+  const phase = week <= 8 ? 'Phase 1' : week <= 16 ? 'Phase 2' : 'Phase 3';
+  document.getElementById('prog-week').textContent = `S${week}`;
+  document.getElementById('prog-phase-num').textContent = phase;
+  document.getElementById('prog-pct').textContent = `${pct}%`;
+  document.getElementById('prog-bar').style.width = `${pct}%`;
+}
+
+// ===== NAVIGATION =====
+function navigate(section, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + section).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('content').scrollTop = 0;
+}
+
+// ===== CHECKLIST =====
+function toggle(el) {
+  el.classList.toggle('done');
+}
+
+// ===== MEAL ACCORDION =====
+function toggleMeal(card) {
+  card.classList.toggle('open');
+}
+
+// ===== TRAINING TOGGLE =====
+function showTraining(key, btn) {
+  ['force','cardio','mobilite','regles'].forEach(k => {
+    document.getElementById('t-' + k).style.display = k === key ? 'block' : 'none';
+  });
+  document.querySelectorAll('#sec-training .toggle-opt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ===== NUTRITION TOGGLE =====
+function showNutrition(key, btn) {
+  ['repas','aliments','supps'].forEach(k => {
+    document.getElementById('n-' + k).style.display = k === key ? 'block' : 'none';
+  });
+  document.querySelectorAll('#sec-nutrition .toggle-opt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ===== BREATHING =====
+function selectBreath(el, pattern) {
+  document.querySelectorAll('.breath-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  currentPattern = pattern;
+  resetBreath();
+  const p = BREATH_PATTERNS[pattern];
+  document.getElementById('breath-name').textContent = p.name;
+  document.getElementById('breath-guide').querySelector('.card-title').textContent = '📖 ' + p.name;
+  document.getElementById('breath-guide').querySelector('.card-body').textContent = p.guide;
+}
+
+function toggleBreath() {
+  if (breathRunning) pauseBreath();
+  else startBreath();
+}
+
+function startBreath() {
+  breathRunning = true;
+  document.getElementById('breath-btn').textContent = '⏸ Pause';
+  if (currentPhaseIdx === 0 && currentCount === 0 && currentCycle === 0) {
+    runBreathTick();
+  }
+  breathInterval = setInterval(runBreathTick, 1000);
+}
+
+function runBreathTick() {
+  const p = BREATH_PATTERNS[currentPattern];
+  const phase = p.phases[currentPhaseIdx];
+  const circle = document.getElementById('breath-circle');
+  const countEl = document.getElementById('breath-count');
+  const phaseEl = document.getElementById('breath-phase-text');
+  const phaseLabel = document.getElementById('breath-phase-label');
+  const cyclesEl = document.getElementById('breath-cycles');
+
+  currentCount++;
+  const remaining = phase.d - currentCount + 1;
+  countEl.textContent = remaining;
+  phaseLabel.textContent = phase.n;
+  phaseEl.textContent = phase.n === 'INSPIRE' ? 'Inspire doucement...' : phase.n === 'EXPIRE' ? 'Expire lentement...' : 'Retiens...';
+  cyclesEl.textContent = `Cycles : ${currentCycle} / ${p.cycles}`;
+
+  // Circle scale
+  const progress = currentCount / phase.d;
+  if (phase.n === 'INSPIRE') {
+    circle.style.transform = `scale(${1 + progress * 0.35})`;
+  } else if (phase.n === 'EXPIRE') {
+    circle.style.transform = `scale(${1.35 - progress * 0.35})`;
+  } else {
+    circle.style.transform = phase.n === 'RETIENS' && currentPhaseIdx === 1 ? 'scale(1.35)' : 'scale(1)';
+  }
+
+  if (currentCount >= phase.d) {
+    currentCount = 0;
+    currentPhaseIdx++;
+    if (currentPhaseIdx >= p.phases.length) {
+      currentPhaseIdx = 0;
+      currentCycle++;
+      if (currentCycle >= p.cycles) {
+        completeBreath();
+        return;
+      }
+    }
+  }
+}
+
+function pauseBreath() {
+  breathRunning = false;
+  clearInterval(breathInterval);
+  document.getElementById('breath-btn').textContent = '▶ Continuer';
+}
+
+function resetBreath() {
+  breathRunning = false;
+  clearInterval(breathInterval);
+  currentPhaseIdx = 0;
+  currentCount = 0;
+  currentCycle = 0;
+  const p = BREATH_PATTERNS[currentPattern];
+  document.getElementById('breath-count').textContent = p.phases[0].d;
+  document.getElementById('breath-phase-text').textContent = 'Prêt à commencer';
+  document.getElementById('breath-phase-label').textContent = 'INSPIRE';
+  document.getElementById('breath-cycles').textContent = `Cycles : 0 / ${p.cycles}`;
+  document.getElementById('breath-circle').style.transform = 'scale(1)';
+  document.getElementById('breath-btn').textContent = '▶ Démarrer';
+}
+
+function completeBreath() {
+  breathRunning = false;
+  clearInterval(breathInterval);
+  document.getElementById('breath-phase-text').textContent = '✓ Session terminée';
+  document.getElementById('breath-btn').textContent = '▶ Recommencer';
+  document.getElementById('breath-circle').style.transform = 'scale(1)';
+  currentPhaseIdx = 0; currentCount = 0; currentCycle = 0;
+}
+
+// ===== SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(() => {
+    console.log('SW registered');
+  }).catch(err => console.log('SW failed:', err));
+}
+</script>
+</body>
+</html>
+
