@@ -1,7 +1,7 @@
-const CACHE = 'bjj-pro-v2';
+const CACHE = 'bjj-pro-v3';
 const ASSETS = [
-  '/',
-  '/index.html',
+  '/usine-cataleya/bjj-pro/',
+  '/usine-cataleya/bjj-pro/index.html',
   'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap'
 ];
 
@@ -31,7 +31,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return response;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => caches.match('/usine-cataleya/bjj-pro/index.html'));
     })
   );
 });
