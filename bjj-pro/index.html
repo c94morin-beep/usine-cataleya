@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="BJJ PRO">
 <meta name="description" content="Programme personnalisé BJJ — Force, Nutrition, Mental, Récupération">
 <title>BJJ PRO — Ton Programme</title>
-<link rel="manifest" href="manifest.v2.json">
+<link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 
@@ -1000,18 +1000,42 @@ START_DATE.setHours(0, 0, 0, 0);
 
 const WEEK_PLAN = [
   { name: 'Lun', type: 'bjj', dot: 'dot-bjj', label: 'BJJ', title: 'BJJ — Technique', icon: '🥋', color: 'var(--accent6)',
-    desc: 'Session technique. Focus sur positions de contrôle, transitions et finitions. Échauffement complet avant tout sparring.' },
+    schedule: [
+      { time: '18h30', end: '19h30', label: 'Cours Ados', icon: '👦', color: 'var(--accent5)' },
+      { time: '19h30', end: '22h00', label: 'BJJ Adultes', icon: '🥋', color: 'var(--accent6)' }
+    ],
+    desc: 'Cours ados 18h30–19h30 : encadrement technique, transmission. BJJ adultes 19h30–22h : session technique, positions de contrôle, transitions. Échauffement complet avant le sparring.' },
   { name: 'Mar', type: 'gym', dot: 'dot-gym', label: 'Force', title: 'Salle — Force', icon: '💪', color: 'var(--accent3)',
+    schedule: [
+      { time: '~10h', end: '', label: 'Salle de sport', icon: '💪', color: 'var(--accent3)' }
+    ],
     desc: 'Tirage + Jambes + Core. 4 blocs de 15 min. Poids fonctionnel, mouvements multi-articulaires. Retour calme avec foam roller.' },
   { name: 'Mer', type: 'bjj', dot: 'dot-bjj', label: 'BJJ', title: 'BJJ — Sparring', icon: '🥋', color: 'var(--accent6)',
-    desc: 'Sparring technique. Objectif : appliquer 1 chose précise travaillée lundi. Respiration consciente tout au long du sparring.' },
+    schedule: [
+      { time: '18h30', end: '19h30', label: 'Cours Ados', icon: '👦', color: 'var(--accent5)' },
+      { time: '19h30', end: '22h00', label: 'BJJ Adultes', icon: '🥋', color: 'var(--accent6)' }
+    ],
+    desc: 'Cours ados 18h30–19h30 : encadrement technique, transmission. BJJ adultes 19h30–22h : sparring technique. Objectif : appliquer 1 chose précise travaillée lundi. Respiration consciente.' },
   { name: 'Jeu', type: 'cardio', dot: 'dot-cardio', label: 'Cardio', title: 'Cardio + Core', icon: '🏃', color: 'var(--accent2)',
+    schedule: [
+      { time: '~10h', end: '', label: 'Cardio', icon: '🏃', color: 'var(--accent2)' }
+    ],
     desc: 'HIIT BJJ-spécifique ou Zone 2 selon la semaine. 50 min. Alterner A et B chaque semaine pour varier la filière énergétique.' },
   { name: 'Ven', type: 'bjj', dot: 'dot-bjj', label: 'BJJ', title: 'BJJ — Sparring', icon: '🥋', color: 'var(--accent6)',
-    desc: 'Sparring compétitif. Mettre en pratique tout ce qui a été travaillé. Écouter le corps. Tapper avant toute douleur articulaire.' },
+    schedule: [
+      { time: '18h30', end: '19h30', label: 'Cours Ados', icon: '👦', color: 'var(--accent5)' },
+      { time: '19h30', end: '22h00', label: 'BJJ Adultes', icon: '🥋', color: 'var(--accent6)' }
+    ],
+    desc: 'Cours ados 18h30–19h30 : encadrement technique, transmission. BJJ adultes 19h30–22h : sparring compétitif. Mettre en pratique tout ce qui a été travaillé. Écouter le corps.' },
   { name: 'Sam', type: 'gym', dot: 'dot-stretch', label: 'Mobilité', title: 'Salle — Mobilité', icon: '🧘', color: 'var(--accent4)',
+    schedule: [
+      { time: '~10h', end: '', label: 'Mobilité', icon: '🧘', color: 'var(--accent4)' }
+    ],
     desc: 'Force légère + mobilité approfondie. Hanches 10 min, colonne & épaules 10 min, ischio & chevilles 10 min. Session récupérative.' },
   { name: 'Dim', type: 'rest', dot: 'dot-rest', label: 'Repos', title: 'Repos actif', icon: '😴', color: 'var(--text3)',
+    schedule: [
+      { time: '', end: '', label: 'Repos & récup', icon: '😴', color: 'var(--text3)' }
+    ],
     desc: 'Récupération active. Marche 30 min en nature, ou nage légère, ou yoga restoratif. Pas d\'effort intense. Préparer la semaine suivante.' }
 ];
 
@@ -1080,7 +1104,8 @@ function initDate() {
   const dow = (now.getDay() + 6) % 7;
   const session = WEEK_PLAN[dow];
   document.getElementById('today-title').textContent = session.title;
-  document.getElementById('today-type').textContent = `${session.type.toUpperCase()} · Aujourd'hui`;
+  const scheduleStr = session.schedule.map(s => `${s.icon} ${s.label}${s.time ? ' ' + s.time + (s.end ? '→' + s.end : '') : ''}`).join('  ·  ');
+  document.getElementById('today-type').textContent = scheduleStr;
   document.getElementById('today-desc').textContent = session.desc;
   document.getElementById('today-icon').textContent = session.icon;
   document.getElementById('today-icon').style.background = `${session.color}22`;
@@ -1124,13 +1149,21 @@ function selectDay(i) {
 function showDaySession(i) {
   const d = WEEK_PLAN[i];
   const el = document.getElementById('session-details');
+  const scheduleHTML = d.schedule.map(s => {
+    const timeStr = s.time ? `<div style="font-size:11px;color:${s.color};font-weight:500;">${s.time}${s.end ? ' → ' + s.end : ''}</div>` : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="font-size:20px;width:32px;text-align:center;">${s.icon}</div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:500;color:var(--text);">${s.label}</div>${timeStr}</div>
+    </div>`;
+  }).join('');
   el.innerHTML = `
     <div class="card">
       <div class="card-header">
         <div class="card-icon" style="background:${d.color}22; font-size:20px;">${d.icon}</div>
         <div><div class="card-title">${d.title}</div><div class="card-sub" style="color:${d.color};">${d.type.toUpperCase()}</div></div>
       </div>
-      <div class="card-body">${d.desc}</div>
+      ${scheduleHTML}
+      <div class="card-body" style="margin-top:10px;">${d.desc}</div>
     </div>
   `;
 }
@@ -1348,4 +1381,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-
