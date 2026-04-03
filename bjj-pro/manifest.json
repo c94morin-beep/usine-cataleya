@@ -10,35 +10,13 @@
   "orientation": "portrait",
   "lang": "fr",
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "categories": ["sports", "health", "fitness"],
   "shortcuts": [
-    {
-      "name": "Planning",
-      "url": "/usine-cataleya/bjj-pro/#planning",
-      "description": "Voir le planning de la semaine"
-    },
-    {
-      "name": "Nutrition",
-      "url": "/usine-cataleya/bjj-pro/#nutrition",
-      "description": "Programme nutritionnel"
-    },
-    {
-      "name": "Respiration",
-      "url": "/usine-cataleya/bjj-pro/#breath",
-      "description": "Exercices de respiration"
-    }
+    { "name": "Planning", "url": "/usine-cataleya/bjj-pro/#planning" },
+    { "name": "Nutrition", "url": "/usine-cataleya/bjj-pro/#nutrition" },
+    { "name": "Respiration", "url": "/usine-cataleya/bjj-pro/#breath" }
   ]
 }
