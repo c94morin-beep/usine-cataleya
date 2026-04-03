@@ -2,7 +2,8 @@
   "name": "BJJ PRO — Programme Personnalisé",
   "short_name": "BJJ PRO",
   "description": "Programme complet BJJ : entraînement, nutrition, respiration, récupération",
-  "start_url": "/",
+  "start_url": "/usine-cataleya/bjj-pro/",
+  "scope": "/usine-cataleya/bjj-pro/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
@@ -10,9 +11,15 @@
   "lang": "fr",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%230a0a0a'/><text x='256' y='340' font-size='300' text-anchor='middle' font-family='Arial'>🥋</text></svg>",
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
@@ -20,19 +27,18 @@
   "shortcuts": [
     {
       "name": "Planning",
-      "url": "/#planning",
+      "url": "/usine-cataleya/bjj-pro/#planning",
       "description": "Voir le planning de la semaine"
     },
     {
       "name": "Nutrition",
-      "url": "/#nutrition",
+      "url": "/usine-cataleya/bjj-pro/#nutrition",
       "description": "Programme nutritionnel"
     },
     {
       "name": "Respiration",
-      "url": "/#breath",
+      "url": "/usine-cataleya/bjj-pro/#breath",
       "description": "Exercices de respiration"
     }
   ]
 }
-
