@@ -1,4 +1,4 @@
-const CACHE = 'bjj-pro-v1';
+const CACHE = 'bjj-pro-v2';
 const ASSETS = [
   '/',
   '/index.html',
