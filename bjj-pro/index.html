@@ -1086,6 +1086,31 @@ body {
       <span>PROGRÈS</span>
     </button>
   </nav>
+
+  <!-- EXERCISE MODAL -->
+  <div class="ex-modal-overlay" id="ex-modal-overlay" onclick="closeExModal(event)">
+    <div class="ex-modal">
+      <div class="ex-modal-header">
+        <div>
+          <div class="ex-modal-title" id="ex-modal-title">Exercice</div>
+          <div class="ex-modal-series" id="ex-modal-series"></div>
+        </div>
+        <div class="ex-modal-close" onclick="closeExercice()">×</div>
+      </div>
+      <img class="ex-gif" id="ex-gif" src="" alt="">
+      <div class="ex-modal-body">
+        <div class="ex-muscles" id="ex-muscles"></div>
+        <div class="ex-tabs">
+          <div class="ex-tab active" onclick="showExTab('cles', this)">Points clés</div>
+          <div class="ex-tab" onclick="showExTab('erreurs', this)">Erreurs</div>
+          <div class="ex-tab" onclick="showExTab('bjj', this)">Lien BJJ</div>
+        </div>
+        <div id="ex-cles" class="ex-content active"></div>
+        <div id="ex-erreurs" class="ex-content"></div>
+        <div id="ex-bjj" class="ex-content"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
