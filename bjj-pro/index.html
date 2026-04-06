@@ -48,7 +48,7 @@ body {
   overscroll-behavior: none;
 }
 
-#app { display: flex; flex-direction: column; height: 100dvh; }
+#app { display: flex; flex-direction: column; height: 100dvh; position: relative; }
 #header {
   padding: 16px 20px 12px;
   border-bottom: 1px solid var(--border);
@@ -567,8 +567,11 @@ body {
 /* EXERCISE MODAL */
 .ex-modal-overlay {
   display: none;
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0,0,0,0.85);
   z-index: 100;
   overflow-y: auto;
@@ -578,7 +581,7 @@ body {
   background: var(--surface);
   border-radius: var(--r2) var(--r2) 0 0;
   margin-top: 60px;
-  min-height: calc(100vh - 60px);
+  min-height: calc(100dvh - 60px);
   padding: 0 0 40px;
 }
 .ex-modal-header {
@@ -1737,8 +1740,11 @@ function openExercice(id) {
   document.querySelector('.ex-tab').classList.add('active');
   document.getElementById('ex-cles').classList.add('active');
   
-  document.getElementById('ex-modal-overlay').classList.add('open');
+  const overlay = document.getElementById('ex-modal-overlay');
+  overlay.classList.add('open');
+  overlay.style.height = document.getElementById('app').offsetHeight + 'px';
   document.getElementById('content').style.overflow = 'hidden';
+  overlay.scrollTop = 0;
 }
 
 function closeExercice() {
