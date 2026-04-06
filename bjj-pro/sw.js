@@ -1,4 +1,4 @@
-const CACHE = 'bjj-pro-v3';
+const CACHE = 'bjj-pro-v4';
 const ASSETS = [
   '/usine-cataleya/bjj-pro/',
   '/usine-cataleya/bjj-pro/index.html',
