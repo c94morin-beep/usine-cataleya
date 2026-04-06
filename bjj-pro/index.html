@@ -547,6 +547,68 @@ body {
 .install-text b { font-size: 14px; font-weight: 500; color: var(--accent); display: block; }
 .install-text span { font-size: 11px; color: var(--text3); }
 .install-close { font-size: 20px; color: var(--text3); cursor: pointer; padding: 4px; }
+
+/* EXERCISE CARDS */
+.ex-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.ex-card-clickable {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ex-card-clickable:active { transform: scale(0.97); border-color: var(--accent); }
+.ex-thumb { position: relative; }
+.ex-thumb img { width: 100%; height: 90px; object-fit: cover; display: block; background: var(--surface3); }
+.ex-thumb-label { font-size: 10px; font-weight: 500; color: var(--text); padding: 6px 6px 2px; line-height: 1.3; }
+.ex-thumb-series { font-size: 9px; color: var(--accent); padding: 0 6px 6px; font-weight: 500; }
+
+/* EXERCISE MODAL */
+.ex-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  overflow-y: auto;
+}
+.ex-modal-overlay.open { display: block; }
+.ex-modal {
+  background: var(--surface);
+  border-radius: var(--r2) var(--r2) 0 0;
+  margin-top: 60px;
+  min-height: calc(100vh - 60px);
+  padding: 0 0 40px;
+}
+.ex-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+.ex-modal-title { font-size: 16px; font-weight: 500; color: var(--text); }
+.ex-modal-series { font-size: 11px; color: var(--accent); font-weight: 500; margin-top: 2px; }
+.ex-modal-close { font-size: 24px; color: var(--text3); cursor: pointer; padding: 4px 8px; }
+.ex-gif { width: 100%; max-height: 260px; object-fit: contain; background: var(--bg); display: block; }
+.ex-modal-body { padding: 16px; }
+.ex-muscles { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 14px; }
+.ex-muscle-tag { font-size: 10px; padding: 3px 8px; border-radius: 20px; background: rgba(91,184,232,0.15); color: var(--accent3); font-weight: 500; }
+.ex-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.ex-tab { flex: 1; text-align: center; padding: 7px 4px; border-radius: 50px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text3); transition: all 0.2s; }
+.ex-tab.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); }
+.ex-content { display: none; }
+.ex-content.active { display: block; }
+.ex-point { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text2); line-height: 1.5; align-items: flex-start; }
+.ex-point:last-child { border-bottom: none; }
+.ex-pdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+.ex-bjj-box { background: var(--surface2); border-left: 2px solid var(--accent3); border-radius: 0 8px 8px 0; padding: 12px 14px; font-size: 13px; color: var(--text2); line-height: 1.6; }
+
 </style>
 </head>
 <body>
@@ -686,7 +748,7 @@ body {
     <!-- ========== ENTRAÎNEMENT ========== -->
     <div class="section" id="sec-training">
       <div class="section-title">ENTRAÎNEMENT</div>
-      <p class="section-desc">Séances détaillées · Salle, Cardio, Mobilité</p>
+      <p class="section-desc">Clique sur un exercice pour voir le GIF et les détails</p>
 
       <div class="toggle-row">
         <div class="toggle-opt active" onclick="showTraining('force', this)">💪 Force</div>
@@ -695,38 +757,74 @@ body {
         <div class="toggle-opt" onclick="showTraining('regles', this)">⚠️ Règles</div>
       </div>
 
+      <!-- FORCE -->
       <div id="t-force">
         <div class="alert alert-blue" style="background:rgba(91,184,232,0.08);border-color:rgba(91,184,232,0.25);color:var(--accent3);">Mardi & Samedi · 60–70 min · Focus fonctionnel BJJ</div>
         <div class="card">
-          <div class="block blue"><div class="block-title">Échauffement · 10 min</div><div class="block-body">Vélo ou rameur faible intensité · Hip circles · Shoulder dislocates avec bâton · Neck rolls progressifs</div></div>
-          <div class="block blue"><div class="block-title">Bloc 1 — Tirage · 15 min</div><div class="block-body">Tractions pronation 4×6 · Rowing barre 4×8 · Face pulls 3×15<br><span style="color:var(--text3);">→ Équilibre épaules, contre la cyphose BJJ</span></div></div>
-          <div class="block blue"><div class="block-title">Bloc 2 — Jambes & hanches · 15 min</div><div class="block-body">Goblet squat 4×10 · Romanian Deadlift 4×8 · Hip thrust 3×12<br><span style="color:var(--text3);">→ Puissance de garde, projections, escapes</span></div></div>
-          <div class="block blue"><div class="block-title">Bloc 3 — Core anti-rotation · 10 min</div><div class="block-body">Pallof press 3×12 · Planche avec rotation 3×30s · Ab wheel 3×8<br><span style="color:var(--text3);">→ Stabilité position au sol, protection lombaire</span></div></div>
-          <div class="block teal"><div class="block-title">Retour au calme · 10 min</div><div class="block-body">Foam roller dos + IT band · Pigeon pose 2 min/côté · Doorway chest stretch</div></div>
+          <div class="block-title" style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">TIRAGE · 15 min</div>
+          <div class="ex-grid">
+            <div class="ex-card-clickable" onclick="openExercice('tractions-pronation')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/tractions-pronation.gif" loading="lazy" alt="Tractions pronation"><div class="ex-thumb-label">Tractions pronation</div><div class="ex-thumb-series">4×6</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('rowing-barre')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/rowing-barre.gif" loading="lazy" alt="Rowing barre"><div class="ex-thumb-label">Rowing barre</div><div class="ex-thumb-series">4×8</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('face-pulls')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/face-pulls.gif" loading="lazy" alt="Face pulls"><div class="ex-thumb-label">Face pulls</div><div class="ex-thumb-series">3×15</div></div></div>
+          </div>
+          <div class="block-title" style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:4px;">JAMBES & HANCHES · 15 min</div>
+          <div class="ex-grid">
+            <div class="ex-card-clickable" onclick="openExercice('goblet-squat')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/goblet-squat.gif" loading="lazy" alt="Goblet squat"><div class="ex-thumb-label">Goblet squat</div><div class="ex-thumb-series">4×10</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('romanian-deadlift')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/romanian-deadlift.gif" loading="lazy" alt="Romanian Deadlift"><div class="ex-thumb-label">Romanian Deadlift</div><div class="ex-thumb-series">4×8</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('hip-thrust')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/hip-thrust.gif" loading="lazy" alt="Hip thrust"><div class="ex-thumb-label">Hip thrust</div><div class="ex-thumb-series">3×12</div></div></div>
+          </div>
+          <div class="block-title" style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:4px;">CORE ANTI-ROTATION · 10 min</div>
+          <div class="ex-grid">
+            <div class="ex-card-clickable" onclick="openExercice('pallof-press')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/pallof-press.gif" loading="lazy" alt="Pallof press"><div class="ex-thumb-label">Pallof press</div><div class="ex-thumb-series">3×12</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('planche-rotation')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/planche-rotation.gif" loading="lazy" alt="Planche avec rotation"><div class="ex-thumb-label">Planche rotation</div><div class="ex-thumb-series">3×30s</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('ab-wheel')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/ab-wheel.gif" loading="lazy" alt="Ab wheel"><div class="ex-thumb-label">Ab wheel</div><div class="ex-thumb-series">3×8</div></div></div>
+          </div>
         </div>
       </div>
 
+      <!-- CARDIO -->
       <div id="t-cardio" style="display:none">
         <div class="alert alert-amber">Jeudi · 50 min · Filières énergétiques BJJ</div>
         <div class="card">
-          <div class="block amber"><div class="block-title">Option A — HIIT BJJ-spécifique</div><div class="block-body">3×(2 min rameur max effort → 2 min récup active) + 3×(30s burpees → 90s marche) + Core 5 min<br><span style="color:var(--text3);">Simule les échanges intenses du combat</span></div></div>
-          <div class="block amber"><div class="block-title">Option B — Zone 2 aérobie</div><div class="block-body">40 min vélo ou corde à sauter · 65–70% FC max · Travail de fond · Améliore récupération entre les rounds<br><span style="color:var(--text3);">Cible : ~130–145 bpm</span></div></div>
+          <div class="block-title" style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">OPTION A — HIIT BJJ</div>
+          <div class="ex-grid">
+            <div class="ex-card-clickable" onclick="openExercice('rameur')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/rameur.gif" loading="lazy" alt="Rameur"><div class="ex-thumb-label">Rameur</div><div class="ex-thumb-series">2 min max</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('burpees')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/burpees.gif" loading="lazy" alt="Burpees"><div class="ex-thumb-label">Burpees</div><div class="ex-thumb-series">30s</div></div></div>
+          </div>
+          <div class="block amber" style="margin-top:8px;"><div class="block-body">Option B — Zone 2 : 40 min vélo ou corde à sauter · 65–70% FC max · ~130–145 bpm</div></div>
           <div class="alert alert-amber" style="margin-top:8px;">Alterner Option A et B chaque semaine</div>
-        </div>
-        <div class="card">
-          <div class="block teal"><div class="block-title">Dimanche — Récup active</div><div class="block-body">Marche 30 min en nature · ou nage faible intensité · ou yoga restoratif · Stimule la circulation sans stress mécanique</div></div>
         </div>
       </div>
 
+      <!-- MOBILITÉ -->
       <div id="t-mobilite" style="display:none">
         <div class="alert" style="background:rgba(232,85,128,0.08);border-color:rgba(232,85,128,0.25);color:var(--accent4);">Samedi après force + routine matin quotidienne</div>
         <div class="card">
-          <div class="block coral"><div class="block-title">Hanches · 10 min — Priorité #1 BJJ</div><div class="block-body">90/90 stretch · Frog stretch · Pigeon passif 3 min/côté · Butterfly stretch avec bascule</div></div>
-          <div class="block coral"><div class="block-title">Colonne & épaules · 10 min</div><div class="block-body">Cat-cow 2×10 · Thread the needle · Thoracic rotations avec bâton · Overhead band stretch</div></div>
-          <div class="block coral"><div class="block-title">Ischio-jambiers & chevilles · 10 min</div><div class="block-body">Hamstring floss · Calf raises excentriques 3×15 · Ankle CARs · Doorway hamstring stretch</div></div>
+          <div class="block-title" style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">HANCHES · 10 min</div>
+          <div class="ex-grid">
+            <div class="ex-card-clickable" onclick="openExercice('90-90-stretch')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/90-90-stretch.gif" loading="lazy" alt="90/90 stretch"><div class="ex-thumb-label">90/90 stretch</div><div class="ex-thumb-series">3 min</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('frog-stretch')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/frog-stretch.gif" loading="lazy" alt="Frog stretch"><div class="ex-thumb-label">Frog stretch</div><div class="ex-thumb-series">2 min</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('pigeon-pose')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/pigeon-pose.gif" loading="lazy" alt="Pigeon pose"><div class="ex-thumb-label">Pigeon pose</div><div class="ex-thumb-series">3 min/côté</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('butterfly-stretch')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/butterfly-stretch.gif" loading="lazy" alt="Butterfly stretch"><div class="ex-thumb-label">Butterfly stretch</div><div class="ex-thumb-series">2 min</div></div></div>
+          </div>
+          <div class="block-title" style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:4px;">COLONNE & ÉPAULES · 10 min</div>
+          <div class="ex-grid">
+            <div class="ex-card-clickable" onclick="openExercice('cat-cow')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/cat-cow.gif" loading="lazy" alt="Cat-cow"><div class="ex-thumb-label">Cat-cow</div><div class="ex-thumb-series">2×10</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('thread-the-needle')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/thread-the-needle.gif" loading="lazy" alt="Thread the needle"><div class="ex-thumb-label">Thread the needle</div><div class="ex-thumb-series">10/côté</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('thoracic-rotations')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/thoracic-rotations.gif" loading="lazy" alt="Thoracic rotations"><div class="ex-thumb-label">Thoracic rotations</div><div class="ex-thumb-series">10/côté</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('overhead-band-stretch')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/overhead-band-stretch.gif" loading="lazy" alt="Overhead band stretch"><div class="ex-thumb-label">Overhead band</div><div class="ex-thumb-series">2 min</div></div></div>
+          </div>
+          <div class="block-title" style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:4px;">ISCHIO & CHEVILLES · 10 min</div>
+          <div class="ex-grid">
+            <div class="ex-card-clickable" onclick="openExercice('hamstring-floss')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/hamstring-floss.gif" loading="lazy" alt="Hamstring floss"><div class="ex-thumb-label">Hamstring floss</div><div class="ex-thumb-series">10/côté</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('calf-raises-excentriques')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/calf-raises-excentriques.gif" loading="lazy" alt="Calf raises"><div class="ex-thumb-label">Calf raises exc.</div><div class="ex-thumb-series">3×15</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('ankle-cars')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/ankle-cars.gif" loading="lazy" alt="Ankle CARs"><div class="ex-thumb-label">Ankle CARs</div><div class="ex-thumb-series">5/côté</div></div></div>
+            <div class="ex-card-clickable" onclick="openExercice('doorway-hamstring')"><div class="ex-thumb"><img src="https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/doorway-hamstring.gif" loading="lazy" alt="Doorway hamstring"><div class="ex-thumb-label">Doorway hamstring</div><div class="ex-thumb-series">2 min/côté</div></div></div>
+          </div>
         </div>
       </div>
 
+      <!-- RÈGLES -->
       <div id="t-regles" style="display:none">
         <div class="alert alert-danger">⚠️ Priorité absolue à 38 ans — Préserver pour durer</div>
         <div class="card">
@@ -742,7 +840,7 @@ body {
       </div>
     </div>
 
-    <!-- ========== NUTRITION ========== -->
+        <!-- ========== NUTRITION ========== -->
     <div class="section" id="sec-nutrition">
       <div class="section-title">NUTRITION</div>
       <p class="section-desc">Alimentation optimisée performance & récupération</p>
@@ -1372,6 +1470,292 @@ function completeBreath() {
   document.getElementById('breath-circle').style.transform = 'scale(1)';
   document.getElementById('breath-count').textContent = '✓';
   document.getElementById('breath-phase-label').textContent = 'TERMINÉ';
+}
+
+
+// ===== EXERCISE MODAL =====
+const EXERCICES_DATA = {
+  'tractions-pronation': {
+    nom: 'Tractions pronation',
+    series: '4x6',
+    muscles: 'Grand dorsal, Biceps, Rhomboïdes',
+    bjj: 'Clinch, tirage kimono, rétention de garde',
+    cles: ['Pincer les omoplates avant de tirer', 'Coudes vers les hanches', 'Descente 3 secondes'],
+    erreurs: ['Épaules qui montent', 'Se balancer', 'Bras pas tendus en bas'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/tractions-pronation.gif'
+  },
+  'rowing-barre': {
+    nom: 'Rowing barre',
+    series: '4x8',
+    muscles: 'Grand dorsal, Trapèzes, Biceps',
+    bjj: 'Tirage de kimono, contrôle en clinch',
+    cles: ['Dos droit légèrement penché', 'Tirer vers le nombril', 'Omoplates pincées en haut'],
+    erreurs: ['Dos arrondi', "Utiliser l'élan", 'Coudes trop élevés'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/rowing-barre.gif'
+  },
+  'face-pulls': {
+    nom: 'Face pulls',
+    series: '3x15',
+    muscles: 'Deltoïdes postérieurs, Trapèzes, Rotateurs',
+    bjj: 'Santé épaules, posture anti-cyphose BJJ',
+    cles: ['Tirer vers le visage', 'Coudes hauts', 'Rotation externe en fin de mouvement'],
+    erreurs: ['Coudes trop bas', 'Trop de charge', 'Mouvement trop rapide'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/face-pulls.gif'
+  },
+  'goblet-squat': {
+    nom: 'Goblet squat',
+    series: '4x10',
+    muscles: 'Quadriceps, Fessiers, Core',
+    bjj: 'Position basse de garde, passage de garde',
+    cles: ['Haltère contre la poitrine', "Genoux dans l'axe des pieds", 'Coudes entre les genoux'],
+    erreurs: ['Genoux qui rentrent', 'Talon qui se lève', 'Dos arrondi'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/goblet-squat.gif'
+  },
+  'romanian-deadlift': {
+    nom: 'Romanian Deadlift',
+    series: '4x8',
+    muscles: 'Ischio-jambiers, Fessiers, Lombaires',
+    bjj: 'Protection genoux, puissance de projection',
+    cles: ['Hanches en arrière', 'Barre proche des jambes', 'Dos droit tout le long'],
+    erreurs: ['Genoux qui fléchissent trop', 'Dos arrondi', 'Descendre trop bas'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/romanian-deadlift.gif'
+  },
+  'hip-thrust': {
+    nom: 'Hip thrust',
+    series: '3x12',
+    muscles: 'Fessiers, Ischio-jambiers, Core',
+    bjj: 'Éjection de garde, pont de défense, puissance au sol',
+    cles: ['Menton rentré', 'Pousser avec les talons', 'Hanches en extension complète'],
+    erreurs: ["Lombes qui s'archivent", 'Pieds trop proches', "Pas d'extension complète"],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/hip-thrust.gif'
+  },
+  'pallof-press': {
+    nom: 'Pallof press',
+    series: '3x12',
+    muscles: 'Core, Obliques, Stabilisateurs',
+    bjj: 'Stabilité au sol, résistance aux rotations forcées',
+    cles: ['Corps perpendiculaire à la poulie', 'Tenir 2s bras tendus', 'Résister à la rotation'],
+    erreurs: ['Se laisser tourner', 'Trop de charge', 'Respiration bloquée'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/pallof-press.gif'
+  },
+  'planche-rotation': {
+    nom: 'Planche avec rotation',
+    series: '3x30s',
+    muscles: 'Core, Obliques, Épaules',
+    bjj: 'Stabilité en garde, transitions au sol',
+    cles: ['Hanches stables', 'Rotation lente et contrôlée', 'Corps aligné'],
+    erreurs: ['Hanches qui bougent', 'Bras porteur qui fléchit', 'Trop rapide'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/planche-rotation.gif'
+  },
+  'ab-wheel': {
+    nom: 'Ab wheel',
+    series: '3x8',
+    muscles: 'Core, Grand droit, Obliques',
+    bjj: 'Tension abdominale en garde, protection lombaire',
+    cles: ['Dos plat', 'Mouvement lent', 'Revenir avec les abdos pas avec les bras'],
+    erreurs: ["Dos qui s'effondre", 'Aller trop loin', 'Trop rapide'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/ab-wheel.gif'
+  },
+  'rameur': {
+    nom: 'Rameur',
+    series: '2 min',
+    muscles: 'Corps entier, Dos, Jambes, Cardio',
+    bjj: 'Simulation effort BJJ, filière anaérobie',
+    cles: ["Pousser avec les jambes d'abord", 'Dos droit', 'Tirer vers le nombril'],
+    erreurs: ['Tirer avec le dos avant les jambes', 'Dos arrondi', 'Bras tendus trop tard'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/rameur.gif'
+  },
+  'burpees': {
+    nom: 'Burpees',
+    series: '30s',
+    muscles: 'Corps entier, Cardio',
+    bjj: 'Se relever rapidement du sol, explosivité',
+    cles: ['Gainage en position basse', 'Saut explosif', 'Rythme régulier'],
+    erreurs: ['Dos affaissé en bas', 'Atterrissage rigide', 'Trop rapide dès le début'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/burpees.gif'
+  },
+  '90-90-stretch': {
+    nom: '90/90 stretch',
+    series: '3 min',
+    muscles: 'Hanches, Rotateurs, Piriforme',
+    bjj: 'Demi-garde, Z-guard, transitions hanches',
+    cles: ['Les deux jambes à 90', 'Dos droit', "Basculer lentement d'un côté à l'autre"],
+    erreurs: ['Genoux qui décollent du sol', 'Dos arrondi', 'Aller trop vite'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/90-90-stretch.gif'
+  },
+  'frog-stretch': {
+    nom: 'Frog stretch',
+    series: '2 min',
+    muscles: 'Adducteurs, Hanches internes',
+    bjj: 'Garde ouverte, écartement, passage',
+    cles: ['Genoux alignés avec les hanches', 'Bassin vers le bas', 'Respirer et relâcher'],
+    erreurs: ['Dos arrondi', 'Forcer avec les mains', 'Genoux pas à 90'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/frog-stretch.gif'
+  },
+  'pigeon-pose': {
+    nom: 'Pigeon pose',
+    series: '3 min/côté',
+    muscles: 'Piriforme, Fléchisseurs hanche, Fessiers',
+    bjj: 'Récupération post-sparring, mobilité demi-garde',
+    cles: ['Jambe avant à 90', 'Jambe arrière tendue', 'Corps vers le bas progressivement'],
+    erreurs: ['Bassin de côté', 'Forcer trop vite', 'Jambe arrière pliée'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/pigeon-pose.gif'
+  },
+  'butterfly-stretch': {
+    nom: 'Butterfly stretch',
+    series: '2 min',
+    muscles: 'Adducteurs, Hanches internes',
+    bjj: 'Garde papillon, sweeps, mobilité interne hanche',
+    cles: ['Pieds proches du bassin', 'Dos droit', 'Pousser doucement les genoux vers le bas'],
+    erreurs: ['Dos arrondi', 'Forcer avec les coudes', 'Pieds trop loin du bassin'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/butterfly-stretch.gif'
+  },
+  'cat-cow': {
+    nom: 'Cat-cow',
+    series: '2x10',
+    muscles: 'Colonne vertébrale, Lombaires, Abdos',
+    bjj: 'Mobilité colonne, échauffement pré-séance',
+    cles: ['Mouvement vertèbre par vertèbre', 'Inspiration en cow expiration en cat', 'Lent'],
+    erreurs: ['Mouvement des hanches seulement', 'Trop rapide', 'Cou pas inclus'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/cat-cow.gif'
+  },
+  'thread-the-needle': {
+    nom: 'Thread the needle',
+    series: '10/côté',
+    muscles: 'Thoracique, Épaules, Rotation colonne',
+    bjj: 'Rotation thoracique, défense étranglement, guard recovery',
+    cles: ['Hanches stables', 'Bras qui glisse sous le corps', 'Regarder vers le plafond'],
+    erreurs: ['Hanches qui tournent', 'Trop rapide', 'Épaule qui décolle'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/thread-the-needle.gif'
+  },
+  'thoracic-rotations': {
+    nom: 'Thoracic rotations',
+    series: '10/côté',
+    muscles: 'Thoracique, Obliques',
+    bjj: 'Rotation sous la garde, défense étranglement',
+    cles: ['Lombaires fixes', 'Rotation vient du thorax', 'Expirer en tournant'],
+    erreurs: ['Rotation des lombaires', "Trop d'amplitude", 'Bras pas utilisés'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/thoracic-rotations.gif'
+  },
+  'overhead-band-stretch': {
+    nom: 'Overhead band stretch',
+    series: '2 min',
+    muscles: 'Épaules, Triceps, Grand dorsal',
+    bjj: 'Mobilité épaules, prévention blessure garde',
+    cles: ['Bras tendus', 'Laisser la bande ouvrir les épaules', 'Dos droit'],
+    erreurs: ["Dos qui s'arche", 'Coudes fléchis', 'Trop de tension'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/overhead-band-stretch.gif'
+  },
+  'hamstring-floss': {
+    nom: 'Hamstring floss',
+    series: '10/côté',
+    muscles: 'Ischio-jambiers, Nerf sciatique',
+    bjj: 'Souplesse arrière cuisse, passage de garde, triangle',
+    cles: ['Jambe tendue', 'Flexion dorsale cheville', 'Mouvement lent et progressif'],
+    erreurs: ['Genou fléchi', 'Dos arrondi', 'Aller trop vite'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/hamstring-floss.gif'
+  },
+  'calf-raises-excentriques': {
+    nom: 'Calf raises excentriques',
+    series: '3x15',
+    muscles: "Mollets, Tendon d'Achille",
+    bjj: 'Prévention blessures chevilles, stabilité au sol',
+    cles: ['Monter sur 2 pieds descendre sur 1', 'Descente lente 3 secondes', 'Amplitude complète'],
+    erreurs: ['Descente trop rapide', 'Genou fléchi', "Pas d'amplitude"],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/calf-raises-excentriques.gif'
+  },
+  'ankle-cars': {
+    nom: 'Ankle CARs',
+    series: '5/côté',
+    muscles: 'Cheville, Stabilisateurs',
+    bjj: 'Stabilité cheville pour déplacements, guard work',
+    cles: ['Amplitude maximale', 'Lent et contrôlé', 'Cercle complet sans compensation'],
+    erreurs: ['Genou qui bouge', 'Trop rapide', 'Amplitude réduite'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/ankle-cars.gif'
+  },
+  'doorway-hamstring': {
+    nom: 'Doorway hamstring stretch',
+    series: '2 min/côté',
+    muscles: 'Ischio-jambiers',
+    bjj: 'Souplesse pour triangle, omoplata, guard recovery',
+    cles: ['Jambe appuyée contre le mur', 'Bassin proche du mur', 'Dos à plat'],
+    erreurs: ['Bassin trop loin', 'Genou fléchi', 'Dos décollé du sol'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/doorway-hamstring.gif'
+  },
+  'bird-dog': {
+    nom: 'Bird-dog',
+    series: '2x10',
+    muscles: 'Core, Lombaires, Fessiers',
+    bjj: 'Stabilité lombaire, protection colonne en garde',
+    cles: ['Dos plat', 'Bras et jambe opposés', 'Tenir 2 secondes'],
+    erreurs: ["Dos qui s'arche", 'Hanches qui tournent', 'Trop rapide'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/bird-dog.gif'
+  },
+  'glute-bridge': {
+    nom: 'Glute bridge',
+    series: '2x15',
+    muscles: 'Fessiers, Ischio-jambiers, Core',
+    bjj: 'Activation fessiers, pont de défense, puissance hanche',
+    cles: ['Pousser avec les talons', 'Extension complète', 'Serrer les fessiers en haut'],
+    erreurs: ['Lombaires qui travaillent', 'Pieds trop proches', "Pas d'extension"],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/glute-bridge.gif'
+  },
+  'hip-circles': {
+    nom: 'Hip circles',
+    series: '10/côté',
+    muscles: 'Hanches, Mobilité articulaire',
+    bjj: 'Échauffement universel BJJ, mobilité de garde',
+    cles: ['Amplitude maximale', 'Lent', 'Haut du corps stable'],
+    erreurs: ['Amplitude réduite', 'Corps qui penche', 'Trop rapide'],
+    gif: 'https://c94morin-beep.github.io/usine-cataleya/bjj-pro/gifs/hip-circles.gif'
+  },
+};
+
+function openExercice(id) {
+  const ex = EXERCICES_DATA[id];
+  if (!ex) return;
+  document.getElementById('ex-modal-title').textContent = ex.nom;
+  document.getElementById('ex-modal-series').textContent = ex.series;
+  document.getElementById('ex-gif').src = ex.gif;
+  
+  // Muscles tags
+  const muscles = ex.muscles.split(', ');
+  document.getElementById('ex-muscles').innerHTML = muscles.map(m => `<span class="ex-muscle-tag">${m}</span>`).join('');
+  
+  // Points clés
+  document.getElementById('ex-cles').innerHTML = ex.cles.map(c => `<div class="ex-point"><div class="ex-pdot" style="background:var(--accent6);"></div>${c}</div>`).join('');
+  
+  // Erreurs
+  document.getElementById('ex-erreurs').innerHTML = ex.erreurs.map(e => `<div class="ex-point"><div class="ex-pdot" style="background:var(--danger);"></div>${e}</div>`).join('');
+  
+  // BJJ
+  document.getElementById('ex-bjj').innerHTML = `<div class="ex-bjj-box">${ex.bjj}</div>`;
+  
+  // Reset tabs
+  document.querySelectorAll('.ex-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ex-content').forEach(c => c.classList.remove('active'));
+  document.querySelector('.ex-tab').classList.add('active');
+  document.getElementById('ex-cles').classList.add('active');
+  
+  document.getElementById('ex-modal-overlay').classList.add('open');
+  document.getElementById('content').style.overflow = 'hidden';
+}
+
+function closeExercice() {
+  document.getElementById('ex-modal-overlay').classList.remove('open');
+  document.getElementById('ex-gif').src = '';
+  document.getElementById('content').style.overflow = 'auto';
+}
+
+function closeExModal(e) {
+  if (e.target === document.getElementById('ex-modal-overlay')) closeExercice();
+}
+
+function showExTab(name, el) {
+  document.querySelectorAll('.ex-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ex-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('ex-' + name).classList.add('active');
+  el.classList.add('active');
 }
 
 // ===== SERVICE WORKER =====
