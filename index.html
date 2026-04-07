@@ -2400,12 +2400,15 @@
             const [filterStatus, setFilterStatus] = React.useState('all');
             const filteredOrders = orders.filter(order => {
                 const q = (searchTerm || '').toLowerCase().trim();
-                const matchSearch = !q ||
-                    (order.name || '').toLowerCase().includes(q) ||
-                    (order.reference || '').toString().includes(q) ||
-                    (order.client || '').toLowerCase().includes(q) ||
-                    (order.email || '').toLowerCase().includes(q) ||
-                    (order.telephone || '').toLowerCase().includes(q);
+                // Si la query est numérique, chercher uniquement dans le numéro de commande
+                const isNumeric = /^\d+$/.test(q);
+                const matchSearch = !q || (isNumeric
+                    ? (order.reference || '').toString().includes(q)
+                    : (order.name || '').toLowerCase().includes(q) ||
+                      (order.reference || '').toString().includes(q) ||
+                      (order.client || '').toLowerCase().includes(q) ||
+                      (order.email || '').toLowerCase().includes(q) ||
+                      (order.telephone || '').toLowerCase().includes(q));
                 const matchStatus = filterStatus === 'all' || order.status === filterStatus;
                 return matchSearch && matchStatus;
             });
