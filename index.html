@@ -1764,7 +1764,7 @@
                     </div>
 
                     {/* Top Produits — Admin + Lecture */}
-                    {(isAdmin || isLecteur || isSara) && <TopProduitsCard orders={orders} />}
+                    {(isAdmin || isLecteur || isSara || isOperateur || isCommentaires) && <TopProduitsCard orders={orders} />}
 
                     {showSAVModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowSAVModal(false)}>
@@ -3961,21 +3961,21 @@
                     .page-header-mini { display: flex; justify-content: space-between; font-size: 8px; color: #666; padding: 2px 4px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
 
                     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                    thead th { background: #f0fdf4; border: 1px solid #ccc; padding: 4px; text-align: center; font-size: 9px; font-weight: bold; white-space: nowrap; }
+                    thead th { background: #f0fdf4; border: 1px solid #1f2937; padding: 4px; text-align: center; font-size: 11px; font-weight: bold; white-space: nowrap; }
                     thead th.col-produit { text-align: left; width: 200px; }
                     thead th.col-img { width: 150px; }
-                    thead th.col-num { width: 42px; }
+                    thead th.col-num { width: 62px; }
                     thead th.col-comment { text-align: left; }
 
-                    td { border: 1px solid #e5e7eb; padding: 2px 4px; text-align: center; vertical-align: middle; }
-                    td.col-produit { text-align: left; font-weight: 600; font-size: 11px; line-height: 1.4; width: 200px; }
+                    td { border: 1px solid #1f2937; padding: 2px 4px; text-align: center; vertical-align: middle; }
+                    td.col-produit { text-align: left; font-weight: 600; font-size: 12px; line-height: 1.4; width: 200px; }
                     td.col-img { padding: 2px; width: 150px; height: 110px; }
                     td.col-img img { width: 144px; height: 106px; object-fit: cover; border-radius: 4px; display: block; margin: auto; }
-                    td.col-num { font-size: 15px; font-weight: bold; color: #16a34a; width: 42px; }
+                    td.col-num { font-size: 17px; font-weight: bold; color: #16a34a; width: 62px; }
                     td.col-num.done { color: #9ca3af; text-decoration: line-through; }
-                    td.col-num.zero { color: #d1d5db; font-weight: normal; font-size: 11px; }
-                    td.col-option { font-size: 9px; color: #6b7280; width: 42px; }
-                    td.col-comment { text-align: left; padding: 3px 5px; font-size: 9px; }
+                    td.col-num.zero { color: #d1d5db; font-weight: normal; font-size: 13px; }
+                    td.col-option { font-size: 11px; color: #6b7280; width: 62px; }
+                    td.col-comment { text-align: left; padding: 3px 5px; font-size: 11px; }
                     .comment-badge { display: inline-block; padding: 2px 5px; border-radius: 3px; font-size: 8px; margin: 1px; line-height: 1.5; }
                     tr.row-done td { background: #fff7ed; opacity: 0.7; }
                     tr.row-alt:not(.row-done) td { background: #f3f4f6; }
@@ -4898,10 +4898,10 @@
                     h1 { font-size: 14px; color: #16a34a; margin:0; }
                     .meta { font-size: 9px; color: #666; }
                     table { width:100%; border-collapse:collapse; }
-                    th { background:#f0fdf4; border:1px solid #ccc; padding:5px 8px; font-size:10px; }
+                    th { background:#f0fdf4; border:1px solid #1f2937; padding:8px 12px; font-size:10px; }
                     th:first-child { text-align:left; }
                     th.qty, th.total { text-align:center; width:70px; }
-                    td { border:1px solid #e5e7eb; padding:4px 8px; vertical-align:middle; }
+                    td { border:1px solid #1f2937; padding:6px 12px; vertical-align:middle; }
                     td.qty { text-align:center; font-weight:bold; color:#16a34a; width:70px; }
                     td.total { text-align:center; font-weight:bold; color:#1d4ed8; width:70px; vertical-align:middle; font-size:13px; }
                     tr:nth-child(even) td:not(.total) { background:#fafafa; }
