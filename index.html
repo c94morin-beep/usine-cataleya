@@ -4866,24 +4866,24 @@
 
             // Grouper par modèle pour la colonne C
             const buildGroups = () => {
-                // Pour chaque produit (trié alpha), calculer le total de son modèle
+                // Passe 1 : calculer le total de chaque modèle
                 const modeleTotals = {};
                 sortedAlpha.forEach(([name, qty]) => {
                     const modele = getModele(name);
                     modeleTotals[modele] = (modeleTotals[modele] || 0) + qty;
                 });
-                // Construire les groupes : [{modele, produits:[{name,qty}], total}]
-                const groups = [];
-                let lastModele = null;
+                // Passe 2 : fusionner les entrées du même modèle (même si non-contigus en GLOBAL)
+                const groupMap = {};
+                const groupOrder = [];
                 sortedAlpha.forEach(([name, qty]) => {
                     const modele = getModele(name);
-                    if (modele !== lastModele) {
-                        groups.push({ modele, produits: [], total: modeleTotals[modele] });
-                        lastModele = modele;
+                    if (!groupMap[modele]) {
+                        groupMap[modele] = { modele, produits: [], total: modeleTotals[modele] };
+                        groupOrder.push(groupMap[modele]);
                     }
-                    groups[groups.length - 1].produits.push({ name, qty });
+                    groupMap[modele].produits.push({ name, qty });
                 });
-                return groups;
+                return groupOrder;
             };
 
             const exportListePDF = () => {
