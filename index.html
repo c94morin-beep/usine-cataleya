@@ -69,6 +69,9 @@
         window.firebaseSaveLists = async (lists) => {
             await set(ref(db, 'lists'), lists);
         };
+        window.firebasePatchOrder = async (listIndex, orderIndex, fields) => {
+            await update(ref(db, `lists/${listIndex}/orders/${orderIndex}`), fields);
+        };
         window.firebaseOnLists = (cb) => {
             return onValue(ref(db, 'lists'), (snapshot) => {
                 cb(snapshot.exists() ? snapshot.val() : []);
@@ -536,6 +539,13 @@
 
             // Mettre à jour un statut
             const updateStatus = (orderId, newStatus, newCommentaires, author) => {
+                // Trouver les index pour l'écriture ciblée
+                let listIndex = -1, orderIndex = -1;
+                for (let li = 0; li < lists.length; li++) {
+                    const oi = lists[li].orders.findIndex(o => o.id === orderId);
+                    if (oi !== -1) { listIndex = li; orderIndex = oi; break; }
+                }
+
                 const updatedLists = lists.map(list => ({
                     ...list,
                     orders: list.orders.map(order =>
@@ -544,16 +554,20 @@
                             : order
                     )
                 }));
-                const listsForFirebase = cleanForFirebase(updatedLists);
-                setLists(updatedLists); // État local avec '' propre
-                const doSave = () => {
-                    if (window.firebaseSaveLists) {
-                        window.firebaseSaveLists(listsForFirebase).catch(e => console.error('Firebase ERREUR:', e));
-                    } else {
-                        setTimeout(doSave, 500);
-                    }
-                };
-                doSave();
+                setLists(updatedLists); // État local immédiat (optimistic)
+
+                // Écriture ciblée sur le seul article modifié
+                if (listIndex !== -1 && window.firebasePatchOrder) {
+                    const fields = {
+                        status: newStatus,
+                        updatedAt: Date.now(),
+                        commentaires: (newCommentaires === '' || newCommentaires === null || newCommentaires === undefined) ? '__clear__' : newCommentaires,
+                    };
+                    if (newCommentaires && author) fields.commentAuthor = author;
+                    else if (newCommentaires === '') fields.commentAuthor = '__clear__';
+                    window.firebasePatchOrder(listIndex, orderIndex, fields)
+                        .catch(e => console.error('Firebase ERREUR:', e));
+                }
 
                 // Afficher la popup à chaque fois qu'un article est terminé
                 if (newStatus === STATUTS.RECU || newStatus === STATUTS.RANGE) {
@@ -3248,10 +3262,10 @@
             const [selectedBase, setSelectedBase] = React.useState(null);
             const [selectedAttrs, setSelectedAttrs] = React.useState({});
             const [showDropdown, setShowDropdown] = React.useState(false);
-            const [selectedTailles, setSelectedTailles] = React.useState([]); // multi-sélection tailles
+            const [selectedTailles, setSelectedTailles] = React.useState([]);
 
-            // Parser un nom de produit en {base, attrs}
-            const parseProduct = (name) => {
+            // parseProduct hors render — stable, pas recréée à chaque frappe
+            const parseProduct = React.useCallback((name) => {
                 const match = name.match(/^(.*?)(?:\s*\((.*)\))?$/);
                 const base = match[1].trim();
                 const attrsStr = match[2] || '';
@@ -3264,7 +3278,6 @@
                             let key = part.substring(0, colonIdx).trim();
                             let val = part.substring(colonIdx + 1).trim();
                             if (val.includes(':')) val = val.split(':').pop().trim();
-                            // Simplifier les clés
                             if (key.toLowerCase().includes('taille')) key = 'Taille';
                             if (key.toLowerCase() === 'option') key = 'Option';
                             if (key.toLowerCase() === 'option2') key = 'Option 2';
@@ -3273,54 +3286,80 @@
                     });
                 }
                 return { base, attrs };
-            };
+            }, []);
 
-            const produitsEnAttente = orders.filter(o => o.status === STATUTS.EN_ATTENTE);
+            // Articles en attente — recalculé seulement si orders change
+            const produitsEnAttente = React.useMemo(
+                () => orders.filter(o => o.status === STATUTS.EN_ATTENTE),
+                [orders]
+            );
 
-            // Noms de base uniques
-            const basesUniques = [...new Set(produitsEnAttente.map(o => parseProduct(o.name).base))]
-                .filter(b => b.toLowerCase().includes(searchBase.toLowerCase()))
-                .sort((a, b) => {
-                    const aAmana = produitsEnAttente.some(o => parseProduct(o.name).base === a && (o.transporteur || '').toLowerCase().includes('amana'));
-                    const bAmana = produitsEnAttente.some(o => parseProduct(o.name).base === b && (o.transporteur || '').toLowerCase().includes('amana'));
-                    if (aAmana && !bAmana) return -1;
-                    if (!aAmana && bAmana) return 1;
-                    return a.localeCompare(b);
+            // Cache parsé une seule fois par changement de orders
+            const parsedCache = React.useMemo(
+                () => produitsEnAttente.map(o => ({ order: o, parsed: parseProduct(o.name) })),
+                [produitsEnAttente, parseProduct]
+            );
+
+            // Map base → {count, amana} — recalculé seulement si parsedCache change
+            const basesMap = React.useMemo(() => {
+                const map = new Map();
+                parsedCache.forEach(({ order, parsed }) => {
+                    const base = parsed.base;
+                    if (!map.has(base)) map.set(base, { count: 0, amana: false });
+                    const entry = map.get(base);
+                    entry.count++;
+                    if ((order.transporteur || '').toLowerCase().includes('amana')) entry.amana = true;
                 });
+                return map;
+            }, [parsedCache]);
 
-            // Articles filtrés par base sélectionnée
-            const articlesDeBase = selectedBase 
-                ? produitsEnAttente.filter(o => parseProduct(o.name).base === selectedBase)
-                : [];
+            // Filtrage par searchBase — seul ce calcul se refait à chaque frappe
+            const basesUniques = React.useMemo(() => {
+                const search = searchBase.toLowerCase();
+                return [...basesMap.entries()]
+                    .filter(([base]) => base.toLowerCase().includes(search))
+                    .sort(([a, aI], [b, bI]) => {
+                        if (aI.amana && !bI.amana) return -1;
+                        if (!aI.amana && bI.amana) return 1;
+                        return a.localeCompare(b);
+                    })
+                    .map(([base, info]) => ({ base, count: info.count }));
+            }, [basesMap, searchBase]);
 
-            // Clés d'attributs disponibles pour les articles de base
-            const getAttrKeys = () => {
+            // Articles de la base sélectionnée
+            const articlesDeBase = React.useMemo(
+                () => selectedBase ? parsedCache.filter(({ parsed }) => parsed.base === selectedBase) : [],
+                [parsedCache, selectedBase]
+            );
+
+            // Articles filtrés par attributs
+            const articlesMatch = React.useMemo(
+                () => articlesDeBase
+                    .filter(({ parsed }) => Object.entries(selectedAttrs).every(([k, v]) => parsed.attrs[k] === v))
+                    .map(({ order }) => order),
+                [articlesDeBase, selectedAttrs]
+            );
+
+            // Clés et valeurs d'attributs
+            const attrKeys = React.useMemo(() => {
                 const keys = new Set();
-                articlesDeBase.forEach(o => {
-                    Object.keys(parseProduct(o.name).attrs).forEach(k => keys.add(k));
-                });
+                articlesDeBase.forEach(({ parsed }) => Object.keys(parsed.attrs).forEach(k => keys.add(k)));
                 return [...keys];
-            };
+            }, [articlesDeBase]);
 
-            // Articles filtrés par les attributs sélectionnés
-            const articlesMatch = articlesDeBase.filter(o => {
-                const { attrs } = parseProduct(o.name);
-                return Object.entries(selectedAttrs).every(([k, v]) => attrs[k] === v);
-            });
-
-            // Valeurs disponibles pour le prochain attribut non encore sélectionné
-            const attrKeys = getAttrKeys();
             const nextAttrKey = attrKeys.find(k => !selectedAttrs[k]);
-            const nextAttrValues = nextAttrKey
-                ? [...new Set(articlesMatch.map(o => parseProduct(o.name).attrs[nextAttrKey]).filter(Boolean))].sort()
-                : [];
+            const nextAttrValues = React.useMemo(() => nextAttrKey
+                ? [...new Set(articlesDeBase
+                    .filter(({ parsed }) => Object.entries(selectedAttrs).every(([k, v]) => parsed.attrs[k] === v))
+                    .map(({ parsed }) => parsed.attrs[nextAttrKey]).filter(Boolean))].sort()
+                : [],
+                [articlesDeBase, selectedAttrs, nextAttrKey]
+            );
 
-            // Est-ce que la sélection est complète (pas d'autres attributs à choisir) ?
             const selectionComplete = selectedBase && (!nextAttrKey || articlesMatch.length === 1 || nextAttrValues.length === 0);
 
             const handleSelectAttr = (key, val) => {
                 setSelectedAttrs(prev => ({ ...prev, [key]: val }));
-                // Ne pas reset les tailles si c'est un autre attribut (Option, etc.)
             };
 
             const resetSelection = () => {
@@ -3335,15 +3374,6 @@
                 updateStatus(order.id, STATUTS.RANGE, order.commentaires || '', userName);
             };
 
-            const getArticlesARecevoir = () => articlesMatch;
-
-            const handleReceptionTous = () => {
-                const articles = getArticlesARecevoir();
-                if (!window.confirm(`Marquer ${articles.length} article(s) comme déposés ?`)) return;
-                articles.forEach(o => updateStatus(o.id, STATUTS.RANGE, o.commentaires || '', userName));
-            };
-
-            // Pour compat avec le reste du code
             const selectedProduct = selectedBase;
 
             return (
@@ -3372,16 +3402,13 @@
                                     />
                                     {showDropdown && basesUniques.length > 0 && (
                                         <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
-                                            {basesUniques.map(base => {
-                                                const count = produitsEnAttente.filter(o => parseProduct(o.name).base === base).length;
-                                                return (
-                                                    <div key={base} onClick={() => { setSelectedBase(base); setShowDropdown(false); setSelectedAttrs({}); }}
-                                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 flex justify-between items-center">
-                                                        <span className="text-sm font-medium text-gray-800">{base}</span>
-                                                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">{count} en attente</span>
-                                                    </div>
-                                                );
-                                            })}
+                                            {basesUniques.map(({ base, count }) => (
+                                                <div key={base} onClick={() => { setSelectedBase(base); setShowDropdown(false); setSelectedAttrs({}); }}
+                                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 flex justify-between items-center">
+                                                    <span className="text-sm font-medium text-gray-800">{base}</span>
+                                                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">{count} en attente</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
@@ -3393,8 +3420,8 @@
                         {/* Étapes suivantes : attributs en cascade */}
                         {selectedBase && attrKeys.map((key, idx) => {
                             const vals = [...new Set(articlesDeBase
-                                .filter(o => Object.entries(selectedAttrs).filter(([k]) => k !== key).every(([k,v]) => parseProduct(o.name).attrs[k] === v))
-                                .map(o => parseProduct(o.name).attrs[key]).filter(Boolean))].sort();
+                                .filter(({ parsed }) => Object.entries(selectedAttrs).filter(([k]) => k !== key).every(([k,v]) => parsed.attrs[k] === v))
+                                .map(({ parsed }) => parsed.attrs[key]).filter(Boolean))].sort();
                             if (vals.length === 0) return null;
                             const isSelected = !!selectedAttrs[key];
                             const isPending = !isSelected && Object.keys(selectedAttrs).length === idx;
@@ -3440,16 +3467,10 @@
                             });
                             return (
                             <div>
-                                <div className="flex justify-between items-center mb-4">
+                                <div className="mb-4">
                                     <h3 className="font-bold text-gray-700">
                                         {articlesMatch.length} commande(s) en attente de <span className="text-blue-600">"{selectedProduct}"</span>
                                     </h3>
-                                    <button
-                                        onClick={handleReceptionTous}
-                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition"
-                                    >
-                                        ✅ Tout marquer déposé
-                                    </button>
                                 </div>
 
                                 {/* Commandes URGENTES - dernier article manquant */}
