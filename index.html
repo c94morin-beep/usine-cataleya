@@ -1449,7 +1449,7 @@
                                     <SAVTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} isOperateur={isOperateur} userName={userName} />
                                 )}
                                 {activeTab === 'reception' && (
-                                    <ReceptionTab orders={activeOrders} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} lists={lists} activeListId={activeListId} casiersData={globalCasiers} />
+                                    <ReceptionTab orders={activeOrders} updateStatus={updateStatus} userName={userName} openOrderRecap={openGlobalOrderRecap} lists={lists} activeListId={activeListId} casiersData={globalCasiers} onZoomImage={setZoomedImage} />
                                 )}
 
 
@@ -3257,7 +3257,7 @@
         }
 
         // CasiersTab
-        function ReceptionTab({ orders, updateStatus, userName, openOrderRecap, lists, activeListId, casiersData }) {
+        function ReceptionTab({ orders, updateStatus, userName, openOrderRecap, lists, activeListId, casiersData, onZoomImage }) {
             const [searchBase, setSearchBase] = React.useState('');
             const [selectedBase, setSelectedBase] = React.useState(null);
             const [selectedAttrs, setSelectedAttrs] = React.useState({});
@@ -3384,10 +3384,23 @@
 
                         {/* Étape 1 : Recherche nom de base */}
                         <div className="relative mb-4">
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white bg-blue-500`}>1</span>
                                 <span className="text-sm font-semibold text-gray-700">Nom du produit</span>
                                 {selectedBase && <span className="text-sm font-bold text-blue-600">{selectedBase}</span>}
+                                {selectedBase && (() => {
+                                    const photoUrl = articlesDeBase[0]?.order?.url_image;
+                                    if (!photoUrl) return null;
+                                    return (
+                                        <img
+                                            src={photoUrl}
+                                            alt={selectedBase}
+                                            className="h-14 w-14 object-cover rounded-lg border border-gray-200 shadow-sm cursor-zoom-in ml-2 hover:opacity-80 transition"
+                                            onClick={() => onZoomImage && onZoomImage({url: photoUrl, name: selectedBase})}
+                                            onError={e => e.target.style.display='none'}
+                                        />
+                                    );
+                                })()}
                             </div>
                             {!selectedBase ? (
                                 <div className="relative">
@@ -3413,7 +3426,41 @@
                                     )}
                                 </div>
                             ) : (
-                                <button onClick={resetSelection} className="text-xs text-gray-400 hover:text-red-500 underline">Changer de produit</button>
+                                <div>
+                                    <button onClick={resetSelection} className="text-xs text-gray-400 hover:text-red-500 underline">Changer de produit</button>
+                                    {(() => {
+                                        // Trouver les produits "cousins" : qui partagent le nom propre (ex: Daniela, Teresa...)
+                                        const genericWords = new Set([
+                                            'abaya','ensemble','robe','jupe','palazzo','tunique','cape','hijab',
+                                            'sous','blazer','chemise','sweat','kimono','manteau','veste','cardigan',
+                                            'noir','noire','blanc','blanche','beige','vert','verte','bleu','bleue',
+                                            'rose','rouge','gris','grise','marron','lilas','camel','taupe','ocre',
+                                            'simple','basic','colors','all','black','white','&',
+                                            'de','du','des','le','la','les','en','et','un','une','au','aux','pour','avec'
+                                        ]);
+                                        const allWords = selectedBase.toLowerCase().split(/\s+/);
+                                        const lastWord = allWords[allWords.length - 1];
+                                        const words = allWords.filter((w, i) => w.length > 2 && !genericWords.has(w) && !(i === allWords.length - 1));
+                                        if (words.length === 0) return null;
+                                        const cousins = basesUniques.filter(({ base }) =>
+                                            base !== selectedBase &&
+                                            words.some(w => base.toLowerCase().includes(w))
+                                        );
+                                        if (cousins.length === 0) return null;
+                                        return (
+                                            <div className="mt-2 flex flex-wrap gap-2 items-center">
+                                                <span className="text-xs text-gray-400 font-medium">Switcher :</span>
+                                                {cousins.map(({ base, count }) => (
+                                                    <button key={base} onClick={() => { setSelectedBase(base); setSelectedAttrs({}); }}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-400 rounded-lg text-xs font-semibold text-blue-700 transition">
+                                                        {base}
+                                                        <span className="bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded-full text-[10px] font-bold">{count}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             )}
                         </div>
 
@@ -5529,6 +5576,6 @@
         // Render
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.5 — 27/03/26</div>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.6 — 12/04/26</div>
 </body>
 </html>
