@@ -1398,7 +1398,7 @@
                                     <TabButton active={activeTab === 'casiers'} onClick={() => setActiveTab('casiers')} icon="💡" label="Casiers" />
                                 )}
                                 {/* Réception — Admin + Sara */}
-                                {(isAdmin || isSara || isCommentaires || isLecteur) && (
+                                {(isAdmin || isSara || isCommentaires || isLecteur || isOperateur) && (
                                     <TabButton active={activeTab === 'listecoupe'} onClick={() => setActiveTab('listecoupe')} icon="✂️" label="Listes Coupe" />
                                 )}
                                 {(isAdmin || isCommentaires || isLecteur) && (
@@ -1443,7 +1443,7 @@
                                     <CasiersTab orders={getAllOrders()} isAdmin={isAdmin} canEditStatus={canEditStatus} openOrderRecap={openGlobalOrderRecap} updateStatus={updateStatus} setCasierAlert={setCasierAlert} lists={lists} />
                                 )}
                                 {activeTab === 'listecoupe' && (
-                                    <ListeCoupeTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} userName={userName} activeTheme={activeTheme} listThemes={LIST_THEMES} activeListId={activeListId} parentLists={lists} />
+                                    <ListeCoupeTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} isOperateur={isOperateur} userName={userName} activeTheme={activeTheme} listThemes={LIST_THEMES} activeListId={activeListId} parentLists={lists} />
                                 )}
                                 {activeTab === 'sav' && (
                                     <SAVTab isAdmin={isAdmin} isSara={isSara} isCommentaires={isCommentaires} isOperateur={isOperateur} userName={userName} />
@@ -3946,7 +3946,7 @@
         }
 
         // ===================== LISTE DE COUPE TAB =====================
-        function ListeCoupeTab({ isAdmin, isSara, isCommentaires, userName, activeTheme, listThemes, activeListId, parentLists }) {
+        function ListeCoupeTab({ isAdmin, isSara, isCommentaires, isOperateur, userName, activeTheme, listThemes, activeListId, parentLists }) {
             const canEditListe = isAdmin || isSara || isCommentaires;
             const db = window.db;
             const [listes, setListes] = React.useState([]);
