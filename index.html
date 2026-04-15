@@ -455,9 +455,7 @@
                                     adresse_livraison: values[7]?.replace(/"/g, '').trim() || '',
                                     telephone: values[8]?.replace(/"/g, '').trim() || '',
                                     email: values[9]?.replace(/"/g, '').trim() || '',
-                                    transporteur: values[10]?.replace(/"/g, '').trim() || '',
-                                    prix_unitaire: parseFloat(values[11]?.replace(/"/g, '').trim()) || 0,
-                                    total_ligne: parseFloat(values[12]?.replace(/"/g, '').trim()) || 0
+                                    transporteur: values[10]?.replace(/"/g, '').trim() || ''
                                 };
                                 data.push(row);
                             }
@@ -482,9 +480,7 @@
                                     adresse_livraison: row.adresse_livraison,
                                     telephone: row.telephone,
                                     email: row.email,
-                                    transporteur: row.transporteur,
-                                    prix_unitaire: row.prix_unitaire || 0,
-                                    total_ligne: row.total_ligne || 0
+                                    transporteur: row.transporteur
                                 });
                             }
                         });
@@ -1565,7 +1561,6 @@
         // Dashboard
         function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum, isSara, isCommentaires, isAdmin, isOperateur, isLecteur, setActiveTab, updateStatus, canEditStatus, validations, toggleValidation }) {
             const [showSAVModal, setShowSAVModal] = useState(false);
-            const [showStats, setShowStats] = useState(false);
             const [globalSearch, setGlobalSearch] = useState('');
             const [searchResults, setSearchResults] = useState([]);
             const [searchShipping, setSearchShipping] = useState({}); // { ref: {labelUrl, packlinkUrl, ...} }
@@ -1700,17 +1695,7 @@
             return (
                 <div className="space-y-6">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-2xl font-bold">Dashboard - {listName}</h2>
-                            {isAdmin && (
-                                <button
-                                    onClick={() => setShowStats(true)}
-                                    style={{background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'white',border:'none',borderRadius:'10px',padding:'7px 14px',cursor:'pointer',fontWeight:'600',fontSize:'13px',display:'flex',alignItems:'center',gap:'6px',boxShadow:'0 2px 8px rgba(99,102,241,0.4)'}}
-                                >
-                                    📊 CA & Stats
-                                </button>
-                            )}
-                        </div>
+                        <h2 className="text-2xl font-bold">Dashboard - {listName}</h2>
                         <div className="relative w-full md:w-96">
                             <input
                                 type="text"
@@ -2389,11 +2374,6 @@
                             </div>
                         );
                     })()}
-
-                    {/* Modal Statistiques CA — admin only */}
-                    {showStats && isAdmin && (
-                        <StatsModal csvData={orders} listName={listName} onClose={() => setShowStats(false)} />
-                    )}
 
                     {/* Modal Récapitulatif Commande */}
 
@@ -5088,6 +5068,13 @@
             const [editId, setEditId] = React.useState(null);
             const [search, setSearch] = React.useState('');
             const [filterPays, setFilterPays] = React.useState('tous');
+            const [sortBy, setSortBy] = React.useState('createdAt');
+            const [sortDir, setSortDir] = React.useState('desc');
+
+            const toggleSort = (col) => {
+                if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                else { setSortBy(col); setSortDir('asc'); }
+            };
             const emptyForm = { numeroCommande: '', date: '', nomCliente: '', nombreCommandes: '', pays: '', article: '', motif: '', solution: '' };
             const [form, setForm] = React.useState(emptyForm);
             const PAYS_OPTIONS = ['France', 'Belgique', 'Suisse', 'Canada', 'Maroc', 'Algérie', 'Tunisie', 'Autre'];
@@ -5135,6 +5122,21 @@
                 const q = search.toLowerCase();
                 const matchSearch = !q || [r.numeroCommande, r.nomCliente, r.article, r.motif, r.solution, r.pays].join(' ').toLowerCase().includes(q);
                 return matchPays && matchSearch;
+            }).sort((a, b) => {
+                let va, vb;
+                if (sortBy === 'numeroCommande') {
+                    va = parseInt(a.numeroCommande) || 0;
+                    vb = parseInt(b.numeroCommande) || 0;
+                } else if (sortBy === 'date') {
+                    va = a.date || '';
+                    vb = b.date || '';
+                } else {
+                    va = a.createdAt || 0;
+                    vb = b.createdAt || 0;
+                }
+                if (va < vb) return sortDir === 'asc' ? -1 : 1;
+                if (va > vb) return sortDir === 'asc' ? 1 : -1;
+                return 0;
             });
 
             return (
@@ -5232,8 +5234,12 @@
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="bg-gradient-to-r from-red-600 to-rose-600 text-white">
-                                        <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">📦 N° Commande</th>
-                                        <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">📅 Date</th>
+                                        <th className="px-3 py-3 text-left font-semibold whitespace-nowrap cursor-pointer select-none hover:bg-red-700 transition" onClick={() => toggleSort('numeroCommande')}>
+                                            📦 N° Commande {sortBy === 'numeroCommande' ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                                        </th>
+                                        <th className="px-3 py-3 text-left font-semibold whitespace-nowrap cursor-pointer select-none hover:bg-red-700 transition" onClick={() => toggleSort('date')}>
+                                            📅 Date {sortBy === 'date' ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                                        </th>
                                         <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">👤 Cliente / Nb cdes</th>
                                         <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">🌍 Pays</th>
                                         <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">👗 Article</th>
@@ -5590,223 +5596,6 @@
                     </div>
                     )}
                 </div>
-            );
-        }
-
-
-        // ============================================================
-        // StatsModal — Dashboard CA admin uniquement
-        // ============================================================
-        function StatsModal({ csvData, listName, onClose }) {
-            const [activeTab, setActiveTab] = React.useState('overview');
-
-            const stats = React.useMemo(() => {
-                if (!csvData || csvData.length === 0) return null;
-
-                const getModelName = (name) => {
-                    if (!name) return 'Inconnu';
-                    return name.replace(/\s*\(.*?\)\s*/g, '').trim();
-                };
-
-                const getSize = (name) => {
-                    if (!name) return 'N/A';
-                    const match = name.match(/\((?:Taille[^:]*:\s*)?([\w\s\/]+)\)/i);
-                    return match ? match[1].trim() : 'N/A';
-                };
-
-                let caGlobal = 0;
-                const caParListe = {};
-                const caParModele = {};
-                const qtyParModele = {};
-                const caParTaille = {};
-                const qtyParTaille = {};
-                const caParTransporteur = {};
-
-                csvData.forEach(row => {
-                    // Chaque article dans orders est une pièce individuelle (qty=1 après expansion)
-                    // total_ligne peut être 0 si vieux CSV — on recalcule depuis prix_unitaire
-                    const prixUnit = parseFloat(row.prix_unitaire) || 0;
-                    const totalLigne = parseFloat(row.total_ligne) || prixUnit;
-                    const qty = 1; // après expansion dans transformedData chaque row = 1 pièce
-                    const model = getModelName(row.name);
-                    const size = getSize(row.name);
-                    const listLabel = listName || 'Liste';
-                    const carrier = row.transporteur || 'N/A';
-
-                    caGlobal += totalLigne;
-                    caParListe[listLabel] = (caParListe[listLabel] || 0) + totalLigne;
-                    caParModele[model] = (caParModele[model] || 0) + totalLigne;
-                    qtyParModele[model] = (qtyParModele[model] || 0) + qty;
-                    caParTaille[size] = (caParTaille[size] || 0) + totalLigne;
-                    qtyParTaille[size] = (qtyParTaille[size] || 0) + qty;
-                    caParTransporteur[carrier] = (caParTransporteur[carrier] || 0) + totalLigne;
-                });
-
-                const topModeles = Object.entries(caParModele).sort((a, b) => b[1] - a[1]).slice(0, 10);
-                const topTailles = Object.entries(qtyParTaille).sort((a, b) => b[1] - a[1]).slice(0, 10);
-                const listesData = Object.entries(caParListe).sort((a, b) => b[1] - a[1]);
-                const transporteursData = Object.entries(caParTransporteur).sort((a, b) => b[1] - a[1]);
-                const nbCommandes = new Set(csvData.map(r => r.reference)).size;
-                const panierMoyen = nbCommandes > 0 ? caGlobal / nbCommandes : 0;
-
-                return { caGlobal, panierMoyen, nbCommandes, nbArticles: csvData.length, topModeles, topTailles, listesData, transporteursData, caParTaille, qtyParTaille, caParModele, qtyParModele };
-            }, [csvData, listName]);
-
-            const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0);
-            const fmtShort = (n) => (n || 0) >= 1000 ? ((n/1000).toFixed(1) + 'k€') : Math.round(n || 0) + '€';
-
-            const BarChart = ({ data, colorFn, valueFormatter }) => {
-                if (!data || data.length === 0) return React.createElement('p', {style:{color:'#64748b',fontSize:'13px'}}, 'Aucune donnée');
-                const max = Math.max(...data.map(d => d[1]), 1);
-                return React.createElement('div', {style:{display:'flex',flexDirection:'column',gap:'8px'}},
-                    data.map(([label, value], i) =>
-                        React.createElement('div', {key:i, style:{display:'flex',alignItems:'center',gap:'10px'}},
-                            React.createElement('div', {style:{width:'130px',fontSize:'12px',color:'#cbd5e1',textAlign:'right',flexShrink:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}, title:label}, label),
-                            React.createElement('div', {style:{flex:1,height:'22px',background:'rgba(255,255,255,0.08)',borderRadius:'4px',overflow:'hidden'}},
-                                React.createElement('div', {style:{width:`${(value/max)*100}%`,height:'100%',background: colorFn ? colorFn(i) : `hsl(${240-i*18},70%,60%)`,borderRadius:'4px',transition:'width 0.5s ease',display:'flex',alignItems:'center',paddingLeft:'6px',minWidth:'40px'}},
-                                    React.createElement('span', {style:{fontSize:'11px',color:'white',fontWeight:'600',whiteSpace:'nowrap'}}, valueFormatter ? valueFormatter(value) : value)
-                                )
-                            )
-                        )
-                    )
-                );
-            };
-
-            if (!stats) return React.createElement('div', {
-                style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'},
-                onClick: onClose
-            }, React.createElement('div', {style:{background:'#1e293b',borderRadius:'16px',padding:'40px',color:'#94a3b8',textAlign:'center'}},
-                React.createElement('p', null, 'Aucune donnée disponible.'),
-                React.createElement('p', {style:{fontSize:'12px',marginTop:'8px'}}, 'Importez un CSV avec le module v10 pour voir les statistiques.'),
-                React.createElement('button', {onClick:onClose,style:{marginTop:'16px',background:'#6366f1',color:'white',border:'none',borderRadius:'8px',padding:'8px 20px',cursor:'pointer'}}, 'Fermer')
-            ));
-
-            const tabs = [
-                {id:'overview', label:'📊 Vue globale'},
-                {id:'modeles', label:'👗 Modèles'},
-                {id:'tailles', label:'📏 Tailles'},
-                {id:'listes', label:'📋 Détail liste'},
-            ];
-
-            const tabStyle = (active) => ({
-                padding:'7px 14px', borderRadius:'8px', border:'none', cursor:'pointer',
-                fontSize:'12px', fontWeight:'600',
-                background: active ? 'rgba(99,102,241,0.3)' : 'transparent',
-                color: active ? '#a5b4fc' : '#64748b',
-                transition:'all 0.2s'
-            });
-
-            const cardStyle = {background:'rgba(255,255,255,0.04)',borderRadius:'12px',padding:'18px',marginBottom:'16px'};
-            const h3Style = {margin:'0 0 14px',color:'#e2e8f0',fontSize:'14px',fontWeight:'600'};
-
-            return React.createElement('div', {
-                style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.78)',backdropFilter:'blur(4px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'},
-                onClick: (e) => e.target === e.currentTarget && onClose()
-            },
-                React.createElement('div', {style:{background:'linear-gradient(160deg,#1e1b4b 0%,#0f172a 100%)',borderRadius:'16px',width:'100%',maxWidth:'820px',maxHeight:'88vh',overflow:'hidden',display:'flex',flexDirection:'column',boxShadow:'0 25px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(99,102,241,0.3)'}},
-
-                    // Header
-                    React.createElement('div', {style:{padding:'20px 24px 0',borderBottom:'1px solid rgba(255,255,255,0.08)'}},
-                        React.createElement('div', {style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'14px'}},
-                            React.createElement('div', null,
-                                React.createElement('h2', {style:{margin:0,color:'#e2e8f0',fontSize:'18px',fontWeight:'700'}}, '📊 Statistiques — ' + (listName || 'Dashboard')),
-                                React.createElement('p', {style:{margin:'3px 0 0',color:'#64748b',fontSize:'12px'}}, stats.nbCommandes + ' commandes · ' + stats.nbArticles + ' articles')
-                            ),
-                            React.createElement('button', {onClick:onClose,style:{background:'rgba(255,255,255,0.08)',border:'none',color:'#94a3b8',width:'34px',height:'34px',borderRadius:'8px',cursor:'pointer',fontSize:'18px'}}, '×')
-                        ),
-                        React.createElement('div', {style:{display:'flex',gap:'4px',paddingBottom:'0'}},
-                            tabs.map(t => React.createElement('button', {key:t.id,style:tabStyle(activeTab===t.id),onClick:()=>setActiveTab(t.id)}, t.label))
-                        )
-                    ),
-
-                    // Body
-                    React.createElement('div', {style:{flex:1,overflowY:'auto',padding:'20px 24px'}},
-
-                        // TAB OVERVIEW
-                        activeTab === 'overview' && React.createElement('div', null,
-                            // KPIs
-                            React.createElement('div', {style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'14px',marginBottom:'20px'}},
-                                [
-                                    {label:'CA Global',value:fmt(stats.caGlobal),sub:'TTC toutes commandes',color:'#6366f1',icon:'💰'},
-                                    {label:'Panier moyen',value:fmt(stats.panierMoyen),sub:'par commande',color:'#10b981',icon:'🛒'},
-                                    {label:'Articles',value:stats.nbArticles,sub:stats.nbCommandes+' commandes',color:'#f59e0b',icon:'📦'},
-                                ].map((kpi,i) => React.createElement('div', {key:i,style:{background:'rgba(255,255,255,0.05)',borderRadius:'10px',padding:'16px',border:`1px solid ${kpi.color}33`,textAlign:'center'}},
-                                    React.createElement('div', {style:{fontSize:'24px',marginBottom:'4px'}}, kpi.icon),
-                                    React.createElement('div', {style:{fontSize:'22px',fontWeight:'700',color:kpi.color}}, kpi.value),
-                                    React.createElement('div', {style:{fontSize:'11px',color:'#94a3b8',marginTop:'3px'}}, kpi.label),
-                                    React.createElement('div', {style:{fontSize:'10px',color:'#64748b'}}, kpi.sub)
-                                ))
-                            ),
-                            // Top 5 modèles CA
-                            React.createElement('div', {style:cardStyle},
-                                React.createElement('h3', {style:h3Style}, '🏆 Top modèles — CA'),
-                                React.createElement(BarChart, {data:stats.topModeles.slice(0,6), colorFn:(i)=>`hsl(${265-i*12},65%,${62-i*2}%)`, valueFormatter:fmtShort})
-                            ),
-                            // Transporteurs
-                            React.createElement('div', {style:cardStyle},
-                                React.createElement('h3', {style:h3Style}, '🚚 CA par transporteur'),
-                                React.createElement(BarChart, {data:stats.transporteursData.slice(0,6), colorFn:(i)=>`hsl(${200-i*15},60%,${55-i*2}%)`, valueFormatter:fmtShort})
-                            )
-                        ),
-
-                        // TAB MODELES
-                        activeTab === 'modeles' && React.createElement('div', null,
-                            React.createElement('div', {style:cardStyle},
-                                React.createElement('h3', {style:h3Style}, '💰 Top 10 par CA'),
-                                React.createElement(BarChart, {data:stats.topModeles, colorFn:(i)=>`hsl(${275-i*10},65%,${62-i*2}%)`, valueFormatter:fmtShort})
-                            ),
-                            React.createElement('div', {style:cardStyle},
-                                React.createElement('h3', {style:h3Style}, '📦 Top 10 par quantité'),
-                                React.createElement(BarChart, {
-                                    data:Object.entries(stats.qtyParModele).sort((a,b)=>b[1]-a[1]).slice(0,10),
-                                    colorFn:(i)=>`hsl(${180-i*10},60%,${55-i*2}%)`,
-                                    valueFormatter:(v)=>v+' pcs'
-                                })
-                            )
-                        ),
-
-                        // TAB TAILLES
-                        activeTab === 'tailles' && React.createElement('div', {style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px'}},
-                            React.createElement('div', {style:cardStyle},
-                                React.createElement('h3', {style:h3Style}, '📏 Quantités par taille'),
-                                React.createElement(BarChart, {data:stats.topTailles, colorFn:(i)=>`hsl(${160-i*12},65%,${55-i*2}%)`, valueFormatter:(v)=>v+' pcs'})
-                            ),
-                            React.createElement('div', {style:{...cardStyle}},
-                                React.createElement('h3', {style:h3Style}, '💰 CA par taille'),
-                                React.createElement(BarChart, {
-                                    data:Object.entries(stats.caParTaille).sort((a,b)=>b[1]-a[1]).slice(0,10),
-                                    colorFn:(i)=>`hsl(${35+i*12},70%,${55-i*2}%)`,
-                                    valueFormatter:fmtShort
-                                })
-                            )
-                        ),
-
-                        // TAB LISTES
-                        activeTab === 'listes' && React.createElement('div', null,
-                            React.createElement('div', {style:{display:'flex',flexDirection:'column',gap:'10px'}},
-                                stats.listesData.map(([liste, ca], i) => {
-                                    const lignes = csvData.filter(r => (listName || 'Liste') === liste);
-                                    const nbCmd = new Set(csvData.map(r => r.reference)).size;
-                                    const pct = stats.caGlobal > 0 ? (ca / stats.caGlobal) * 100 : 0;
-                                    return React.createElement('div', {key:i, style:{background:'rgba(255,255,255,0.04)',borderRadius:'10px',padding:'14px',border:'1px solid rgba(255,255,255,0.07)'}},
-                                        React.createElement('div', {style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}},
-                                            React.createElement('span', {style:{color:'#e2e8f0',fontWeight:'600',fontSize:'14px'}}, liste),
-                                            React.createElement('span', {style:{color:'#a5b4fc',fontWeight:'700',fontSize:'20px'}}, fmt(ca))
-                                        ),
-                                        React.createElement('div', {style:{height:'5px',background:'rgba(255,255,255,0.08)',borderRadius:'3px',marginBottom:'8px'}},
-                                            React.createElement('div', {style:{width:`${pct}%`,height:'100%',background:`hsl(${250-i*15},70%,60%)`,borderRadius:'3px'}})
-                                        ),
-                                        React.createElement('div', {style:{display:'flex',gap:'20px'}},
-                                            React.createElement('span', {style:{fontSize:'12px',color:'#64748b'}}, '📦 '+nbCmd+' commandes'),
-                                            React.createElement('span', {style:{fontSize:'12px',color:'#64748b'}}, '👗 '+stats.nbArticles+' pièces'),
-                                            React.createElement('span', {style:{fontSize:'12px',color:'#64748b'}}, '📊 '+pct.toFixed(1)+'% du CA')
-                                        )
-                                    );
-                                })
-                            )
-                        )
-                    )
-                )
             );
         }
 
