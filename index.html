@@ -203,16 +203,15 @@
                 }
                 setPoidsData(prev => ({ ...prev, [ref]: val.trim() }));
             };
-            const saveOrderNote = async (ref, val, authorName) => {
-                const author = authorName || 'Admin';
+            const saveOrderNote = async (ref, val) => {
                 if (!val || val.trim() === '') {
                     await window.firebaseRemove(window.firebaseRef(window.db, 'order_notes/' + ref));
                 } else {
                     await window.firebaseUpdate(window.firebaseRef(window.db, 'order_notes'), {
-                        [ref]: { text: val.trim(), author: author, updatedAt: Date.now() }
+                        [ref]: { text: val.trim(), author: 'Admin', updatedAt: Date.now() }
                     });
                 }
-                setOrderNotesData(prev => ({ ...prev, [ref]: val.trim() ? { text: val.trim(), author: author, updatedAt: Date.now() } : null }));
+                setOrderNotesData(prev => ({ ...prev, [ref]: val.trim() ? { text: val.trim(), author: 'Admin', updatedAt: Date.now() } : null }));
             };
             const [showImportModal, setShowImportModal] = useState(false);
             const [completionAlert, setCompletionAlert] = useState(null); // {reference, client, autresCommandes[]}
@@ -985,25 +984,19 @@
                                         const ref = globalSelectedOrder.reference;
                                         const noteObj = orderNotesData[ref];
                                         const noteText = noteObj?.text || '';
-                                        const noteAuthor = noteObj?.author || 'Admin';
-                                        // Fatima peut éditer si : note vide (nouvelle) OU note qui lui appartient
-                                        const canFatimaEdit = isCommentaires && (!noteText || noteAuthor === userName);
-                                        const canEditNote = isAdmin || canFatimaEdit;
                                         const NoteAdmin = () => {
                                             const [editing, setEditing] = React.useState(false);
                                             const [val, setVal] = React.useState(noteText);
                                             React.useEffect(() => { setVal(noteText); }, [noteText]);
                                             const save = async () => {
-                                                await saveOrderNote(ref, val, userName);
+                                                await saveOrderNote(ref, val);
                                                 setEditing(false);
                                             };
                                             const cancel = () => { setVal(noteText); setEditing(false); };
-                                            if (canEditNote) {
-                                                const labelColor = isAdmin ? 'text-indigo-500' : 'text-purple-500';
-                                                const label = isAdmin ? '🔒 Note interne (admin)' : '💬 Note interne (Fatima)';
+                                            if (isAdmin) {
                                                 return (
                                                     <div className="mt-4 pt-4 border-t border-gray-200">
-                                                        <p className={`text-xs font-semibold ${labelColor} mb-2`}>{label}</p>
+                                                        <p className="text-xs font-semibold text-indigo-500 mb-2">🔒 Note interne (admin)</p>
                                                         {editing ? (
                                                             <div className="flex flex-col gap-2">
                                                                 <textarea
@@ -1016,9 +1009,6 @@
                                                                 />
                                                                 <div className="flex gap-2 justify-end">
                                                                     <button onClick={cancel} className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Annuler</button>
-                                                                    {noteText && (
-                                                                        <button onClick={async () => { await saveOrderNote(ref, '', userName); setEditing(false); }} className="px-3 py-1.5 text-sm bg-red-100 text-red-600 hover:bg-red-200 font-semibold rounded-lg transition">🗑️ Supprimer</button>
-                                                                    )}
                                                                     <button onClick={save} className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition">💾 Sauvegarder</button>
                                                                 </div>
                                                             </div>
@@ -1028,13 +1018,11 @@
                                                                 className={`cursor-pointer rounded-lg px-3 py-2.5 border transition ${noteText ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-400' : 'bg-gray-50 border-dashed border-gray-300 hover:border-indigo-300'}`}
                                                             >
                                                                 {noteText ? (
-                                                                    <>
-                                                                        <p className="text-sm text-indigo-800 font-medium whitespace-pre-wrap">{noteText}</p>
-                                                                        <p className="text-xs text-indigo-400 mt-1">— {noteAuthor}{noteObj?.updatedAt && ' · ' + new Date(noteObj.updatedAt).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</p>
-                                                                    </>
+                                                                    <p className="text-sm text-indigo-800 font-medium whitespace-pre-wrap">{noteText}</p>
                                                                 ) : (
                                                                     <p className="text-sm text-gray-400 italic">Cliquer pour ajouter une note…</p>
                                                                 )}
+                                                                {noteObj?.updatedAt && <p className="text-xs text-indigo-400 mt-1">Modifié le {new Date(noteObj.updatedAt).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</p>}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1047,7 +1035,6 @@
                                                     <p className="text-xs font-semibold text-indigo-500 mb-2">🔒 Note interne</p>
                                                     <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2.5">
                                                         <p className="text-sm text-indigo-800 font-medium whitespace-pre-wrap">{noteText}</p>
-                                                        <p className="text-xs text-indigo-400 mt-1">— {noteAuthor}</p>
                                                     </div>
                                                 </div>
                                             );
@@ -3989,8 +3976,17 @@
             const themeAccentLight = themeAccent + '20';
 
             // Synchronisation : quand la liste de suivi active change, sélectionner la liste de coupe au même index
+            // On track le précédent activeListId pour ne déclencher la sync QUE quand il change réellement
+            // (et pas quand `listes` se met à jour suite à une écriture Firebase, ex: ajout de commentaire)
+            const prevActiveListIdRef = React.useRef(activeListId);
             React.useEffect(() => {
-                if (!activeListId || activeListId === 'global' || listes.length === 0 || !parentLists) return;
+                if (!activeListId || activeListId === 'global' || listes.length === 0 || !parentLists) {
+                    prevActiveListIdRef.current = activeListId;
+                    return;
+                }
+                // Ne rien faire si activeListId n'a pas changé (évite le reset après sauvegarde commentaire)
+                if (prevActiveListIdRef.current === activeListId) return;
+                prevActiveListIdRef.current = activeListId;
                 const parentIdx = parentLists.findIndex(l => l.id === activeListId);
                 if (parentIdx >= 0 && listes[parentIdx]) {
                     setActiveListe(listes[parentIdx].id);
@@ -4244,6 +4240,11 @@
             const [zoomPhoto, setZoomPhoto] = React.useState(null);
 
             // Charger la liste des listes de coupe
+            // IMPORTANT : on utilise une ref pour lire la valeur courante de activeListe
+            // car sinon la closure du callback capture la valeur initiale (null) et réinitialise
+            // systématiquement à la 1ère liste à chaque snapshot Firebase (ex: après save commentaire)
+            const activeListeRef = React.useRef(activeListe);
+            React.useEffect(() => { activeListeRef.current = activeListe; }, [activeListe]);
             React.useEffect(() => {
                 const r = window.firebaseRef(db, 'listescoupe');
                 const unsub = window.firebaseOnValue(r, snap => {
@@ -4251,7 +4252,7 @@
                     const arr = Object.entries(val).map(([id, v]) => ({ id, ...v }))
                         .sort((a, b) => a.createdAt - b.createdAt);
                     setListes(arr);
-                    if (!activeListe && arr.length > 0) setActiveListe(arr[0].id);
+                    if (!activeListeRef.current && arr.length > 0) setActiveListe(arr[0].id);
                 });
                 return () => unsub();
             }, []);
