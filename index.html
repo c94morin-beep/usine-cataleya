@@ -1398,8 +1398,8 @@
                                 {(isAdmin || isOperateur || isSara || isCommentaires || isLecteur) && (
                                     <TabButton active={activeTab === 'production'} onClick={() => setActiveTab('production')} icon="🧵" label="Suivi Production" />
                                 )}
-                                {/* Multi-Commandes — Admin + Achraf */}
-                                {(isAdmin || isOperateur || isLecteur) && (
+                                {/* Multi-Commandes — Admin + Achraf + Sara */}
+                                {(isAdmin || isOperateur || isSara || isLecteur) && (
                                     <TabButton active={activeTab === 'multiorders'} onClick={() => setActiveTab('multiorders')} icon="👯" label="Multi-Commandes" />
                                 )}
                                 {/* Casiers — Admin seulement */}
