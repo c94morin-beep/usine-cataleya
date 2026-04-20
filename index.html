@@ -5329,11 +5329,12 @@
             const [formHeader, setFormHeader] = React.useState({ cliente: '', reference: '' });
             const [formArticles, setFormArticles] = React.useState([{ produit: '', couleurTaille: '', description: '', photoUrl: '', status: 'En attente' }]);
 
-            const SAV_STATUTS = ['En attente', 'Reçu', 'Rangé'];
+            const SAV_STATUTS = ['En attente', 'Reçu', 'Rangé', 'Expédié'];
             const STATUS_COLORS = {
                 'En attente': { bg: 'bg-orange-100', text: 'text-orange-700', dot: 'bg-orange-400' },
                 'Reçu':       { bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-400' },
                 'Rangé':      { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500' },
+                'Expédié':    { bg: 'bg-emerald-100', text: 'text-emerald-800', dot: 'bg-emerald-600' },
             };
 
             // Permissions
