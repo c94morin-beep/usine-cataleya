@@ -13,9 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script>
-        // Impression étiquette via proxy PHP + iframe dans une page wrapper HTML
-        // Méthode la plus fiable : le wrapper HTML charge le PDF dans un iframe
-        // et déclenche print() sur l'iframe dès qu'il est rendu.
+        // Impression étiquette via proxy PHP + window.print()
         window.printLabel = async function(labelUrl, fallbackFn) {
             try {
                 const proxyUrl = 'https://www.cataleyaparis.com/proxy-label.php?url=' + encodeURIComponent(labelUrl);
@@ -23,58 +21,15 @@
                 if (!response.ok) throw new Error('Fetch PDF échoué: ' + response.status);
                 const blob = await response.blob();
                 const blobUrl = URL.createObjectURL(blob);
-
-                // Page wrapper HTML avec iframe + auto-print
-                const wrapperHtml = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Impression étiquette</title>
-<style>
-  html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #525659; }
-  iframe { border: 0; width: 100%; height: 100vh; }
-  #status { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px 14px; border-radius: 6px; font-family: sans-serif; font-size: 13px; z-index: 10; }
-</style>
-</head>
-<body>
-<div id="status">⏳ Préparation de l'impression...</div>
-<iframe id="pdfFrame" src="${blobUrl}"></iframe>
-<script>
-(function() {
-  var iframe = document.getElementById('pdfFrame');
-  var status = document.getElementById('status');
-  var printed = false;
-  function doPrint() {
-    if (printed) return;
-    printed = true;
-    status.textContent = '🖨️ Ouverture de l\\'impression...';
-    try {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(function() { status.style.display = 'none'; }, 1000);
-    } catch(e) {
-      console.warn('[Print iframe]', e);
-      // Fallback : print depuis la fenêtre parente
-      try { window.focus(); window.print(); } catch(e2) {}
-    }
-  }
-  iframe.onload = function() { setTimeout(doPrint, 600); };
-  // Fallback si onload ne se déclenche pas
-  setTimeout(doPrint, 1800);
-})();
-<\/script>
-</body>
-</html>`;
-
-                const wrapperBlob = new Blob([wrapperHtml], { type: 'text/html' });
-                const wrapperUrl = URL.createObjectURL(wrapperBlob);
-                const win = window.open(wrapperUrl, '_blank');
-                if (!win) { fallbackFn(); return; }
-                // Nettoyage des blob URLs au bout de 5 min
-                setTimeout(() => {
-                    URL.revokeObjectURL(blobUrl);
-                    URL.revokeObjectURL(wrapperUrl);
-                }, 5 * 60 * 1000);
+                const win = window.open(blobUrl, '_blank');
+                if (win) {
+                    win.onload = function() {
+                        setTimeout(() => {
+                            win.focus();
+                            win.print();
+                        }, 800);
+                    };
+                } else { fallbackFn(); }
             } catch(e) {
                 console.warn('[Print] Erreur, fallback:', e);
                 fallbackFn();
@@ -1455,7 +1410,7 @@
                                 {(isAdmin || isSara || isCommentaires || isLecteur || isOperateur) && (
                                     <TabButton active={activeTab === 'listecoupe'} onClick={() => setActiveTab('listecoupe')} icon="✂️" label="Listes Coupe" />
                                 )}
-                                {(isAdmin || isCommentaires || isLecteur) && (
+                                {(isAdmin || isCommentaires || isLecteur || isSara || isOperateur) && (
                                     <TabButton active={activeTab === 'sav'} onClick={() => setActiveTab('sav')} icon="🔧" label="SAV" />
                                 )}
                                 {(isAdmin || isSara || isOperateur) && (
@@ -1809,17 +1764,30 @@
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {/* Cartes visibles par tous */}
-                        {!isSara && !isCommentaires && <StatCard title="Total / En attente" value={stats.total} subtitle={`${stats.enAttente} en attente`} color="blue" icon="📦" />}
-                        {!isSara && !isCommentaires && <StatCard title="Commandes" value={[...new Set(orders.map(o => o.reference))].length} color="indigo" icon="🛒" onClick={() => setShowCommandesModal(true)} clickable={true} />}
-                        {!isSara && !isCommentaires && <StatCard title="Terminés" value={terminesRefs.length} subtitle={`commandes complètes`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />}
-                        {!isSara && !isCommentaires && <StatCard title="Validés" value={validéesRefs.length} subtitle={`vérifiés & emballés`} color="emerald" icon="📦✅" onClick={() => setShowValidésModal(true)} clickable={true} />}
-                        {!isSara && !isCommentaires && <StatCard title="Rangés" value={(() => { const refs = [...new Set(orders.filter(o => o.status === STATUTS.RANGE).map(o => o.reference))]; return refs.filter(ref => { const items = orders.filter(o => o.reference === ref); return !items.every(o => o.status === STATUTS.RANGE); }).length; })()} subtitle={`${orders.filter(o => { if(o.status !== STATUTS.RANGE) return false; const c = orders.filter(a => a.reference === o.reference); return !c.every(a => a.status === STATUTS.RANGE); }).length} articles rangés`} color="teal" icon="📦" onClick={() => setShowRangesModal(true)} clickable={true} />}
+                        {!isCommentaires && <StatCard title="Total / En attente" value={stats.total} subtitle={`${stats.total} articles • ${stats.enAttente} en attente`} color="blue" icon="📦" />}
+                        {!isCommentaires && <StatCard title="Commandes" value={[...new Set(orders.map(o => o.reference))].length} subtitle={`${terminesRefs.length + validéesRefs.length} terminées`} color="indigo" icon="🛒" onClick={() => setShowCommandesModal(true)} clickable={true} />}
+                        {!isCommentaires && <StatCard title="Terminés" value={terminesRefs.length} subtitle={`commandes complètes`} color="green" icon="✅" onClick={() => setShowTerminesModal(true)} clickable={true} />}
+                        {!isCommentaires && <StatCard title="Validés" value={validéesRefs.length} subtitle={`commandes vérifiées & emballées`} color="emerald" icon="📦✅" onClick={() => setShowValidésModal(true)} clickable={true} />}
+                        {!isCommentaires && <StatCard title="Rangés" value={(() => { const refs = [...new Set(orders.filter(o => o.status === STATUTS.RANGE).map(o => o.reference))]; return refs.filter(ref => { const items = orders.filter(o => o.reference === ref); return !items.every(o => o.status === STATUTS.RANGE); }).length; })()} subtitle={`commandes partielles • ${orders.filter(o => { if(o.status !== STATUTS.RANGE) return false; const c = orders.filter(a => a.reference === o.reference); return !c.every(a => a.status === STATUTS.RANGE); }).length} articles rangés`} color="teal" icon="📦" onClick={() => setShowRangesModal(true)} clickable={true} />}
                         {/* Reçus — Admin/Achraf + Sara */}
                         {!isCommentaires && <StatCard title="Reçus" value={orders.filter(o => o.status === STATUTS.RECU).reduce((sum, o) => sum + (o.quantity || 1), 0)} subtitle={`${[...new Set(orders.filter(o => o.status === STATUTS.RECU).map(o => o.reference))].length} commande(s)`} color="orange" icon="📬" onClick={() => setShowRecusModal(true)} clickable={true} />}
-                        {/* Avec commentaire — Admin/Achraf + Fatima */}
-                        {!isSara && <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />}
+                        {/* Avec commentaire — Admin/Achraf + Fatima + Sara */}
+                        <StatCard title="Avec commentaire" value={stats.avecCommentaire} color="purple" icon="💬" onClick={() => setShowCommentairesModal(true)} clickable={true} />
                         {/* SAV — visible par tous */}
-                        <StatCard title="SAV" value={savArticles.reduce((n, sav) => { const arts = sav.articles ? (Array.isArray(sav.articles) ? sav.articles : Object.values(sav.articles)) : [sav]; return n + arts.filter(a => a.status !== 'Rangé').length; }, 0)} subtitle={`${savArticles.reduce((n, sav) => { const arts = sav.articles ? (Array.isArray(sav.articles) ? sav.articles : Object.values(sav.articles)) : [sav]; return n + arts.length; }, 0)} total`} color="red" icon="🔧" onClick={() => setShowSAVModal(true)} clickable={true} />
+                        {(() => {
+                            const allArts = savArticles.flatMap(sav => sav.articles ? (Array.isArray(sav.articles) ? sav.articles : Object.values(sav.articles)) : [sav]);
+                            const enAttente = allArts.filter(a => a.status === 'En attente').length;
+                            const recu = allArts.filter(a => a.status === 'Reçu').length;
+                            const range = allArts.filter(a => a.status === 'Rangé' && !a.validatedAt).length;
+                            const expedie = allArts.filter(a => a.status === 'Expédié').length;
+                            const valides = allArts.filter(a => a.status === 'Rangé' && a.validatedAt).length;
+                            const total = allArts.length;
+                            const savTermines = savArticles.filter(sav => {
+                                const arts = sav.articles ? (Array.isArray(sav.articles) ? sav.articles : Object.values(sav.articles)) : [sav];
+                                return arts.length > 0 && arts.every(a => a.status === 'Rangé' && a.validatedAt);
+                            }).length;
+                            return <StatCard title="SAV" value={enAttente} subtitle={`en attente • ${range} rangé, ${valides} validé, ${expedie} expédié, ${recu} reçu • ${savTermines} SAV terminés • ${total} total`} color="red" icon="🔧" onClick={() => setShowSAVModal(true)} clickable={true} />;
+                        })()}
                     </div>
 
                     <div className="bg-white rounded-lg shadow p-6">
@@ -1850,7 +1818,7 @@
                                 <div className="sticky top-0 bg-white p-5 border-b rounded-t-xl flex justify-between items-center">
                                     <h3 className="text-lg font-bold text-red-700">🔧 Articles SAV</h3>
                                     <div className="flex gap-2 items-center">
-                                        {(isAdmin || isCommentaires) && (
+                                        {(isAdmin || isCommentaires || isSara || isOperateur) && (
                                             <button onClick={() => { setShowSAVModal(false); setActiveTab('sav'); }}
                                                 className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600">
                                                 Gérer →
@@ -1868,7 +1836,10 @@
                                                 const statusColors = {'En attente':'bg-orange-100 text-orange-700','Reçu':'bg-blue-100 text-blue-700','Rangé':'bg-green-100 text-green-700'};
                                                 // Compatibilité ancienne structure
                                                 const arts = sav.articles ? (Array.isArray(sav.articles) ? sav.articles : Object.values(sav.articles)) : [{ produit: sav.produit, couleurTaille: sav.couleurTaille, photoUrl: sav.photoUrl, status: sav.status }];
-                                                const activeArts = arts.filter(a => a.status !== 'Rangé');
+                                                // Un SAV est "terminé" si tous ses articles sont Rangés ET validés → on l'affiche plus comme actif
+                                                const allDone = arts.length > 0 && arts.every(a => a.status === 'Rangé' && a.validatedAt);
+                                                if (allDone) return null;
+                                                const activeArts = arts.filter(a => !(a.status === 'Rangé' && a.validatedAt));
                                                 if (activeArts.length === 0) return null;
                                                 return (
                                                     <div key={i} className="border border-gray-200 rounded-xl overflow-hidden">
@@ -5396,6 +5367,7 @@
             const canAdd    = isAdmin || isCommentaires; // Admin + Fatima
             const canEdit   = isAdmin || isCommentaires; // Admin + Fatima
             const canStatus = isAdmin || isCommentaires || isOperateur || isSara; // tout le monde sauf lecture
+            const canValidate = isAdmin || isCommentaires || isOperateur || isSara; // Admin + Fatima + Achraf + Sara
 
             React.useEffect(() => {
                 const r = window.firebaseRef(db, 'sav');
@@ -5453,7 +5425,32 @@
             const updateArticleStatus = async (savId, artIdx, status) => {
                 const sav = savList.find(s => s.id === savId);
                 if (!sav) return;
-                const updated = sav.articles.map((a, i) => i === artIdx ? { ...a, status } : a);
+                const updated = sav.articles.map((a, i) => {
+                    if (i !== artIdx) return a;
+                    // Si on change le statut et que ce n'est plus "Rangé", on retire la validation
+                    const next = { ...a, status };
+                    if (status !== 'Rangé' && next.validatedAt) {
+                        delete next.validatedAt;
+                        delete next.validatedBy;
+                    }
+                    return next;
+                });
+                await window.firebaseUpdate(window.firebaseRef(db, 'sav/' + savId), {
+                    articles: updated, updatedAt: Date.now(), updatedBy: userName
+                });
+            };
+
+            const toggleArticleValidation = async (savId, artIdx) => {
+                const sav = savList.find(s => s.id === savId);
+                if (!sav) return;
+                const updated = sav.articles.map((a, i) => {
+                    if (i !== artIdx) return a;
+                    if (a.validatedAt) {
+                        const { validatedAt, validatedBy, ...rest } = a;
+                        return rest;
+                    }
+                    return { ...a, validatedAt: Date.now(), validatedBy: userName };
+                });
                 await window.firebaseUpdate(window.firebaseRef(db, 'sav/' + savId), {
                     articles: updated, updatedAt: Date.now(), updatedBy: userName
                 });
@@ -5464,12 +5461,18 @@
                 await window.firebaseRemove(window.firebaseRef(db, 'sav/' + id));
             };
 
+            // Un SAV est "terminé" si tous ses articles sont Rangés ET validés
+            const isSavTermine = (sav) => sav.articles.length > 0 && sav.articles.every(a => a.status === 'Rangé' && a.validatedAt);
+            const savTerminesCount = savList.filter(isSavTermine).length;
+
             // Filtrage : on filtre les SAV dont au moins un article correspond
             const filtered = savList.filter(sav => {
-                const matchStatus = filterStatus === 'tous' || sav.articles.some(a => a.status === filterStatus);
                 const q = search.toLowerCase();
                 const matchSearch = !q || [sav.cliente, sav.reference, ...sav.articles.map(a => a.produit)].join(' ').toLowerCase().includes(q);
-                return matchStatus && matchSearch;
+                if (!matchSearch) return false;
+                if (filterStatus === 'tous') return true;
+                if (filterStatus === 'termines') return isSavTermine(sav);
+                return sav.articles.some(a => a.status === filterStatus);
             });
 
             // Comptages par statut (sur les articles)
@@ -5522,6 +5525,11 @@
                                 </div>
                             );
                         })}
+                        <div className={`px-3 py-2 rounded-xl border text-sm font-semibold cursor-pointer transition ${filterStatus === 'termines' ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 bg-white'}`}
+                            onClick={() => setFilterStatus(filterStatus === 'termines' ? 'tous' : 'termines')}>
+                            <span className="inline-block w-2 h-2 rounded-full mr-2 bg-emerald-500"></span>
+                            Terminés <span className="ml-1 text-emerald-700 font-bold">{savTerminesCount}</span>
+                        </div>
                         <div className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold cursor-pointer"
                             onClick={() => setFilterStatus('tous')}>
                             Tous <span className="ml-1 text-gray-600 font-bold">{totalArticles}</span>
@@ -5543,14 +5551,17 @@
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-4">
-                            {filtered.map(sav => (
-                                <div key={sav.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            {filtered.map(sav => {
+                                const allValidated = sav.articles.length > 0 && sav.articles.every(a => a.status === 'Rangé' && a.validatedAt);
+                                return (
+                                <div key={sav.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${allValidated ? 'border-emerald-300 bg-emerald-50/30' : 'border-gray-200'}`}>
                                     {/* En-tête commande */}
-                                    <div className="bg-orange-50 border-b border-orange-100 px-4 py-2 flex items-center justify-between gap-2 flex-wrap">
+                                    <div className={`border-b px-4 py-2 flex items-center justify-between gap-2 flex-wrap ${allValidated ? 'bg-emerald-50 border-emerald-100' : 'bg-orange-50 border-orange-100'}`}>
                                         <div className="flex items-center gap-3">
-                                            {sav.reference && <span className="font-bold text-orange-800 text-sm">📦 Réf. {sav.reference}</span>}
-                                            {sav.cliente && <span className="text-xs text-orange-600">👤 {sav.cliente}</span>}
-                                            <span className="text-xs text-orange-400">{sav.articles.length} article{sav.articles.length > 1 ? 's' : ''}</span>
+                                            {sav.reference && <span className={`font-bold text-sm ${allValidated ? 'text-emerald-800' : 'text-orange-800'}`}>📦 Réf. {sav.reference}</span>}
+                                            {sav.cliente && <span className={`text-xs ${allValidated ? 'text-emerald-600' : 'text-orange-600'}`}>👤 {sav.cliente}</span>}
+                                            <span className={`text-xs ${allValidated ? 'text-emerald-400' : 'text-orange-400'}`}>{sav.articles.length} article{sav.articles.length > 1 ? 's' : ''}</span>
+                                            {allValidated && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-600 text-white">✅ Terminé</span>}
                                         </div>
                                         <div className="flex gap-2">
                                             {canEdit && (
@@ -5569,8 +5580,10 @@
                                             const col = STATUS_COLORS[art.status] || STATUS_COLORS['En attente'];
                                             const showThisArticle = filterStatus === 'tous' || art.status === filterStatus;
                                             if (!showThisArticle) return null;
+                                            const isValidated = !!art.validatedAt;
+                                            const canShowValidateBtn = canValidate && art.status === 'Rangé';
                                             return (
-                                                <div key={idx} className="p-3 flex items-start gap-3">
+                                                <div key={idx} className={`p-3 flex items-start gap-3 ${isValidated ? 'bg-emerald-50/40' : ''}`}>
                                                     {art.photoUrl && (
                                                         <img src={art.photoUrl} className="w-14 h-14 object-cover rounded-lg border border-gray-200 flex-shrink-0"
                                                             onError={e => e.target.style.display='none'} />
@@ -5583,15 +5596,27 @@
                                                                 <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${col.dot}`}></span>
                                                                 {art.status}
                                                             </span>
+                                                            {isValidated && (
+                                                                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-700" title={art.validatedBy ? `Validé par ${art.validatedBy}` : 'Validé'}>
+                                                                    ✅ Validé
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         {art.description && <p className="text-xs text-gray-600 italic bg-gray-50 rounded p-2 mb-1">{art.description}</p>}
-                                                        {canStatus && (
-                                                            <select value={art.status}
-                                                                onChange={e => updateArticleStatus(sav.id, idx, e.target.value)}
-                                                                className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-orange-400 mt-1">
-                                                                {SAV_STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
-                                                            </select>
-                                                        )}
+                                                        <div className="flex items-center gap-2 flex-wrap mt-1">
+                                                            {canStatus && (
+                                                                <select value={art.status}
+                                                                    onChange={e => updateArticleStatus(sav.id, idx, e.target.value)}
+                                                                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-orange-400">
+                                                                    {SAV_STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
+                                                                </select>
+                                                            )}
+                                                            {canShowValidateBtn && (
+                                                                isValidated
+                                                                    ? <button onClick={() => toggleArticleValidation(sav.id, idx)} className="flex items-center gap-1 px-3 py-1 bg-green-400 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition" title="Annuler la validation">✅ Validé</button>
+                                                                    : <button onClick={() => toggleArticleValidation(sav.id, idx)} className="flex items-center gap-1 px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-white text-xs font-semibold rounded-lg transition">📦 Valider</button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
@@ -5601,7 +5626,8 @@
                                         <div className="px-4 py-1 text-xs text-gray-300 border-t border-gray-100">Modifié par {sav.updatedBy}</div>
                                     )}
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
 
@@ -5681,6 +5707,6 @@
         // Render
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.7 — 22/04/26</div>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:#aaa;z-index:9999;pointer-events:none;">v3.6 — 12/04/26</div>
 </body>
 </html>
