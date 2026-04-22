@@ -1736,9 +1736,19 @@
                                                                 target="_blank" rel="noopener noreferrer"
                                                                 className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-semibold">🧾 Facture</a>
                                                             {ship?.loading && <span className="text-xs text-gray-400">⏳ Chargement...</span>}
-                                                            {ship?.labelUrl && <a href={ship.labelUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-600 font-semibold">📄 Étiquette MR</a>}
+                                                            {ship?.labelUrl && <button onClick={() => {
+                                                                const url = ship.labelUrl;
+                                                                if (r.ref) window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [r.ref]: Date.now() });
+                                                                const fallback = () => window.open(url, '_blank');
+                                                                window.printLabel(url, fallback);
+                                                            }} className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-600 font-semibold">📄 Étiquette MR</button>}
                                                             {ship?.trackingUrl && <a href={ship.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-600 font-semibold">🔍 Suivi MR</a>}
-                                                            {ship?.packlinkUrl && <a href={ship.packlinkUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-orange-50 hover:bg-orange-100 rounded-lg text-orange-600 font-semibold">📄 Étiquette {ship.packlinkCarrier || 'Packlink'}</a>}
+                                                            {ship?.packlinkUrl && <button onClick={() => {
+                                                                const url = ship.packlinkUrl;
+                                                                if (r.ref) window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [r.ref]: Date.now() });
+                                                                const fallback = () => window.open(url, '_blank');
+                                                                window.printLabel(url, fallback);
+                                                            }} className="text-xs px-2 py-1 bg-orange-50 hover:bg-orange-100 rounded-lg text-orange-600 font-semibold">📄 Étiquette {ship.packlinkCarrier || 'Packlink'}</button>}
                                                             {ship?.packlinkTrackingUrl && <a href={ship.packlinkTrackingUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-orange-50 hover:bg-orange-100 rounded-lg text-orange-600 font-semibold">🔍 Suivi Packlink</a>}
                                                         </div>
                                                     </div>
