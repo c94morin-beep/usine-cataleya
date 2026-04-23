@@ -762,7 +762,7 @@
             const isLecteur = !userRole || userRole === 'lecture' || (!['admin','operateur','commentaires','livreur'].includes(userRole));
             const isCommentaires = userRole === 'commentaires';
             const isSara = userRole === 'livreur';
-            const canEditStatus = isAdmin || isOperateur;
+            const canEditStatus = isAdmin || isOperateur || isSara;
             const canViewAll = isAdmin || isLecteur;
             const canEditComment = isAdmin || isCommentaires || isSara;
             // Nom affiché de l'utilisateur pour les commentaires
@@ -2541,9 +2541,7 @@
                 const matchStatus = filterStatus === 'all' || order.status === filterStatus;
                 return matchSearch && matchStatus;
             });
-            const statutsDisponibles = isSara 
-                ? [STATUTS.EN_ATTENTE]
-                : isOperateur 
+            const statutsDisponibles = (isSara || isOperateur)
                 ? [STATUTS.EN_ATTENTE, STATUTS.RANGE]
                 : [STATUTS.EN_ATTENTE, STATUTS.RECU, STATUTS.RANGE];
             const [selectedImage, setSelectedImage] = React.useState(null);
