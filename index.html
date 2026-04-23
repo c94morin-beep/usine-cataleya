@@ -894,9 +894,26 @@
                                                             if (ref) window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [ref]: Date.now() });
                                                             const fallback = () => window.open(url, '_blank');
                                                             window.printLabel(url, fallback);
-                                                        }} className="flex items-center gap-1 px-3 py-1.5 bg-orange-400 hover:bg-orange-500 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette {globalSelectedOrder.packlinkCarrier || 'Packlink'}</button>}
+                                                        }} className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">📄 Étiquette {globalSelectedOrder.packlinkCarrier || 'Packlink'}</button>}
                                                         {globalSelectedOrder.packlinkTrackingUrl && <a href={globalSelectedOrder.packlinkTrackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🔍 Suivi {globalSelectedOrder.packlinkTrackingNumber || 'colis'}</a>}
-                                                        <a href={`https://cataleyaparis.fr/FIEdit.php.php?secure_key=ed3fa1ce558e1cfbaa3f99403&id_order=${globalSelectedOrder.reference}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">🧾 Facture</a>
+                                                        {(() => {
+                                                            const PAYS_UE_C = ['france','allemagne','belgique','espagne','italie','pays-bas','netherlands','portugal','autriche','suède','sweden','danemark','denmark','finlande','finland','irlande','ireland','grèce','greece','pologne','poland','tchéquie','czech','hongrie','hungary','roumanie','romania','bulgarie','bulgaria','croatie','croatia','slovaquie','slovakia','slovénie','slovenia','lituanie','lithuania','lettonie','latvia','estonie','estonia','luxembourg','malte','malta','chypre','cyprus','maroc','morocco'];
+                                                            let invoiceRequired = false;
+                                                            if (globalSelectedOrder.adresse_livraison) {
+                                                                const lines = globalSelectedOrder.adresse_livraison.trim().split('\n').map(l => l.trim()).filter(Boolean);
+                                                                const paysLine = lines.length >= 2 ? lines[lines.length - 2] : lines[lines.length - 1];
+                                                                if (paysLine) {
+                                                                    const pays = paysLine.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                                                    invoiceRequired = !PAYS_UE_C.some(p => pays.includes(p.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+                                                                }
+                                                            }
+                                                            return (
+                                                                <a href={`https://cataleyaparis.fr/FIEdit.php?secure_key=ed3fa1ce558e1cfbaa3f99403&id_order=${globalSelectedOrder.reference}`}
+                                                                    target="_blank" rel="noopener noreferrer"
+                                                                    title={invoiceRequired ? "Facture douane requise" : ""}
+                                                                    className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${invoiceRequired ? 'bg-red-500 hover:bg-red-600 text-white border border-red-300' : 'bg-white bg-opacity-20 hover:bg-opacity-30 text-white'}`}>🧾 Facture{invoiceRequired ? ' ⚠️' : ''}</a>
+                                                            );
+                                                        })()}
                                                         {(isAdmin || isOperateur) && (() => {
                                                             const ref = globalSelectedOrder.reference;
                                                             const allItems = globalSelectedOrder.items || [];
@@ -1627,6 +1644,12 @@
                     setSearchShipping(prev => ({ ...prev, [ref]: { loading: false } }));
                 }
             };
+            // Auto-charger le shipping dès que les résultats de recherche apparaissent
+            useEffect(() => {
+                searchResults.forEach(r => {
+                    if (!searchShipping[r.ref]) fetchShippingForRef(r.ref);
+                });
+            }, [searchResults]);
             const [savArticles, setSavArticles] = useState([]);
             const [showTerminesModal, setShowTerminesModal] = useState(false);
             const [showValidésModal, setShowValidésModal] = useState(false);
@@ -1732,9 +1755,24 @@
                                                         {r.email && <p className="text-xs text-gray-400">{r.email}</p>}
                                                         {r.transporteur && <p className="text-xs text-gray-500 mt-0.5">🚚 {r.transporteur}</p>}
                                                         <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                            <a href={`https://cataleyaparis.fr/FIEdit.php?secure_key=ed3fa1ce558e1cfbaa3f99403&id_order=${r.ref}`}
-                                                                target="_blank" rel="noopener noreferrer"
-                                                                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-semibold">🧾 Facture</a>
+                                            {(() => {
+                                                const PAYS_UE_C = ['france','allemagne','belgique','espagne','italie','pays-bas','netherlands','portugal','autriche','suède','sweden','danemark','denmark','finlande','finland','irlande','ireland','grèce','greece','pologne','poland','tchéquie','czech','hongrie','hungary','roumanie','romania','bulgarie','bulgaria','croatie','croatia','slovaquie','slovakia','slovénie','slovenia','lituanie','lithuania','lettonie','latvia','estonie','estonia','luxembourg','malte','malta','chypre','cyprus','maroc','morocco'];
+                                                let invoiceRequired = false;
+                                                if (r.adresse) {
+                                                    const lines = r.adresse.trim().split('\n').map(l => l.trim()).filter(Boolean);
+                                                    const paysLine = lines.length >= 2 ? lines[lines.length - 2] : lines[lines.length - 1];
+                                                    if (paysLine) {
+                                                        const pays = paysLine.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                                        invoiceRequired = !PAYS_UE_C.some(p => pays.includes(p.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+                                                    }
+                                                }
+                                                return (
+                                                    <a href={`https://cataleyaparis.fr/FIEdit.php?secure_key=ed3fa1ce558e1cfbaa3f99403&id_order=${r.ref}`}
+                                                        target="_blank" rel="noopener noreferrer"
+                                                        title={invoiceRequired ? "Facture douane requise" : ""}
+                                                        className={`text-xs px-2 py-1 rounded-lg font-semibold ${invoiceRequired ? 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>🧾 Facture{invoiceRequired ? ' ⚠️' : ''}</a>
+                                                );
+                                            })()}
                                                             {ship?.loading && <span className="text-xs text-gray-400">⏳ Chargement...</span>}
                                                             {ship?.labelUrl && <button onClick={() => {
                                                                 const url = ship.labelUrl;
@@ -1748,8 +1786,8 @@
                                                                 if (r.ref) window.firebaseUpdate(window.firebaseRef(window.db, 'bordereaux'), { [r.ref]: Date.now() });
                                                                 const fallback = () => window.open(url, '_blank');
                                                                 window.printLabel(url, fallback);
-                                                            }} className="text-xs px-2 py-1 bg-orange-50 hover:bg-orange-100 rounded-lg text-orange-600 font-semibold">📄 Étiquette {ship.packlinkCarrier || 'Packlink'}</button>}
-                                                            {ship?.packlinkTrackingUrl && <a href={ship.packlinkTrackingUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-orange-50 hover:bg-orange-100 rounded-lg text-orange-600 font-semibold">🔍 Suivi Packlink</a>}
+                                                            }} className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-600 font-semibold">📄 Étiquette {ship.packlinkCarrier || 'Packlink'}</button>}
+                                                            {ship?.packlinkTrackingUrl && <a href={ship.packlinkTrackingUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-600 font-semibold">🔍 Suivi Packlink</a>}
                                                         </div>
                                                     </div>
                                                     <span className="text-xs text-gray-400 whitespace-nowrap">{r.total} article(s)</span>
