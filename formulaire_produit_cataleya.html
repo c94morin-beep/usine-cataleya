@@ -11,25 +11,26 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script type="module">
-  // Firebase v10 modular SDK
+  // Firebase v10 modular SDK — Realtime Database
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, orderBy, limit, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getDatabase, ref, set, get, remove, onValue, query as rtQuery, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+  // ⚠️ TA CONFIG FIREBASE USINE-CATALEYA À METTRE ICI
   const firebaseConfig = {
-    apiKey: "AIzaSyD0EDX1uK2lhlqPxOzHR8lCGGzs9fJqAtY",
+    apiKey: "AIzaSyDVpN0cbCqDYI2klKrWqZJAcYDX2ayx8F0",
     authDomain: "usine-cataleya.firebaseapp.com",
     databaseURL: "https://usine-cataleya-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "usine-cataleya",
     storageBucket: "usine-cataleya.firebasestorage.app",
-    messagingSenderId: "880301803590",
-    appId: "1:880301803590:web:8b4a2c6e9d5f0a1c8d3e7f"
+    messagingSenderId: "218489156781",
+    appId: "1:218489156781:web:92f657e50e63222a130224"
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  const db = getDatabase(app);
 
   // Exposer pour le code non-module
-  window._firebase = { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, orderBy, limit, serverTimestamp, Timestamp };
+  window._firebase = { db, ref, set, get, remove, onValue, rtQuery, orderByChild, limitToLast };
   window.dispatchEvent(new Event('firebase-ready'));
 </script>
 <style>
@@ -2625,14 +2626,15 @@ async function saveDraft() {
     showSaveIndicator('saving');
     if (!currentDraftId) currentDraftId = generateDraftId();
     const nom = state.nom.trim() || '(Sans nom)';
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const now = Date.now();
+    const expiresAt = now + 30 * 24 * 60 * 60 * 1000; // 30 jours en ms
 
-    await fb.setDoc(fb.doc(fb.db, 'product_drafts', currentDraftId), {
+    await fb.set(fb.ref(fb.db, 'product_drafts/' + currentDraftId), {
       id: currentDraftId,
       nom,
       state,
-      updatedAt: fb.serverTimestamp(),
-      expiresAt: fb.Timestamp.fromDate(expiresAt)
+      updatedAt: now,
+      expiresAt
     });
     showSaveIndicator('saved');
     loadDraftsList();
@@ -2645,27 +2647,39 @@ async function saveDraft() {
 async function loadDraftsList() {
   if (!fb) return;
   try {
-    const q = fb.query(fb.collection(fb.db, 'product_drafts'), fb.orderBy('updatedAt', 'desc'), fb.limit(20));
-    const snap = await fb.getDocs(q);
+    const snap = await fb.get(fb.ref(fb.db, 'product_drafts'));
     const drafts = [];
     const now = Date.now();
-    snap.forEach(doc => {
-      const d = doc.data();
-      if (d.expiresAt && d.expiresAt.toMillis && d.expiresAt.toMillis() < now) return;
-      drafts.push(d);
-    });
+    if (snap.exists()) {
+      const data = snap.val();
+      Object.keys(data).forEach(key => {
+        const d = data[key];
+        // Filtrer ceux expirés (auto-suppression côté client)
+        if (d.expiresAt && d.expiresAt < now) {
+          // Supprimer en arrière-plan
+          fb.remove(fb.ref(fb.db, 'product_drafts/' + key)).catch(()=>{});
+          return;
+        }
+        drafts.push(d);
+      });
+    }
+
+    // Tri par updatedAt décroissant
+    drafts.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    // Limiter à 20
+    const visibleDrafts = drafts.slice(0, 20);
 
     const banner = document.getElementById('drafts-banner');
     const countEl = document.getElementById('drafts-count');
     const list = document.getElementById('drafts-list');
 
-    if (!drafts.length) { banner.style.display = 'none'; return; }
+    if (!visibleDrafts.length) { banner.style.display = 'none'; return; }
 
     banner.style.display = 'block';
-    countEl.textContent = drafts.length;
+    countEl.textContent = visibleDrafts.length;
 
-    list.innerHTML = drafts.map(d => {
-      const updatedAt = d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate() : new Date();
+    list.innerHTML = visibleDrafts.map(d => {
+      const updatedAt = new Date(d.updatedAt || Date.now());
       const meta = formatRelativeTime(updatedAt);
       const isCurrent = d.id === currentDraftId;
       return `<div class="draft-item" ${isCurrent ? 'style="border-color:var(--terracotta);background:var(--cream-warm)"' : ''}>
@@ -2708,9 +2722,9 @@ function toggleDraftsList() {
 async function loadDraft(id) {
   if (!fb) return;
   try {
-    const docSnap = await fb.getDoc(fb.doc(fb.db, 'product_drafts', id));
-    if (!docSnap.exists()) { showToast('Brouillon introuvable', 'error'); return; }
-    const data = docSnap.data();
+    const snap = await fb.get(fb.ref(fb.db, 'product_drafts/' + id));
+    if (!snap.exists()) { showToast('Brouillon introuvable', 'error'); return; }
+    const data = snap.val();
     currentDraftId = id;
     restoreFormState(data.state);
     showToast(`Brouillon « ${data.nom} » chargé`);
@@ -2723,9 +2737,9 @@ async function loadDraft(id) {
 async function viewDraft(id) {
   if (!fb) return;
   try {
-    const docSnap = await fb.getDoc(fb.doc(fb.db, 'product_drafts', id));
-    if (!docSnap.exists()) return;
-    const data = docSnap.data();
+    const snap = await fb.get(fb.ref(fb.db, 'product_drafts/' + id));
+    if (!snap.exists()) return;
+    const data = snap.val();
     const s = data.state;
     const summary = `📋 ${data.nom}\n\nNom : ${s.nom || '—'}\nSKU : ${s.sku || '—'}\nPrix : ${s.prix || '—'} €\nPoids : ${s.poids || '—'} kg\nCatégories : ${(s.categories || []).join(', ') || '—'}\nCouleurs : ${(s.couleurs || []).join(', ') || '—'}\nTailles : ${(s.tailles || []).join(', ') || '—'}\n\nDescription :\n${s.descPrincipale || '—'}\n\nMatière : ${s.descMatiere || '—'}\n\nPour qui :\n${s.descPourqui || '—'}\n\nEntretien : ${s.entretien || '—'}\nNotes : ${s.notes || '—'}`;
     alert(summary);
@@ -2736,7 +2750,7 @@ async function deleteDraft(id) {
   if (!confirm('Supprimer ce brouillon ?')) return;
   if (!fb) return;
   try {
-    await fb.deleteDoc(fb.doc(fb.db, 'product_drafts', id));
+    await fb.remove(fb.ref(fb.db, 'product_drafts/' + id));
     if (id === currentDraftId) currentDraftId = null;
     loadDraftsList();
     showToast('Brouillon supprimé');
@@ -2764,7 +2778,7 @@ saveAndAdd = function() {
   const draftIdToDelete = currentDraftId;
   _origSaveAndAdd();
   if (draftIdToDelete && fb) {
-    fb.deleteDoc(fb.doc(fb.db, 'product_drafts', draftIdToDelete)).catch(()=>{});
+    fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
     currentDraftId = null;
     loadDraftsList();
   }
@@ -2774,7 +2788,7 @@ const _origResetAll = resetAll;
 resetAll = function() {
   _origResetAll();
   if (currentDraftId && fb) {
-    fb.deleteDoc(fb.doc(fb.db, 'product_drafts', currentDraftId)).catch(()=>{});
+    fb.remove(fb.ref(fb.db, 'product_drafts/' + currentDraftId)).catch(()=>{});
     currentDraftId = null;
     loadDraftsList();
   }
