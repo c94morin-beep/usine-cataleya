@@ -10,6 +10,28 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="module">
+  // Firebase v10 modular SDK
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, orderBy, limit, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD0EDX1uK2lhlqPxOzHR8lCGGzs9fJqAtY",
+    authDomain: "usine-cataleya.firebaseapp.com",
+    databaseURL: "https://usine-cataleya-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "usine-cataleya",
+    storageBucket: "usine-cataleya.firebasestorage.app",
+    messagingSenderId: "880301803590",
+    appId: "1:880301803590:web:8b4a2c6e9d5f0a1c8d3e7f"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Exposer pour le code non-module
+  window._firebase = { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, orderBy, limit, serverTimestamp, Timestamp };
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
   :root {
     --bordeaux: #6B2737;
@@ -746,6 +768,197 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  /* ═══════════════════ ÉCRAN CODE D'ACCÈS ═══════════════════ */
+  .access-screen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, var(--bordeaux) 0%, var(--bordeaux-deep) 100%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .access-screen.hidden { display: none; }
+  .access-card {
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    padding: 32px 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+  }
+  .access-brand {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--terracotta);
+    margin-bottom: 6px;
+  }
+  .access-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--bordeaux);
+    margin-bottom: 6px;
+  }
+  .access-subtitle {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-bottom: 20px;
+  }
+  .access-input {
+    text-align: center;
+    font-size: 22px !important;
+    letter-spacing: 4px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .access-btn {
+    width: 100%;
+    height: 48px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, var(--bordeaux) 0%, var(--bordeaux-deep) 100%);
+    color: var(--cream);
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .access-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 10px;
+    height: 18px;
+  }
+
+  /* ═══════════════════ INDICATEUR SAUVEGARDE ═══════════════════ */
+  .save-indicator {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 8px);
+    right: 12px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    z-index: 60;
+    box-shadow: var(--shadow-sm);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .save-indicator.show { opacity: 1; }
+  .save-indicator.saved { color: var(--success); }
+  .save-indicator.saving { color: var(--terracotta); }
+  .save-indicator.error { color: var(--danger); }
+
+  /* ═══════════════════ BANDEAU BROUILLONS ═══════════════════ */
+  .drafts-banner {
+    background: linear-gradient(135deg, #FFF8F0 0%, var(--cream-warm) 100%);
+    border: 1.5px solid var(--terracotta-soft);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .drafts-banner-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+  .drafts-banner-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bordeaux);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .drafts-banner-count {
+    background: var(--terracotta);
+    color: var(--white);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-weight: 700;
+  }
+  .drafts-list {
+    display: none;
+    margin-top: 12px;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .drafts-list.open { display: flex; }
+  .draft-item {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .draft-info { flex: 1; min-width: 0; }
+  .draft-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .draft-meta {
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+  .draft-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .draft-btn {
+    background: var(--cream);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .draft-btn.primary {
+    background: var(--bordeaux);
+    color: var(--white);
+    border-color: var(--bordeaux);
+  }
+  .draft-btn.danger {
+    color: var(--danger);
+    width: 30px;
+    padding: 6px 0;
+  }
+
+  /* ═══════════════════ NOUVEAU PRODUIT BTN ═══════════════════ */
+  .btn-new-draft {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    background: var(--white);
+    border: 1.5px dashed var(--line);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    cursor: pointer;
+  }
+  .btn-new-draft:active { border-color: var(--terracotta); color: var(--terracotta); }
+
   /* ═══════════════════ DESKTOP ═══════════════════ */
   @media (min-width: 700px) {
     .container { padding: 24px 24px 0; }
@@ -756,6 +969,21 @@
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════ ÉCRAN CODE D'ACCÈS ═══════════════════ -->
+<div class="access-screen" id="access-screen">
+  <div class="access-card">
+    <div class="access-brand">Cataleya Paris</div>
+    <div class="access-title">Accès à l'atelier</div>
+    <div class="access-subtitle">Saisis le code partagé pour accéder au formulaire</div>
+    <input type="tel" inputmode="numeric" id="access-input" class="access-input" placeholder="• • • • • • •" maxlength="7" autocomplete="off" />
+    <button class="access-btn" onclick="checkAccess()">Entrer</button>
+    <div class="access-error" id="access-error"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ INDICATEUR SAUVEGARDE ═══════════════════ -->
+<div class="save-indicator" id="save-indicator"></div>
 
 <!-- ═══════════════════════ HEADER + STEPPER ═══════════════════════ -->
 <header>
@@ -774,6 +1002,19 @@
 </header>
 
 <div class="container">
+
+  <!-- BANDEAU BROUILLONS -->
+  <div id="drafts-banner" class="drafts-banner" style="display:none">
+    <div class="drafts-banner-head" onclick="toggleDraftsList()">
+      <div class="drafts-banner-title">
+        <span>📁 Brouillons en cours</span>
+        <span class="drafts-banner-count" id="drafts-count">0</span>
+      </div>
+      <span id="drafts-toggle-icon" style="font-size:11px;color:var(--ink-muted);transition:transform 0.2s">▼</span>
+    </div>
+    <div class="drafts-list" id="drafts-list"></div>
+    <button class="btn-new-draft" onclick="newDraft()">+ Commencer un nouveau produit</button>
+  </div>
 
   <!-- COMPTEUR PRODUITS -->
   <div id="product-counter" class="product-counter" style="display:none">
@@ -813,8 +1054,8 @@
           <input type="number" inputmode="decimal" id="prix" placeholder="89.90" step="0.01" min="0" data-summary="Prix" data-summary-suffix=" €" />
         </div>
         <div class="field">
-          <label>Poids (g)</label>
-          <input type="number" inputmode="numeric" id="poids" placeholder="350" min="0" />
+          <label>Poids (kg)</label>
+          <input type="number" inputmode="decimal" id="poids" placeholder="0.350" step="0.001" min="0" />
         </div>
       </div>
     </div>
@@ -822,19 +1063,15 @@
     <div class="card">
       <div class="card-title">Catégorie(s) <span class="req">*</span></div>
       <div class="hint-strong">La 1ʳᵉ cochée = catégorie principale. Les suivantes = secondaires.</div>
-      <div class="chips" id="categories-chips">
-        <span class="chip"><input type="checkbox" id="cat-abayas" value="Abayas & Robes"><label for="cat-abayas">Abayas & Robes</label></span>
-        <span class="chip"><input type="checkbox" id="cat-sous" value="Sous Abayas"><label for="cat-sous">Sous Abayas</label></span>
-        <span class="chip"><input type="checkbox" id="cat-ensembles" value="Ensembles"><label for="cat-ensembles">Ensembles</label></span>
-        <span class="chip"><input type="checkbox" id="cat-new" value="New Collection"><label for="cat-new">New Collection</label></span>
-        <span class="chip"><input type="checkbox" id="cat-soldes" value="Soldes"><label for="cat-soldes">Soldes</label></span>
-        <span class="chip"><input type="checkbox" id="cat-hijabs" value="Hijabs & Accessoires"><label for="cat-hijabs">Hijabs & Accessoires</label></span>
-        <span class="chip"><input type="checkbox" id="cat-jupes" value="Jupes-Palazzos"><label for="cat-jupes">Jupes-Palazzos</label></span>
-        <span class="chip"><input type="checkbox" id="cat-manteaux" value="Manteaux & Trenchs"><label for="cat-manteaux">Manteaux & Trenchs</label></span>
-        <span class="chip"><input type="checkbox" id="cat-hauts" value="Hauts & Capes"><label for="cat-hauts">Hauts & Capes</label></span>
-        <span class="chip"><input type="checkbox" id="cat-fw" value="Fall Winter"><label for="cat-fw">Fall Winter</label></span>
-        <span class="chip"><input type="checkbox" id="cat-destock" value="Destockage"><label for="cat-destock">Destockage</label></span>
-        <span class="chip"><input type="checkbox" id="cat-ramadan" value="Ramadan & Eid"><label for="cat-ramadan">Ramadan & Eid</label></span>
+      <div class="chips" id="categories-chips"></div>
+
+      <div style="margin-top: 18px">
+        <label style="margin-bottom:8px;display:block">Ajouter une catégorie</label>
+        <div class="custom-color-row">
+          <input type="text" id="custom-cat-input" placeholder="ex. Caftans" />
+          <button type="button" class="btn-add-color" onclick="addCustomCategory()">+</button>
+        </div>
+        <p class="hint" style="margin-top:8px">Les catégories ajoutées sont mémorisées pour les prochains produits.</p>
       </div>
     </div>
   </div>
@@ -1009,24 +1246,38 @@
     </div>
 
     <div class="card">
-      <div class="card-title">Aperçu en direct</div>
-      <div class="desc-preview-label">Voici ce que verra la cliente</div>
-      <div class="desc-preview empty" id="desc-preview">La description s'affichera ici au fur et à mesure…</div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Tes textes</div>
+      <div class="card-title">Tes textes (français)</div>
       <div class="field">
         <label>Description principale</label>
         <textarea id="desc-principale" rows="4" placeholder="ex. La abaya Estela est une abaya à la coupe fluide, travaillée dans un tissu brodé ajouré…" oninput="updatePreview()"></textarea>
       </div>
       <div class="field">
         <label>Matière</label>
-        <input type="text" id="desc-matiere" placeholder="ex. Tissu brodé ajouré" oninput="updatePreview()" />
+        <input type="text" id="desc-matiere" placeholder="ex. Crêpe de soie coréenne, Lin, Tencel…" oninput="updatePreview();matchComposition()" />
+        <p class="hint" style="margin-top:4px">Cette matière sera utilisée pour pré-sélectionner la composition à l'étape 5.</p>
       </div>
       <div class="field">
         <label>Pour qui ?</label>
         <textarea id="desc-pourqui" rows="3" placeholder="ex. Pour celles qui recherchent une abaya avec du détail…" oninput="updatePreview()"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Aperçu en direct</div>
+      <div class="desc-preview-label">Voici ce que verra la cliente</div>
+      <div class="desc-preview empty" id="desc-preview">La description s'affichera ici au fur et à mesure…</div>
+
+      <button type="button" id="btn-translate" class="btn-add-color" style="width:100%;margin-top:12px;height:44px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="translateDescription()">
+        <span id="btn-translate-icon">🌐</span>
+        <span id="btn-translate-text">Traduire en anglais</span>
+      </button>
+
+      <div id="translation-block" style="display:none;margin-top:14px">
+        <div class="desc-preview-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>🇬🇧 Version anglaise</span>
+          <button type="button" onclick="translateDescription()" style="background:none;border:none;color:var(--terracotta);font-size:11px;font-weight:600;cursor:pointer">↻ Régénérer</button>
+        </div>
+        <div class="desc-preview" id="desc-preview-en" style="border-color:var(--terracotta-soft);background:#FFF8F0"></div>
       </div>
     </div>
   </div>
@@ -1041,11 +1292,59 @@
 
     <div class="card">
       <div class="card-title">Composition du tissu</div>
-      <div class="field">
-        <label>Composition</label>
-        <input type="text" id="composition" placeholder="ex. 100% Polyester" />
+
+      <!-- TISSU PRINCIPAL -->
+      <div style="margin-bottom:18px">
+        <div style="font-size:11px;font-weight:700;color:var(--bordeaux);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Tissu principal <span class="req">*</span></div>
+
+        <!-- Suggestions auto à partir de la matière étape 4 -->
+        <div id="comp-suggestions" style="display:none;margin-bottom:12px">
+          <div class="desc-preview-label" style="margin-bottom:6px">✨ Suggestions basées sur la matière saisie</div>
+          <div id="comp-suggestions-list"></div>
+        </div>
+
+        <div class="field" style="margin-bottom:0">
+          <div style="position:relative">
+            <input type="text" id="composition-search" placeholder="Tape pour chercher (ex. lin, soie, polyester…)" autocomplete="off" />
+            <div id="composition-list" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--white);border:1px solid var(--line);border-radius:var(--radius-md);max-height:240px;overflow-y:auto;z-index:50;box-shadow:var(--shadow-md);margin-top:4px"></div>
+          </div>
+        </div>
+
+        <!-- Composition principale sélectionnée -->
+        <div id="composition-selected" style="display:none;background:var(--cream-warm);border:1px solid var(--terracotta-soft);border-radius:var(--radius-md);padding:10px 12px;margin-top:8px">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
+            <div>
+              <div id="comp-sel-name" style="font-size:13px;font-weight:600;color:var(--ink)"></div>
+              <div id="comp-sel-hs" style="font-size:11px;color:var(--ink-muted);margin-top:2px;font-family:monospace"></div>
+            </div>
+            <button type="button" onclick="clearComposition()" style="background:transparent;border:none;color:var(--ink-muted);font-size:18px;cursor:pointer;padding:4px 8px">×</button>
+          </div>
+        </div>
       </div>
-      <div class="field">
+
+      <!-- TISSU SECONDAIRE -->
+      <div style="padding-top:14px;border-top:1px dashed var(--line)">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-soft);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Tissu secondaire <span style="color:var(--ink-muted);font-weight:500;text-transform:none;letter-spacing:0">(doublure, parement…)</span></div>
+
+        <div class="field" style="margin-bottom:0">
+          <div style="position:relative">
+            <input type="text" id="composition2-search" placeholder="Optionnel — laisse vide si non applicable" autocomplete="off" />
+            <div id="composition2-list" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--white);border:1px solid var(--line);border-radius:var(--radius-md);max-height:240px;overflow-y:auto;z-index:50;box-shadow:var(--shadow-md);margin-top:4px"></div>
+          </div>
+        </div>
+
+        <div id="composition2-selected" style="display:none;background:var(--cream);border:1px solid var(--line);border-radius:var(--radius-md);padding:10px 12px;margin-top:8px">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
+            <div>
+              <div id="comp2-sel-name" style="font-size:13px;font-weight:600;color:var(--ink)"></div>
+              <div id="comp2-sel-hs" style="font-size:11px;color:var(--ink-muted);margin-top:2px;font-family:monospace"></div>
+            </div>
+            <button type="button" onclick="clearComposition2()" style="background:transparent;border:none;color:var(--ink-muted);font-size:18px;cursor:pointer;padding:4px 8px">×</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:14px">
         <label>Instructions d'entretien</label>
         <input type="text" id="entretien" placeholder="ex. Lavage à 30°" />
       </div>
@@ -1111,15 +1410,32 @@
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-header">
-      <h2>Récapitulatif CSV</h2>
+      <h2>Récapitulatif</h2>
       <button class="btn-close" onclick="closeOverlay()">×</button>
     </div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--ink-muted);margin-bottom:12px">Voici le CSV de tous les produits enregistrés. Tu peux le copier ou le télécharger.</p>
-      <div class="csv-content" id="csv-content"></div>
+
+    <!-- Onglets -->
+    <div style="display:flex;gap:0;padding:0 20px;border-bottom:1px solid var(--line);background:var(--cream)">
+      <button type="button" class="recap-tab active" id="tab-list" onclick="switchRecapTab('list')" style="flex:1;padding:12px 0;background:none;border:none;border-bottom:2px solid var(--bordeaux);font-size:13px;font-weight:600;color:var(--bordeaux);cursor:pointer">📋 Liste des produits</button>
+      <button type="button" class="recap-tab" id="tab-csv" onclick="switchRecapTab('csv')" style="flex:1;padding:12px 0;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:var(--ink-muted);cursor:pointer">📄 CSV brut</button>
     </div>
+
+    <div class="modal-body">
+      <!-- Vue Liste -->
+      <div id="view-list">
+        <p style="font-size:13px;color:var(--ink-muted);margin-bottom:14px">Vérifie tes produits avant de télécharger. Tu peux supprimer une ligne ou un produit complet.</p>
+        <div id="recap-list"></div>
+      </div>
+
+      <!-- Vue CSV -->
+      <div id="view-csv" style="display:none">
+        <p style="font-size:13px;color:var(--ink-muted);margin-bottom:12px">Format CSV brut prêt à importer dans PrestaShop.</p>
+        <div class="csv-content" id="csv-content"></div>
+      </div>
+    </div>
+
     <div class="modal-actions">
-      <button class="btn-copy" id="btn-copy" onclick="copyCSV()">📋 Copier</button>
+      <button class="btn-copy" id="btn-copy" onclick="copyCSV()">📋 Copier CSV</button>
       <button class="btn-download" onclick="downloadCSV()">⬇ Télécharger</button>
       <button class="btn-reset" onclick="resetAll()">Recommencer un nouveau lot</button>
     </div>
@@ -1149,18 +1465,16 @@ function goToStep(n) {
     if (s === n) p.classList.add('active');
     else if (stepCompleted[s]) p.classList.add('done');
   });
-  // Update boutons
-  const btnPrev = document.getElementById('btn-prev');
-  const btnNext = document.getElementById('btn-next');
-  btnPrev.disabled = (n === 1);
+  // Update sticky bar selon l'étape (toujours reconstruite en entier)
+  const stickyBar = document.getElementById('sticky-bar');
   if (n === TOTAL_STEPS) {
-    document.getElementById('sticky-bar').innerHTML = `
+    stickyBar.innerHTML = `
       <button class="nav-btn" onclick="goToStep(currentStep - 1)">‹</button>
       <button class="nav-btn-secondary" onclick="saveAndAdd()">+ Ajouter un autre</button>
       <button class="nav-btn-primary finish" onclick="saveAndFinish()">Terminer ✓</button>
     `;
   } else {
-    document.getElementById('sticky-bar').innerHTML = `
+    stickyBar.innerHTML = `
       <button class="nav-btn" id="btn-prev" onclick="goToStep(currentStep - 1)" ${n===1?'disabled':''}>‹</button>
       <button class="nav-btn-primary" id="btn-next" onclick="nextStep()">Suivant <span style="font-size:18px">›</span></button>
     `;
@@ -1353,8 +1667,12 @@ function updateSummary() {
   const dp = document.getElementById('desc-principale').value.trim();
   if (dp) items.push(`<div><span class="key">Description :</span> ${dp.substring(0, 50)}${dp.length>50?'…':''}</div>`);
 
-  const comp = document.getElementById('composition').value.trim();
-  if (comp) items.push(`<div><span class="key">Composition :</span> ${comp}</div>`);
+  if (selectedComposition) {
+    items.push(`<div><span class="key">Composition :</span> ${selectedComposition.nom}</div>`);
+  }
+
+  const trad = getCurrentTranslation && getCurrentTranslation();
+  if (trad) items.push(`<div><span class="key">🇬🇧 Traduit :</span> oui</div>`);
 
   if (items.length) {
     list.innerHTML = items.join('');
@@ -1403,26 +1721,44 @@ function collectProducts() {
   const dm = document.getElementById('desc-matiere').value.trim();
   const dq = document.getElementById('desc-pourqui').value.trim();
 
-  let description = '';
-  if (dp) description += 'Description :\n\n' + dp;
-  if (dm) description += (description ? '\n\n' : '') + 'Matière :\n\n' + dm;
-  if (dq) description += (description ? '\n\n' : '') + 'Pour qui ? :\n\n' + dq;
+  let descriptionFR = '';
+  if (dp) descriptionFR += 'Description :\n\n' + dp;
+  if (dm) descriptionFR += (descriptionFR ? '\n\n' : '') + 'Matière :\n\n' + dm;
+  if (dq) descriptionFR += (descriptionFR ? '\n\n' : '') + 'Pour qui ? :\n\n' + dq;
 
-  const comp = document.getElementById('composition').value.trim();
+  // Traduction EN si dispo
+  let descriptionEN = '';
+  const trad = getCurrentTranslation();
+  if (trad) {
+    if (trad.description) descriptionEN += 'Description:\n\n' + trad.description;
+    if (trad.matiere) descriptionEN += (descriptionEN ? '\n\n' : '') + 'Material:\n\n' + trad.matiere;
+    if (trad.pourQui) descriptionEN += (descriptionEN ? '\n\n' : '') + 'Who is it for?:\n\n' + trad.pourQui;
+  }
+
+  // Composition : sélectionnée dans le dropdown (2 emplacements)
+  let comp = '', hs = '', comp2 = '', hs2 = '';
+  if (selectedComposition) {
+    comp = selectedComposition.nom + ' — ' + selectedComposition.desc;
+    hs = selectedComposition.hs;
+  }
+  if (selectedComposition2) {
+    comp2 = selectedComposition2.nom + ' — ' + selectedComposition2.desc;
+    hs2 = selectedComposition2.hs;
+  }
   const ent = document.getElementById('entretien').value.trim();
   const photoLinks = [...document.querySelectorAll('.photo-input')].map(i => i.value.trim()).filter(Boolean);
   const photos = photoLinks.join(' | ');
   const notes = document.getElementById('notes').value.trim();
 
   if (!colors.length) {
-    return [{ nom, sku, cat, prix, poids, couleur: '', type: isDecl ? 'Déclinaisons' : 'Simple', tailles, options, options2, description, comp, ent, photos, notes }];
+    return [{ nom, sku, cat, prix, poids, couleur: '', type: isDecl ? 'Déclinaisons' : 'Simple', tailles, options, options2, descriptionFR, descriptionEN, comp, hs, comp2, hs2, ent, photos, notes }];
   }
   return colors.map(couleur => ({
     nom: nom + ' ' + couleur.toLowerCase(),
     sku: sku ? sku + '-' + couleur.toLowerCase().replace(/\s+/g, '') : '',
     cat, prix, poids, couleur,
     type: isDecl ? 'Déclinaisons' : 'Simple',
-    tailles, options, options2, description, comp, ent, photos, notes
+    tailles, options, options2, descriptionFR, descriptionEN, comp, hs, comp2, hs2, ent, photos, notes
   }));
 }
 
@@ -1446,10 +1782,23 @@ function resetFormSilent() {
   document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(i => i.value = '');
   document.querySelectorAll('#categories-chips input').forEach(i => i.checked = false);
   rebuildColorChips();
+  rebuildCategoryChips();
   document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
 
   document.getElementById('type-decl').checked = true;
   document.getElementById('bloc-declinaisons').style.display = 'block';
+
+  // Reset composition
+  selectedComposition = null;
+  selectedComposition2 = null;
+  document.getElementById('composition-selected').style.display = 'none';
+  document.getElementById('composition2-selected').style.display = 'none';
+  document.getElementById('comp-suggestions').style.display = 'none';
+
+  // Reset traduction
+  translationCache = {};
+  document.getElementById('translation-block').style.display = 'none';
+  document.getElementById('desc-preview-en').textContent = '';
 
   // Reset groupes
   Object.keys(groupState).forEach(k => {
@@ -1520,14 +1869,16 @@ function csvEscape(val) {
 }
 
 function generateCSV() {
-  const headers = ['Nom','Référence','Catégorie(s)','Prix (€)','Poids (g)','Couleur','Type','Tailles','Option','Option2','Description','Composition','Entretien','Photos','Notes'];
+  const headers = ['Nom','Référence','Catégorie(s)','Prix (€)','Poids (kg)','Couleur','Type','Tailles','Option','Option2','Description FR','Description EN','Tissu principal','Code HS principal','Tissu secondaire','Code HS secondaire','Entretien','Photos','Notes'];
   const rows = allProducts.map(p => [
-    p.nom, p.sku, p.cat, p.prix, p.poids, p.couleur, p.type, p.tailles, p.options, p.options2, p.description, p.comp, p.ent, p.photos, p.notes
+    p.nom, p.sku, p.cat, p.prix, p.poids, p.couleur, p.type, p.tailles, p.options, p.options2, p.descriptionFR, p.descriptionEN, p.comp, p.hs, p.comp2 || '', p.hs2 || '', p.ent, p.photos, p.notes
   ].map(csvEscape).join(','));
 
   csvString = headers.join(',') + '\n' + rows.join('\n');
   document.getElementById('csv-content').textContent = csvString;
+  renderRecapList();
   document.getElementById('overlay').classList.add('active');
+  switchRecapTab('list'); // Ouvre toujours sur la liste d'abord
 }
 
 function downloadCSV() {
@@ -1623,7 +1974,6 @@ function initAutocomplete() {
     { sel: '#desc-principale', key: 'desc-principale' },
     { sel: '#desc-matiere', key: 'desc-matiere' },
     { sel: '#desc-pourqui', key: 'desc-pourqui' },
-    { sel: '#composition', key: 'composition' },
     { sel: '#entretien', key: 'entretien' },
     { sel: '#notes', key: 'notes' }
   ];
@@ -1683,7 +2033,753 @@ function showToast(msg, type = 'success') {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
 }
 
-// Init
+// ═══════════════════════════════════════════════════
+// CATÉGORIES PERSONNALISÉES (localStorage)
+// ═══════════════════════════════════════════════════
+const CAT_KEY = 'cataleya_custom_categories';
+const baseCategories = [
+  'Abayas & Robes', 'Sous Abayas', 'Ensembles', 'New Collection', 'Soldes',
+  'Hijabs & Accessoires', 'Jupes-Palazzos', 'Manteaux & Trenchs',
+  'Hauts & Capes', 'Fall Winter', 'Destockage', 'Ramadan & Eid'
+];
+
+function loadCustomCategories() {
+  try { return JSON.parse(localStorage.getItem(CAT_KEY)) || []; } catch { return []; }
+}
+function saveCustomCategories(list) { localStorage.setItem(CAT_KEY, JSON.stringify(list)); }
+
+function rebuildCategoryChips() {
+  const container = document.getElementById('categories-chips');
+  const custom = loadCustomCategories();
+  const seen = new Set();
+  const all = [];
+  [...baseCategories, ...custom].forEach(c => {
+    const key = c.toLowerCase();
+    if (!seen.has(key)) { seen.add(key); all.push(c); }
+  });
+  const checked = new Set([...container.querySelectorAll('input:checked')].map(i => i.value));
+  container.innerHTML = all.map(c => {
+    const id = 'cat-' + c.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const isChecked = checked.has(c) ? ' checked' : '';
+    return `<span class="chip"><input type="checkbox" id="${id}" value="${c}"${isChecked}><label for="${id}">${c}</label></span>`;
+  }).join('');
+  container.querySelectorAll('input').forEach(i => i.addEventListener('change', updateSummary));
+}
+
+function addCustomCategory() {
+  const input = document.getElementById('custom-cat-input');
+  const val = input.value.trim();
+  if (!val) return;
+  const custom = loadCustomCategories();
+  if (!custom.some(c => c.toLowerCase() === val.toLowerCase())) {
+    custom.push(val);
+    saveCustomCategories(custom);
+  }
+  rebuildCategoryChips();
+  const id = 'cat-' + val.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const cb = document.getElementById(id);
+  if (cb) { cb.checked = true; updateSummary(); }
+  input.value = '';
+  showToast(`Catégorie « ${val} » ajoutée`);
+}
+
+rebuildCategoryChips();
+
+// ═══════════════════════════════════════════════════
+// COMPOSITIONS (35 tissus avec codes HS)
+// ═══════════════════════════════════════════════════
+const COMPOSITIONS = [
+  { id: 25, nom: 'Crêpe de soie coréenne mate', desc: '100% soie tissée', hs: '5007 20 11', keywords: ['crepe','soie','coreenne','mate','silk'] },
+  { id: 26, nom: 'Drap de soie satiné', desc: '100% soie tissée, armure satin', hs: '5007 20 59', keywords: ['drap','soie','satine','satin','silk'] },
+  { id: 27, nom: 'Lin', desc: '100% lin tissé', hs: '5309 11', keywords: ['lin','linen'] },
+  { id: 28, nom: 'Crêpe coréenne mate', desc: '100% polyester tissé, finition mate', hs: '5407 52 90', keywords: ['crepe','coreenne','mate','polyester'] },
+  { id: 29, nom: 'Crêpe satinée texturée', desc: '100% polyester tissé, armure satin', hs: '5407 52 90', keywords: ['crepe','satinee','texturee','polyester','satin'] },
+  { id: 30, nom: 'Crêpe texturée', desc: '100% polyester tissé', hs: '5407 52 90', keywords: ['crepe','texturee','polyester'] },
+  { id: 31, nom: 'Polyester-viscose', desc: 'Mélange polyester et viscose', hs: '5515 11 90', keywords: ['polyester','viscose','melange'] },
+  { id: 32, nom: 'Crêpe de soie coréenne', desc: '100% soie tissée', hs: '5007 20 11', keywords: ['crepe','soie','coreenne','silk'] },
+  { id: 33, nom: 'Tencel', desc: '100% lyocell, fibre cellulosique régénérée', hs: '5516 11', keywords: ['tencel','lyocell','cellulosique'] },
+  { id: 34, nom: 'Suiting', desc: '100% coton tissé, tissu costume', hs: '5208/5209', keywords: ['suiting','coton','costume'] },
+  { id: 35, nom: 'Gabardine premium', desc: '100% coton tissé, armure sergée', hs: '5209', keywords: ['gabardine','coton','sergee','premium'] },
+  { id: 36, nom: 'Coton rayonne', desc: 'Mélange coton et viscose/rayonne', hs: '5210.29.00', keywords: ['coton','rayonne','viscose','melange'] },
+  { id: 37, nom: 'Coton', desc: '100% coton tissé', hs: '5208 / 5209 selon poids', keywords: ['coton','cotton'] },
+  { id: 38, nom: 'Tissu côtelé', desc: '100% coton, velours côtelé', hs: '5801.23.00', keywords: ['cotele','velours','coton','corduroy'] },
+  { id: 39, nom: 'Tissu technique imperméable', desc: '100% polyester tissé + enduction PU', hs: '5903.20', keywords: ['technique','impermeable','polyester','waterproof'] },
+  { id: 40, nom: 'Tweed', desc: 'Mélange laine et acrylique/polyester, armure sergée', hs: '5111.20', keywords: ['tweed','laine','acrylique','wool'] },
+  { id: 41, nom: 'Maille douce', desc: '100% polyester, étoffe de bonneterie', hs: '6006.32', keywords: ['maille','douce','polyester','bonneterie','knit'] },
+  { id: 42, nom: 'Laine', desc: 'Mélange laine et acrylique/polyester, tissée', hs: '5111', keywords: ['laine','wool'] },
+  { id: 43, nom: 'Polyamide', desc: '100% polyamide (nylon) tissé', hs: '5407.42', keywords: ['polyamide','nylon'] },
+  { id: 44, nom: 'Acrylique', desc: '100% acrylique, tissu en fibres discontinues', hs: '5512.21', keywords: ['acrylique','acrylic'] },
+  { id: 45, nom: 'Nylon', desc: '100% polyamide tissé', hs: '5407.42', keywords: ['nylon','polyamide'] },
+  { id: 46, nom: 'Élasthane', desc: 'Fibre synthétique élastique 100%', hs: '5402.44', keywords: ['elasthane','elastique','spandex','elastane'] },
+  { id: 47, nom: 'Cachemire', desc: '100% cachemire tissé, poil animal fin', hs: '5111.11', keywords: ['cachemire','cashmere'] },
+  { id: 48, nom: 'Maille gaufrée polyester', desc: '100% polyester, bonneterie gaufrée', hs: '6006.32', keywords: ['maille','gaufree','polyester','bonneterie'] },
+  { id: 51, nom: 'Crêpe georgette', desc: '100% polyester tissé, léger et transparent', hs: '5407.61', keywords: ['crepe','georgette','polyester','transparent','leger'] },
+  { id: 52, nom: 'Velours', desc: '100% coton, velours coupé', hs: '5801.22', keywords: ['velours','coton','velvet'] },
+  { id: 53, nom: 'Organza', desc: '100% polyester tissé, transparent', hs: '5407.61', keywords: ['organza','polyester','transparent'] },
+  { id: 54, nom: 'Lamé', desc: 'Polyester avec fils métalliques', hs: '5809', keywords: ['lame','metallique','metal'] },
+  { id: 55, nom: 'Crème de soie coréenne mate', desc: '100% soie tissée, finition mate, écrue', hs: '5007 20 11', keywords: ['creme','soie','coreenne','mate','ecrue','silk'] },
+  { id: 56, nom: 'Jacquard', desc: '100% polyester tissé jacquard', hs: '5407.53', keywords: ['jacquard','polyester'] },
+  { id: 57, nom: 'Brocard', desc: 'Polyester tissé avec fils métalliques', hs: '5407.53 / 5809', keywords: ['brocard','metallique','polyester','brocade'] }
+];
+
+let selectedComposition = null;
+let selectedComposition2 = null;
+
+function normalizeText(str) {
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function scoreComposition(comp, query) {
+  if (!query) return 0;
+  const q = normalizeText(query);
+  const words = q.split(/\s+/).filter(Boolean);
+  let score = 0;
+  const nomNorm = normalizeText(comp.nom);
+  const descNorm = normalizeText(comp.desc);
+  if (nomNorm === q) score += 100;
+  if (nomNorm.includes(q)) score += 50;
+  words.forEach(w => {
+    comp.keywords.forEach(k => {
+      if (k === w) score += 30;
+      else if (k.includes(w) || w.includes(k)) score += 15;
+    });
+    if (nomNorm.includes(w)) score += 20;
+    if (descNorm.includes(w)) score += 8;
+  });
+  return score;
+}
+
+function matchComposition() {
+  const matiere = document.getElementById('desc-matiere').value.trim();
+  const block = document.getElementById('comp-suggestions');
+  const list = document.getElementById('comp-suggestions-list');
+
+  if (!matiere || matiere.length < 3 || selectedComposition) {
+    block.style.display = 'none';
+    return;
+  }
+
+  const scored = COMPOSITIONS.map(c => ({ comp: c, score: scoreComposition(c, matiere) }))
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+
+  if (!scored.length) {
+    block.style.display = 'none';
+    return;
+  }
+
+  const max = scored[0].score;
+  list.innerHTML = scored.map(s => {
+    const pct = Math.round((s.score / max) * 100);
+    return `<button type="button" onclick="selectComposition(${s.comp.id})" style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:10px 14px;background:var(--white);border:1.5px solid var(--line);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;text-align:left;font-family:inherit">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">${s.comp.nom}</div>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">${s.comp.desc}</div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:${pct>=80?'var(--success)':pct>=50?'var(--terracotta)':'var(--ink-muted)'};white-space:nowrap;margin-left:10px">${pct}%</div>
+    </button>`;
+  }).join('');
+  block.style.display = 'block';
+}
+
+function selectComposition(id) {
+  const comp = COMPOSITIONS.find(c => c.id === id);
+  if (!comp) return;
+  selectedComposition = comp;
+  document.getElementById('comp-sel-name').textContent = `${comp.nom} — ${comp.desc}`;
+  document.getElementById('comp-sel-hs').textContent = `Code HS : ${comp.hs}`;
+  document.getElementById('composition-selected').style.display = 'block';
+  document.getElementById('composition-search').value = '';
+  document.getElementById('composition-list').style.display = 'none';
+  document.getElementById('comp-suggestions').style.display = 'none';
+  updateSummary();
+  scheduleAutoSave();
+}
+
+function clearComposition() {
+  selectedComposition = null;
+  document.getElementById('composition-selected').style.display = 'none';
+  matchComposition();
+  updateSummary();
+  scheduleAutoSave();
+}
+
+function selectComposition2(id) {
+  const comp = COMPOSITIONS.find(c => c.id === id);
+  if (!comp) return;
+  selectedComposition2 = comp;
+  document.getElementById('comp2-sel-name').textContent = `${comp.nom} — ${comp.desc}`;
+  document.getElementById('comp2-sel-hs').textContent = `Code HS : ${comp.hs}`;
+  document.getElementById('composition2-selected').style.display = 'block';
+  document.getElementById('composition2-search').value = '';
+  document.getElementById('composition2-list').style.display = 'none';
+  updateSummary();
+  scheduleAutoSave();
+}
+
+function clearComposition2() {
+  selectedComposition2 = null;
+  document.getElementById('composition2-selected').style.display = 'none';
+  updateSummary();
+  scheduleAutoSave();
+}
+
+// Searchable dropdown : factorisé pour les 2 emplacements
+function setupCompositionSearch(inputId, listId, selectFn) {
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+
+  function showList(query = '') {
+    const q = normalizeText(query);
+    let filtered = COMPOSITIONS;
+    if (q) {
+      filtered = COMPOSITIONS
+        .map(c => ({ comp: c, score: scoreComposition(c, query) }))
+        .filter(s => s.score > 0 || normalizeText(s.comp.nom).includes(q))
+        .sort((a, b) => b.score - a.score)
+        .map(s => s.comp);
+    }
+    if (!filtered.length) { list.style.display = 'none'; return; }
+    list.innerHTML = filtered.slice(0, 50).map(c => `
+      <div onclick="${selectFn}(${c.id})" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line-soft);font-size:13px" onmouseenter="this.style.background='var(--cream-warm)'" onmouseleave="this.style.background='transparent'">
+        <div style="font-weight:600;color:var(--ink)">${c.nom}</div>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">${c.desc}</div>
+      </div>
+    `).join('');
+    list.style.display = 'block';
+  }
+
+  input.addEventListener('focus', () => showList(input.value));
+  input.addEventListener('input', () => showList(input.value));
+  input.addEventListener('blur', () => setTimeout(() => list.style.display = 'none', 200));
+}
+
+setupCompositionSearch('composition-search', 'composition-list', 'selectComposition');
+setupCompositionSearch('composition2-search', 'composition2-list', 'selectComposition2');
+
+// ═══════════════════════════════════════════════════
+// TRADUCTION FR → EN (via Firebase Cloud Function)
+// ═══════════════════════════════════════════════════
+// IMPORTANT : remplacer cette URL après déploiement de la Cloud Function
+const TRANSLATE_URL = 'https://YOUR-FUNCTION-URL.cloudfunctions.net/translateProduct';
+
+let translationCache = {};
+
+async function translateDescription() {
+  const fr = document.getElementById('desc-principale').value.trim();
+  const matiere = document.getElementById('desc-matiere').value.trim();
+  const pourQui = document.getElementById('desc-pourqui').value.trim();
+
+  if (!fr && !matiere && !pourQui) {
+    showToast('⚠ Remplis d\'abord la description', 'error');
+    return;
+  }
+
+  const cacheKey = fr + '|' + matiere + '|' + pourQui;
+  if (translationCache[cacheKey]) {
+    displayTranslation(translationCache[cacheKey]);
+    return;
+  }
+
+  const btnText = document.getElementById('btn-translate-text');
+  const btnIcon = document.getElementById('btn-translate-icon');
+  const btn = document.getElementById('btn-translate');
+  btn.disabled = true;
+  btnIcon.textContent = '⏳';
+  btnText.textContent = 'Traduction en cours…';
+
+  try {
+    if (TRANSLATE_URL.includes('YOUR-FUNCTION-URL')) {
+      // Mode dev : pas encore déployé
+      throw new Error('CLOUD_FUNCTION_NOT_DEPLOYED');
+    }
+
+    const res = await fetch(TRANSLATE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: fr, matiere, pourQui })
+    });
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    translationCache[cacheKey] = data;
+    displayTranslation(data);
+    showToast('✓ Traduction terminée');
+  } catch (e) {
+    console.error('Translation error:', e);
+    if (e.message === 'CLOUD_FUNCTION_NOT_DEPLOYED') {
+      showToast('⚠ Cloud Function pas encore déployée — voir consignes Sousou', 'error');
+    } else {
+      showToast('⚠ Erreur de traduction : ' + e.message, 'error');
+    }
+  } finally {
+    btn.disabled = false;
+    btnIcon.textContent = '🌐';
+    btnText.textContent = 'Traduire en anglais';
+  }
+}
+
+function displayTranslation(data) {
+  let txt = '';
+  if (data.description) txt += 'Description\n' + data.description;
+  if (data.matiere) txt += (txt ? '\n\n' : '') + 'Material\n' + data.matiere;
+  if (data.pourQui) txt += (txt ? '\n\n' : '') + 'Who is it for?\n' + data.pourQui;
+  document.getElementById('desc-preview-en').textContent = txt;
+  document.getElementById('translation-block').style.display = 'block';
+}
+
+function getCurrentTranslation() {
+  const fr = document.getElementById('desc-principale').value.trim();
+  const matiere = document.getElementById('desc-matiere').value.trim();
+  const pourQui = document.getElementById('desc-pourqui').value.trim();
+  const cacheKey = fr + '|' + matiere + '|' + pourQui;
+  return translationCache[cacheKey] || null;
+}
+
+// ═══════════════════════════════════════════════════
+// VUE LISTE DES PRODUITS DANS LE MODAL
+// ═══════════════════════════════════════════════════
+function switchRecapTab(tab) {
+  const tabList = document.getElementById('tab-list');
+  const tabCsv = document.getElementById('tab-csv');
+  const viewList = document.getElementById('view-list');
+  const viewCsv = document.getElementById('view-csv');
+
+  if (tab === 'list') {
+    tabList.classList.add('active');
+    tabList.style.color = 'var(--bordeaux)';
+    tabList.style.borderBottomColor = 'var(--bordeaux)';
+    tabCsv.classList.remove('active');
+    tabCsv.style.color = 'var(--ink-muted)';
+    tabCsv.style.borderBottomColor = 'transparent';
+    viewList.style.display = 'block';
+    viewCsv.style.display = 'none';
+  } else {
+    tabCsv.classList.add('active');
+    tabCsv.style.color = 'var(--bordeaux)';
+    tabCsv.style.borderBottomColor = 'var(--bordeaux)';
+    tabList.classList.remove('active');
+    tabList.style.color = 'var(--ink-muted)';
+    tabList.style.borderBottomColor = 'transparent';
+    viewCsv.style.display = 'block';
+    viewList.style.display = 'none';
+  }
+}
+
+function renderRecapList() {
+  const container = document.getElementById('recap-list');
+  if (!allProducts.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--ink-muted);padding:30px 0">Aucun produit</p>';
+    return;
+  }
+
+  // Grouper par produit "racine" (nom sans la couleur)
+  const groups = {};
+  allProducts.forEach((p, idx) => {
+    const baseName = p.nom.replace(/ (beige|blanc|bleu|bleu marine|bordeaux|camel|crème|gris|kaki|mauve|noir|olive|prune|rose|taupe|terracotta|vert)([^a-z].*)?$/i, '').trim();
+    if (!groups[baseName]) groups[baseName] = [];
+    groups[baseName].push({ ...p, _idx: idx });
+  });
+
+  container.innerHTML = Object.entries(groups).map(([baseName, items]) => `
+    <div style="background:var(--white);border:1px solid var(--line);border-radius:var(--radius-md);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm)">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;font-weight:500;color:var(--bordeaux);line-height:1.2">${baseName}</div>
+          <div style="font-size:11px;color:var(--ink-muted);margin-top:3px">${items[0].cat || '—'} · ${items[0].prix} €${items[0].poids ? ' · ' + items[0].poids + ' kg' : ''}</div>
+        </div>
+        <button type="button" onclick="removeProductGroup('${baseName.replace(/'/g, "\\'")}')" style="background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--danger);cursor:pointer">🗑</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${items.map(i => `
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 9px;background:var(--cream-warm);border-radius:100px;font-size:11px;color:var(--ink-soft)">
+            ${i.couleur || 'Sans couleur'}
+            <button type="button" onclick="removeProductLine(${i._idx})" style="background:none;border:none;color:var(--ink-muted);cursor:pointer;font-size:13px;padding:0;line-height:1">×</button>
+          </span>
+        `).join('')}
+      </div>
+      ${items[0].tailles ? `<div style="font-size:11px;color:var(--ink-muted);margin-top:8px"><strong>Tailles:</strong> ${items[0].tailles.split(' | ').slice(0, 5).join(', ')}${items[0].tailles.split(' | ').length > 5 ? '…' : ''}</div>` : ''}
+      ${items[0].comp ? `<div style="font-size:11px;color:var(--ink-muted);margin-top:4px"><strong>Composition:</strong> ${items[0].comp}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function removeProductLine(idx) {
+  if (!confirm('Supprimer cette ligne ?')) return;
+  allProducts.splice(idx, 1);
+  updateCounter();
+  generateCSV();
+}
+
+function removeProductGroup(baseName) {
+  if (!confirm(`Supprimer toutes les déclinaisons de « ${baseName} » ?`)) return;
+  // Retirer toutes les lignes dont le nom commence par baseName
+  for (let i = allProducts.length - 1; i >= 0; i--) {
+    const cleanName = allProducts[i].nom.replace(/ (beige|blanc|bleu|bleu marine|bordeaux|camel|crème|gris|kaki|mauve|noir|olive|prune|rose|taupe|terracotta|vert)([^a-z].*)?$/i, '').trim();
+    if (cleanName === baseName) allProducts.splice(i, 1);
+  }
+  if (!allProducts.length) {
+    closeOverlay();
+    showToast('Liste vidée');
+    updateCounter();
+  } else {
+    updateCounter();
+    generateCSV();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// CODE D'ACCÈS
+// ═══════════════════════════════════════════════════
+const ACCESS_CODE = '1234567';
+const ACCESS_KEY = 'cataleya_access_granted';
+
+function checkAccess() {
+  const input = document.getElementById('access-input');
+  const error = document.getElementById('access-error');
+  if (input.value === ACCESS_CODE) {
+    localStorage.setItem(ACCESS_KEY, 'yes');
+    document.getElementById('access-screen').classList.add('hidden');
+    onAccessGranted();
+  } else {
+    error.textContent = 'Code incorrect';
+    input.value = '';
+    setTimeout(() => error.textContent = '', 2500);
+  }
+}
+
+document.getElementById('access-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') checkAccess();
+});
+
+if (localStorage.getItem(ACCESS_KEY) === 'yes') {
+  document.getElementById('access-screen').classList.add('hidden');
+  if (window._firebase) onAccessGranted();
+  else window.addEventListener('firebase-ready', onAccessGranted);
+} else {
+  setTimeout(() => document.getElementById('access-input').focus(), 300);
+}
+
+function onAccessGranted() {
+  if (!fb && window._firebase) fb = window._firebase;
+  loadDraftsList();
+}
+
+// ═══════════════════════════════════════════════════
+// FIREBASE BROUILLONS
+// ═══════════════════════════════════════════════════
+let fb = window._firebase || null;
+if (!fb) window.addEventListener('firebase-ready', () => { fb = window._firebase; if (localStorage.getItem(ACCESS_KEY) === 'yes') loadDraftsList(); });
+
+let currentDraftId = null;
+let saveTimer = null;
+let isLoadingDraft = false;
+
+function generateDraftId() { return 'd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8); }
+
+function showSaveIndicator(state) {
+  const ind = document.getElementById('save-indicator');
+  ind.classList.remove('saved', 'saving', 'error');
+  if (state === 'saving') { ind.textContent = '💾 Sauvegarde…'; ind.classList.add('saving', 'show'); }
+  else if (state === 'saved') { ind.textContent = '✓ Sauvegardé'; ind.classList.add('saved', 'show'); setTimeout(() => ind.classList.remove('show'), 2000); }
+  else if (state === 'error') { ind.textContent = '⚠ Erreur'; ind.classList.add('error', 'show'); }
+  else ind.classList.remove('show');
+}
+
+function captureFormState() {
+  return {
+    nom: document.getElementById('nom').value,
+    sku: document.getElementById('sku').value,
+    prix: document.getElementById('prix').value,
+    poids: document.getElementById('poids').value,
+    categories: [...document.querySelectorAll('#categories-chips input:checked')].map(i => i.value),
+    type: document.getElementById('type-decl').checked ? 'declinaisons' : 'simple',
+    groupState: { ...groupState },
+    subState: { ...subState },
+    tailles: [...document.querySelectorAll('#grp-taille input[type=checkbox]:checked')].map(i => i.value),
+    optionsChecked: [...document.querySelectorAll('#grp-option input[type=checkbox]:checked')].map(i => i.value),
+    options2Checked: [...document.querySelectorAll('#grp-option2 input[type=checkbox]:checked')].map(i => i.value),
+    couleurs: [...document.querySelectorAll('#color-chips input:checked')].map(i => i.value),
+    descPrincipale: document.getElementById('desc-principale').value,
+    descMatiere: document.getElementById('desc-matiere').value,
+    descPourqui: document.getElementById('desc-pourqui').value,
+    compositionId: selectedComposition ? selectedComposition.id : null,
+    composition2Id: selectedComposition2 ? selectedComposition2.id : null,
+    entretien: document.getElementById('entretien').value,
+    photos: [...document.querySelectorAll('.photo-input')].map(i => i.value),
+    notes: document.getElementById('notes').value,
+    currentStep,
+    stepCompleted: { ...stepCompleted },
+    translation: getCurrentTranslation()
+  };
+}
+
+function restoreFormState(state) {
+  isLoadingDraft = true;
+  document.getElementById('nom').value = state.nom || '';
+  document.getElementById('sku').value = state.sku || '';
+  document.getElementById('prix').value = state.prix || '';
+  document.getElementById('poids').value = state.poids || '';
+  document.getElementById('desc-principale').value = state.descPrincipale || '';
+  document.getElementById('desc-matiere').value = state.descMatiere || '';
+  document.getElementById('desc-pourqui').value = state.descPourqui || '';
+  document.getElementById('entretien').value = state.entretien || '';
+  document.getElementById('notes').value = state.notes || '';
+
+  rebuildCategoryChips();
+  (state.categories || []).forEach(v => {
+    const cb = [...document.querySelectorAll('#categories-chips input')].find(i => i.value === v);
+    if (cb) cb.checked = true;
+  });
+
+  if (state.type === 'simple') {
+    document.getElementById('type-simple').checked = true;
+    document.getElementById('bloc-declinaisons').style.display = 'none';
+  } else {
+    document.getElementById('type-decl').checked = true;
+    document.getElementById('bloc-declinaisons').style.display = 'block';
+  }
+
+  Object.keys(state.groupState || {}).forEach(k => {
+    groupState[k] = state.groupState[k];
+    const grp = document.getElementById('grp-' + k);
+    if (grp) grp.classList.toggle('active', !!groupState[k]);
+  });
+
+  Object.keys(state.subState || {}).forEach(k => {
+    subState[k] = state.subState[k];
+    const btn = document.getElementById('sb-' + k);
+    const chips = document.getElementById('chips-' + k);
+    if (btn) btn.classList.toggle('active', !!subState[k]);
+    if (chips) chips.classList.toggle('open', !!subState[k]);
+  });
+
+  document.querySelectorAll('#grp-taille input[type=checkbox]').forEach(i => i.checked = false);
+  (state.tailles || []).forEach(v => {
+    const cb = [...document.querySelectorAll('#grp-taille input[type=checkbox]')].find(i => i.value === v);
+    if (cb) cb.checked = true;
+  });
+  document.querySelectorAll('#grp-option input[type=checkbox]').forEach(i => i.checked = false);
+  (state.optionsChecked || []).forEach(v => {
+    const cb = [...document.querySelectorAll('#grp-option input[type=checkbox]')].find(i => i.value === v);
+    if (cb) cb.checked = true;
+  });
+  document.querySelectorAll('#grp-option2 input[type=checkbox]').forEach(i => i.checked = false);
+  (state.options2Checked || []).forEach(v => {
+    const cb = [...document.querySelectorAll('#grp-option2 input[type=checkbox]')].find(i => i.value === v);
+    if (cb) cb.checked = true;
+  });
+
+  rebuildColorChips();
+  (state.couleurs || []).forEach(v => {
+    const cb = [...document.querySelectorAll('#color-chips input')].find(i => i.value === v);
+    if (cb) cb.checked = true;
+  });
+
+  selectedComposition = null;
+  selectedComposition2 = null;
+  document.getElementById('composition-selected').style.display = 'none';
+  document.getElementById('composition2-selected').style.display = 'none';
+  if (state.compositionId) selectComposition(state.compositionId);
+  if (state.composition2Id) selectComposition2(state.composition2Id);
+
+  const photoList = document.getElementById('photo-list');
+  photoList.innerHTML = '';
+  const photos = (state.photos && state.photos.length) ? state.photos : ['', ''];
+  photos.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'photo-item';
+    div.innerHTML = `<input type="text" placeholder="Photo ${i+1}" class="photo-input" value="${(p||'').replace(/"/g,'&quot;')}" /><button class="btn-remove" onclick="removePhoto(this)">×</button>`;
+    photoList.appendChild(div);
+  });
+
+  if (state.translation) {
+    const cacheKey = (state.descPrincipale||'') + '|' + (state.descMatiere||'') + '|' + (state.descPourqui||'');
+    translationCache[cacheKey] = state.translation;
+    displayTranslation(state.translation);
+  }
+
+  Object.keys(state.stepCompleted || {}).forEach(k => stepCompleted[k] = state.stepCompleted[k]);
+  goToStep(state.currentStep || 1);
+
+  updatePreview();
+  updateSummary();
+  isLoadingDraft = false;
+}
+
+function scheduleAutoSave() {
+  if (isLoadingDraft) return;
+  if (!fb) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveDraft, 2000);
+}
+
+async function saveDraft() {
+  if (!fb) return;
+  try {
+    const state = captureFormState();
+    const isEmpty = !state.nom && !state.descPrincipale && !state.prix && !state.categories.length;
+    if (isEmpty) { showSaveIndicator(null); return; }
+
+    showSaveIndicator('saving');
+    if (!currentDraftId) currentDraftId = generateDraftId();
+    const nom = state.nom.trim() || '(Sans nom)';
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    await fb.setDoc(fb.doc(fb.db, 'product_drafts', currentDraftId), {
+      id: currentDraftId,
+      nom,
+      state,
+      updatedAt: fb.serverTimestamp(),
+      expiresAt: fb.Timestamp.fromDate(expiresAt)
+    });
+    showSaveIndicator('saved');
+    loadDraftsList();
+  } catch (e) {
+    console.error('Save error:', e);
+    showSaveIndicator('error');
+  }
+}
+
+async function loadDraftsList() {
+  if (!fb) return;
+  try {
+    const q = fb.query(fb.collection(fb.db, 'product_drafts'), fb.orderBy('updatedAt', 'desc'), fb.limit(20));
+    const snap = await fb.getDocs(q);
+    const drafts = [];
+    const now = Date.now();
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (d.expiresAt && d.expiresAt.toMillis && d.expiresAt.toMillis() < now) return;
+      drafts.push(d);
+    });
+
+    const banner = document.getElementById('drafts-banner');
+    const countEl = document.getElementById('drafts-count');
+    const list = document.getElementById('drafts-list');
+
+    if (!drafts.length) { banner.style.display = 'none'; return; }
+
+    banner.style.display = 'block';
+    countEl.textContent = drafts.length;
+
+    list.innerHTML = drafts.map(d => {
+      const updatedAt = d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate() : new Date();
+      const meta = formatRelativeTime(updatedAt);
+      const isCurrent = d.id === currentDraftId;
+      return `<div class="draft-item" ${isCurrent ? 'style="border-color:var(--terracotta);background:var(--cream-warm)"' : ''}>
+        <div class="draft-info">
+          <div class="draft-name">${(d.nom || '(Sans nom)').replace(/</g, '&lt;')}${isCurrent ? ' <span style="font-size:10px;color:var(--terracotta);font-weight:700">• EN COURS</span>' : ''}</div>
+          <div class="draft-meta">${meta}</div>
+        </div>
+        <div class="draft-actions">
+          <button class="draft-btn" onclick="viewDraft('${d.id}')" title="Voir">👁</button>
+          <button class="draft-btn primary" onclick="loadDraft('${d.id}')">Reprendre</button>
+          <button class="draft-btn danger" onclick="deleteDraft('${d.id}')" title="Supprimer">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    console.error('Load drafts error:', e);
+  }
+}
+
+function formatRelativeTime(date) {
+  const diff = Date.now() - date.getTime();
+  const min = Math.floor(diff / 60000);
+  const hour = Math.floor(min / 60);
+  const day = Math.floor(hour / 24);
+  if (min < 1) return 'À l\'instant';
+  if (min < 60) return `Il y a ${min} min`;
+  if (hour < 24) return `Il y a ${hour}h`;
+  if (day === 1) return 'Hier';
+  if (day < 7) return `Il y a ${day} jours`;
+  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+function toggleDraftsList() {
+  const list = document.getElementById('drafts-list');
+  const icon = document.getElementById('drafts-toggle-icon');
+  list.classList.toggle('open');
+  icon.style.transform = list.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0)';
+}
+
+async function loadDraft(id) {
+  if (!fb) return;
+  try {
+    const docSnap = await fb.getDoc(fb.doc(fb.db, 'product_drafts', id));
+    if (!docSnap.exists()) { showToast('Brouillon introuvable', 'error'); return; }
+    const data = docSnap.data();
+    currentDraftId = id;
+    restoreFormState(data.state);
+    showToast(`Brouillon « ${data.nom} » chargé`);
+    document.getElementById('drafts-list').classList.remove('open');
+    document.getElementById('drafts-toggle-icon').style.transform = 'rotate(0)';
+    loadDraftsList();
+  } catch (e) { console.error('Load draft error:', e); showToast('Erreur chargement', 'error'); }
+}
+
+async function viewDraft(id) {
+  if (!fb) return;
+  try {
+    const docSnap = await fb.getDoc(fb.doc(fb.db, 'product_drafts', id));
+    if (!docSnap.exists()) return;
+    const data = docSnap.data();
+    const s = data.state;
+    const summary = `📋 ${data.nom}\n\nNom : ${s.nom || '—'}\nSKU : ${s.sku || '—'}\nPrix : ${s.prix || '—'} €\nPoids : ${s.poids || '—'} kg\nCatégories : ${(s.categories || []).join(', ') || '—'}\nCouleurs : ${(s.couleurs || []).join(', ') || '—'}\nTailles : ${(s.tailles || []).join(', ') || '—'}\n\nDescription :\n${s.descPrincipale || '—'}\n\nMatière : ${s.descMatiere || '—'}\n\nPour qui :\n${s.descPourqui || '—'}\n\nEntretien : ${s.entretien || '—'}\nNotes : ${s.notes || '—'}`;
+    alert(summary);
+  } catch (e) { showToast('Erreur', 'error'); }
+}
+
+async function deleteDraft(id) {
+  if (!confirm('Supprimer ce brouillon ?')) return;
+  if (!fb) return;
+  try {
+    await fb.deleteDoc(fb.doc(fb.db, 'product_drafts', id));
+    if (id === currentDraftId) currentDraftId = null;
+    loadDraftsList();
+    showToast('Brouillon supprimé');
+  } catch (e) { showToast('Erreur', 'error'); }
+}
+
+function newDraft() {
+  if (currentDraftId && document.getElementById('nom').value.trim()) {
+    if (!confirm('Commencer un nouveau produit ? Le brouillon en cours est sauvegardé.')) return;
+  }
+  currentDraftId = null;
+  resetFormSilent();
+  showToast('Nouveau brouillon');
+  document.getElementById('drafts-list').classList.remove('open');
+  document.getElementById('drafts-toggle-icon').style.transform = 'rotate(0)';
+}
+
+document.querySelectorAll('input, textarea').forEach(el => {
+  el.addEventListener('input', scheduleAutoSave);
+  el.addEventListener('change', scheduleAutoSave);
+});
+
+const _origSaveAndAdd = saveAndAdd;
+saveAndAdd = function() {
+  const draftIdToDelete = currentDraftId;
+  _origSaveAndAdd();
+  if (draftIdToDelete && fb) {
+    fb.deleteDoc(fb.doc(fb.db, 'product_drafts', draftIdToDelete)).catch(()=>{});
+    currentDraftId = null;
+    loadDraftsList();
+  }
+};
+
+const _origResetAll = resetAll;
+resetAll = function() {
+  _origResetAll();
+  if (currentDraftId && fb) {
+    fb.deleteDoc(fb.doc(fb.db, 'product_drafts', currentDraftId)).catch(()=>{});
+    currentDraftId = null;
+    loadDraftsList();
+  }
+};
+
 updateSummary();
 </script>
 </body>
