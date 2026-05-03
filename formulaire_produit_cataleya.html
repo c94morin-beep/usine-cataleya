@@ -17,13 +17,13 @@
 
   // ⚠️ TA CONFIG FIREBASE USINE-CATALEYA À METTRE ICI
   const firebaseConfig = {
-    apiKey: "AIzaSyDVpN0cbCqDYI2klKrWqZJAcYDX2ayx8F0",
+    apiKey: "AIzaSyD0EDX1uK2lhlqPxOzHR8lCGGzs9fJqAtY",
     authDomain: "usine-cataleya.firebaseapp.com",
     databaseURL: "https://usine-cataleya-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "usine-cataleya",
     storageBucket: "usine-cataleya.firebasestorage.app",
-    messagingSenderId: "218489156781",
-    appId: "1:218489156781:web:92f657e50e63222a130224"
+    messagingSenderId: "880301803590",
+    appId: "1:880301803590:web:8b4a2c6e9d5f0a1c8d3e7f"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -1923,42 +1923,73 @@ function resetAll() {
 }
 
 // ═══════════════════════════════════════════════════
-// AUTOCOMPLÉTION (localStorage)
+// AUTOCOMPLÉTION (Realtime Database — partagé tous appareils)
 // ═══════════════════════════════════════════════════
-const AC_KEY = 'cataleya_autocomplete';
+const AC_KEY_LOCAL = 'cataleya_autocomplete'; // fallback si pas de Firebase
+const AC_PATH = 'product_autocomplete'; // nœud Firebase
 
-function acLoad() {
-  try { return JSON.parse(localStorage.getItem(AC_KEY)) || {}; } catch { return {}; }
+// Cache en mémoire (chargé une fois, mis à jour à chaque ajout)
+let acCache = {};
+let acCacheLoaded = false;
+
+async function acLoadFromFirebase() {
+  // Toujours charger d'abord le cache local pour avoir des suggestions immédiates
+  try { acCache = JSON.parse(localStorage.getItem(AC_KEY_LOCAL)) || {}; } catch { acCache = {}; }
+
+  if (!fb) {
+    acCacheLoaded = true;
+    return;
+  }
+  try {
+    const snap = await fb.get(fb.ref(fb.db, AC_PATH));
+    if (snap.exists()) {
+      const remote = snap.val() || {};
+      // Fusionner : Firebase écrase le local
+      acCache = remote;
+      // Sauver aussi en local pour les futures sessions hors-ligne
+      localStorage.setItem(AC_KEY_LOCAL, JSON.stringify(acCache));
+    }
+  } catch (e) {
+    console.warn('AC load from Firebase failed, using local cache:', e);
+  }
+  acCacheLoaded = true;
 }
-function acSave(data) { localStorage.setItem(AC_KEY, JSON.stringify(data)); }
 
-function acAdd(fieldId, value) {
+async function acAdd(fieldId, value) {
   if (!value || value.length < 2) return;
-  const data = acLoad();
-  if (!data[fieldId]) data[fieldId] = [];
-  if (data[fieldId].some(v => v.toLowerCase() === value.toLowerCase())) return;
-  data[fieldId].unshift(value);
-  if (data[fieldId].length > 30) data[fieldId].pop();
-  acSave(data);
+  if (!acCache[fieldId]) acCache[fieldId] = [];
+  // Dédup case-insensitive
+  if (acCache[fieldId].some(v => v.toLowerCase() === value.toLowerCase())) return;
+  acCache[fieldId].unshift(value);
+  if (acCache[fieldId].length > 30) acCache[fieldId].pop();
+
+  // Sauvegarde locale (instantané)
+  localStorage.setItem(AC_KEY_LOCAL, JSON.stringify(acCache));
+
+  // Sauvegarde Firebase (asynchrone, sans bloquer l'UI)
+  if (fb) {
+    fb.set(fb.ref(fb.db, AC_PATH + '/' + fieldId), acCache[fieldId]).catch(e => {
+      console.warn('AC sync to Firebase failed:', e);
+    });
+  }
 }
 
 function acGet(fieldId, query) {
-  const data = acLoad();
-  const list = data[fieldId] || [];
+  const list = acCache[fieldId] || [];
   if (!query) return list.slice(0, 8);
   const q = query.toLowerCase();
   return list.filter(v => v.toLowerCase().includes(q)).slice(0, 8);
 }
 
-const origSaveAndAdd = saveAndAdd;
+const origSaveAndAdd_AC = saveAndAdd;
 saveAndAdd = function() {
   acSaveCurrentFields();
-  origSaveAndAdd();
+  origSaveAndAdd_AC();
 };
-const origSaveAndFinish = saveAndFinish;
+const origSaveAndFinish_AC = saveAndFinish;
 saveAndFinish = function() {
   acSaveCurrentFields();
-  origSaveAndFinish();
+  origSaveAndFinish_AC();
 };
 
 function acSaveCurrentFields() {
@@ -1966,6 +1997,11 @@ function acSaveCurrentFields() {
     const val = el.value.trim();
     if (val) acAdd(el.getAttribute('data-ac'), val);
   });
+}
+
+// Charger l'historique d'autocomplétion une fois Firebase prêt
+function loadAutocompleteHistory() {
+  acLoadFromFirebase();
 }
 
 function initAutocomplete() {
@@ -2263,7 +2299,7 @@ setupCompositionSearch('composition2-search', 'composition2-list', 'selectCompos
 // TRADUCTION FR → EN (via Firebase Cloud Function)
 // ═══════════════════════════════════════════════════
 // IMPORTANT : remplacer cette URL après déploiement de la Cloud Function
-const TRANSLATE_URL = 'https://YOUR-FUNCTION-URL.cloudfunctions.net/translateProduct';
+const TRANSLATE_URL = 'https://europe-west1-usine-cataleya.cloudfunctions.net/translateProduct';
 
 let translationCache = {};
 
@@ -2465,13 +2501,20 @@ if (localStorage.getItem(ACCESS_KEY) === 'yes') {
 function onAccessGranted() {
   if (!fb && window._firebase) fb = window._firebase;
   loadDraftsList();
+  loadAutocompleteHistory();
 }
 
 // ═══════════════════════════════════════════════════
 // FIREBASE BROUILLONS
 // ═══════════════════════════════════════════════════
 let fb = window._firebase || null;
-if (!fb) window.addEventListener('firebase-ready', () => { fb = window._firebase; if (localStorage.getItem(ACCESS_KEY) === 'yes') loadDraftsList(); });
+if (!fb) window.addEventListener('firebase-ready', () => {
+  fb = window._firebase;
+  if (localStorage.getItem(ACCESS_KEY) === 'yes') {
+    loadDraftsList();
+    loadAutocompleteHistory();
+  }
+});
 
 let currentDraftId = null;
 let saveTimer = null;
