@@ -1035,6 +1035,24 @@
     justify-content: center;
     flex-shrink: 0;
   }
+  .products-export {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(244,235,222,0.15);
+    border: 1px solid rgba(244,235,222,0.25);
+    color: var(--cream);
+    font-size: 17px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .products-export:active {
+    background: rgba(244,235,222,0.25);
+    transform: scale(0.95);
+  }
 
   .products-tabs {
     display: flex;
@@ -1318,7 +1336,7 @@
     <button class="btn-new-draft" onclick="newDraft()">+ Commencer un nouveau produit</button>
   </div>
 
-  <!-- COMPTEUR PRODUITS -->
+  <!-- COMPTEUR PRODUITS (déprécié — gardé caché pour compat) -->
   <div id="product-counter" class="product-counter" style="display:none">
     <div class="count" id="counter-count"></div>
     <div id="counter-text"></div>
@@ -1744,6 +1762,7 @@
   <div class="products-header">
     <button class="products-back" onclick="closeProductsView()">‹</button>
     <h2>Mes produits</h2>
+    <button class="products-export" onclick="askExportCSV()" title="Export CSV admin">📄</button>
   </div>
 
   <div class="products-tabs">
@@ -1799,8 +1818,8 @@ function goToStep(n) {
   if (n === TOTAL_STEPS) {
     stickyBar.innerHTML = `
       <button class="nav-btn" onclick="goToStep(currentStep - 1)">‹</button>
-      <button class="nav-btn-secondary" onclick="saveAndAdd()">+ Ajouter un autre</button>
-      <button class="nav-btn-primary finish" onclick="saveAndFinish()">Terminer ✓</button>
+      <button class="nav-btn-secondary" onclick="saveAndAdd()">+ Nouveau</button>
+      <button class="nav-btn-primary finish" onclick="saveAndFinish()">Enregistrer ✓</button>
     `;
   } else {
     stickyBar.innerHTML = `
@@ -1897,9 +1916,10 @@ function removePhoto(btn) {
 }
 
 // ═══════════════════════════════════════════════════
-// COULEURS
+// COULEURS (Firebase + cache local)
 // ═══════════════════════════════════════════════════
 const COLORS_KEY = 'cataleya_custom_colors';
+const COLORS_PATH = 'product_colors';
 const baseColors = ['Beige','Blanc','Bleu','Bleu marine','Bordeaux','Camel','Crème','Gris','Kaki','Mauve','Noir','Olive','Prune','Rose','Taupe','Terracotta','Vert'];
 
 function loadCustomColors() {
@@ -1907,6 +1927,26 @@ function loadCustomColors() {
 }
 function saveCustomColors(list) {
   localStorage.setItem(COLORS_KEY, JSON.stringify(list));
+  // Sync Firebase
+  if (window._firebase) {
+    const f = window._firebase;
+    f.set(f.ref(f.db, COLORS_PATH), list).catch(e => console.warn('Colors sync failed:', e));
+  }
+}
+
+async function loadColorsFromFirebase() {
+  if (!window._firebase) return;
+  try {
+    const f = window._firebase;
+    const snap = await f.get(f.ref(f.db, COLORS_PATH));
+    if (snap.exists()) {
+      const remote = snap.val();
+      if (Array.isArray(remote)) {
+        localStorage.setItem(COLORS_KEY, JSON.stringify(remote));
+        rebuildColorChips();
+      }
+    }
+  } catch (e) { console.warn('Load colors failed:', e); }
 }
 
 function rebuildColorChips() {
@@ -2082,18 +2122,9 @@ function collectProducts() {
 }
 
 function updateCounter() {
+  // Déprécié — plus de notion de "lot" en v13
   const counter = document.getElementById('product-counter');
-  const count = document.getElementById('counter-count');
-  const text = document.getElementById('counter-text');
-  if (allProducts.length > 0) {
-    counter.style.display = 'block';
-    const n = allProducts.length;
-    count.textContent = `${n} produit${n>1?'s':''} enregistré${n>1?'s':''}`;
-    const names = [...new Set(allProducts.map(p => p.nom.replace(/ (beige|blanc|bleu|bleu marine|bordeaux|camel|crème|gris|kaki|mauve|noir|olive|prune|rose|taupe|terracotta|vert).*$/i, '')))];
-    text.textContent = names.join(' · ');
-  } else {
-    counter.style.display = 'none';
-  }
+  if (counter) counter.style.display = 'none';
 }
 
 function resetFormSilent() {
@@ -2148,11 +2179,10 @@ function saveAndAdd() {
   const products = collectProducts();
   if (!products) return;
   acSaveCurrentFields();
+  const nomProduit = document.getElementById('nom').value.trim() || 'Produit';
   // Sauvegarder en Firebase comme produit finalisé (groupe)
   saveFinalizedProduct(products);
-  allProducts.push(...products);
-  updateCounter();
-  showToast(`✓ ${products.length} ligne${products.length>1?'s':''} enregistrée${products.length>1?'s':''}`);
+  showToast(`✓ ${nomProduit} ajouté · retrouve-le dans 📦 Mes produits`);
   // Supprimer le brouillon associé
   const draftIdToDelete = currentDraftId;
   currentDraftId = null;
@@ -2165,26 +2195,24 @@ function saveAndAdd() {
 
 function saveAndFinish() {
   const nom = document.getElementById('nom').value.trim();
-  if (nom) {
-    const products = collectProducts();
-    if (!products) return;
-    acSaveCurrentFields();
-    saveFinalizedProduct(products);
-    allProducts.push(...products);
-    updateCounter();
-    // Supprimer le brouillon associé
-    const draftIdToDelete = currentDraftId;
-    currentDraftId = null;
-    if (draftIdToDelete && fb) {
-      fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
-      loadDraftsList();
-    }
-  }
-  if (!allProducts.length) {
-    showToast('⚠ Aucun produit enregistré', 'error');
+  if (!nom) {
+    showToast('⚠ Remplis au moins le nom du produit', 'error');
+    goToStep(1);
     return;
   }
-  generateCSV();
+  const products = collectProducts();
+  if (!products) return;
+  acSaveCurrentFields();
+  saveFinalizedProduct(products);
+  showToast(`✓ ${nom} ajouté · retrouve-le dans 📦 Mes produits`);
+  // Supprimer le brouillon associé
+  const draftIdToDelete = currentDraftId;
+  currentDraftId = null;
+  if (draftIdToDelete && fb) {
+    fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
+    loadDraftsList();
+  }
+  resetFormSilent();
 }
 
 // ═══════════════════════════════════════════════════
@@ -2318,6 +2346,8 @@ function initAutocomplete() {
   const fields = [
     { sel: '#nom', key: 'nom' },
     { sel: '#sku', key: 'sku' },
+    { sel: '#prix', key: 'prix' },
+    { sel: '#poids', key: 'poids' },
     { sel: '#desc-principale', key: 'desc-principale' },
     { sel: '#desc-matiere', key: 'desc-matiere' },
     { sel: '#desc-pourqui', key: 'desc-pourqui' },
@@ -2374,13 +2404,14 @@ function showToast(msg, type = 'success') {
   toast.style.background = type === 'error' ? 'var(--danger)' : 'var(--ink)';
   toast.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
 // ═══════════════════════════════════════════════════
-// CATÉGORIES
+// CATÉGORIES (Firebase + cache local)
 // ═══════════════════════════════════════════════════
 const CAT_KEY = 'cataleya_custom_categories';
+const CAT_PATH = 'product_categories';
 const baseCategories = [
   'Abayas & Robes', 'Sous Abayas', 'Ensembles', 'New Collection', 'Soldes',
   'Hijabs & Accessoires', 'Jupes-Palazzos', 'Manteaux & Trenchs',
@@ -2390,7 +2421,28 @@ const baseCategories = [
 function loadCustomCategories() {
   try { return JSON.parse(localStorage.getItem(CAT_KEY)) || []; } catch { return []; }
 }
-function saveCustomCategories(list) { localStorage.setItem(CAT_KEY, JSON.stringify(list)); }
+function saveCustomCategories(list) {
+  localStorage.setItem(CAT_KEY, JSON.stringify(list));
+  if (window._firebase) {
+    const f = window._firebase;
+    f.set(f.ref(f.db, CAT_PATH), list).catch(e => console.warn('Cats sync failed:', e));
+  }
+}
+
+async function loadCategoriesFromFirebase() {
+  if (!window._firebase) return;
+  try {
+    const f = window._firebase;
+    const snap = await f.get(f.ref(f.db, CAT_PATH));
+    if (snap.exists()) {
+      const remote = snap.val();
+      if (Array.isArray(remote)) {
+        localStorage.setItem(CAT_KEY, JSON.stringify(remote));
+        rebuildCategoryChips();
+      }
+    }
+  } catch (e) { console.warn('Load cats failed:', e); }
+}
 
 function rebuildCategoryChips() {
   const container = document.getElementById('categories-chips');
@@ -2805,6 +2857,8 @@ function onAccessGranted() {
   loadDraftsList();
   loadAutocompleteHistory();
   loadFinalizedList();
+  loadColorsFromFirebase();
+  loadCategoriesFromFirebase();
 }
 
 // ═══════════════════════════════════════════════════
@@ -2817,6 +2871,8 @@ if (!fb) window.addEventListener('firebase-ready', () => {
     loadDraftsList();
     loadAutocompleteHistory();
     loadFinalizedList();
+    loadColorsFromFirebase();
+    loadCategoriesFromFirebase();
   }
 });
 
@@ -3356,6 +3412,59 @@ function closeProductDetail(e) {
   if (!e || e.target === document.getElementById('product-detail-overlay')) {
     document.getElementById('product-detail-overlay').classList.remove('active');
   }
+}
+
+// ═══════════════════════════════════════════════════
+// EXPORT CSV ADMIN (Sousou uniquement)
+// ═══════════════════════════════════════════════════
+const ADMIN_EXPORT_CODE = '1234567';
+
+function askExportCSV() {
+  const code = prompt('Code admin pour exporter le CSV :');
+  if (!code) return;
+  if (code !== ADMIN_EXPORT_CODE) {
+    showToast('⚠ Code admin incorrect', 'error');
+    return;
+  }
+  exportAllFinalizedCSV();
+}
+
+function exportAllFinalizedCSV() {
+  if (!cachedFinalized.length) {
+    showToast('Aucun produit finalisé à exporter', 'error');
+    return;
+  }
+
+  // Aplatir tous les products[] de chaque finalisé
+  const allLines = [];
+  cachedFinalized.forEach(item => {
+    if (item.products && Array.isArray(item.products)) {
+      allLines.push(...item.products);
+    }
+  });
+
+  if (!allLines.length) {
+    showToast('Aucune ligne à exporter', 'error');
+    return;
+  }
+
+  const headers = ['Nom','Référence','Catégorie(s)','Prix (€)','Poids (kg)','Couleur','Type','Tailles','Option','Option2','Description FR','Description EN','Tissu principal','Code HS principal','Tissu secondaire','Code HS secondaire','Entretien','Photos','Notes'];
+  const rows = allLines.map(p => [
+    p.nom||'', p.sku||'', p.cat||'', p.prix||'', p.poids||'', p.couleur||'', p.type||'',
+    p.tailles||'', p.options||'', p.options2||'', p.descriptionFR||'', p.descriptionEN||'',
+    p.comp||'', p.hs||'', p.comp2||'', p.hs2||'', p.ent||'', p.photos||'', p.notes||''
+  ].map(csvEscape).join(','));
+
+  const csv = headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const date = new Date().toISOString().split('T')[0];
+  a.download = `cataleya_export_admin_${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`✓ Export ${allLines.length} ligne${allLines.length>1?'s':''}`);
 }
 
 updateSummary();
