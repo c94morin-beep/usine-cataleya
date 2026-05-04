@@ -11,11 +11,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script type="module">
-  // Firebase v10 modular SDK — Realtime Database
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, set, get, remove, onValue, query as rtQuery, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, set, get, remove, onValue, query as rtQuery, orderByChild, limitToLast, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  // ⚠️ TA CONFIG FIREBASE USINE-CATALEYA À METTRE ICI
   const firebaseConfig = {
     apiKey: "AIzaSyD0EDX1uK2lhlqPxOzHR8lCGGzs9fJqAtY",
     authDomain: "usine-cataleya.firebaseapp.com",
@@ -29,8 +27,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  // Exposer pour le code non-module
-  window._firebase = { db, ref, set, get, remove, onValue, rtQuery, orderByChild, limitToLast };
+  window._firebase = { db, ref, set, get, remove, onValue, rtQuery, orderByChild, limitToLast, push };
   window.dispatchEvent(new Event('firebase-ready'));
 </script>
 <style>
@@ -92,6 +89,13 @@
     z-index: 50;
     box-shadow: 0 2px 12px rgba(74,27,38,0.15);
   }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .header-content { flex: 1; min-width: 0; }
   .brand {
     font-size: 10px;
     font-weight: 600;
@@ -113,6 +117,31 @@
     margin-top: 2px;
     font-weight: 400;
   }
+
+  /* Bouton "Mes produits" dans header */
+  .btn-products {
+    flex-shrink: 0;
+    background: rgba(244,235,222,0.12);
+    border: 1px solid rgba(244,235,222,0.25);
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    color: var(--cream);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 64px;
+    transition: all 0.15s;
+  }
+  .btn-products:active {
+    background: rgba(244,235,222,0.22);
+    transform: scale(0.96);
+  }
+  .btn-products .icon { font-size: 18px; }
+  .btn-products .label { font-size: 10px; letter-spacing: 0.3px; }
 
   /* ═══════════════════ STEPPER ═══════════════════ */
   .stepper {
@@ -960,6 +989,266 @@
   }
   .btn-new-draft:active { border-color: var(--terracotta); color: var(--terracotta); }
 
+  /* ═══════════════════ VUE MES PRODUITS (overlay plein écran) ═══════════════════ */
+  .products-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--cream);
+    z-index: 250;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+  }
+  .products-overlay.active { display: flex; }
+
+  .products-header {
+    background: linear-gradient(180deg, var(--bordeaux) 0%, var(--bordeaux-deep) 100%);
+    color: var(--cream);
+    padding: calc(20px + env(safe-area-inset-top)) 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .products-header h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 500;
+    font-style: italic;
+    flex: 1;
+  }
+  .products-back {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(244,235,222,0.15);
+    border: 1px solid rgba(244,235,222,0.25);
+    color: var(--cream);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .products-tabs {
+    display: flex;
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    padding: 0 16px;
+    flex-shrink: 0;
+  }
+  .products-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 14px 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .products-tab.active {
+    color: var(--bordeaux);
+    border-bottom-color: var(--bordeaux);
+  }
+  .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: var(--cream-warm);
+    color: var(--bordeaux);
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .products-tab.active .tab-count {
+    background: var(--terracotta);
+    color: var(--white);
+  }
+
+  .products-search {
+    padding: 12px 16px;
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .products-search input {
+    background: var(--cream);
+    font-size: 14px;
+  }
+
+  .products-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .product-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+  .product-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .product-card-info { flex: 1; min-width: 0; }
+  .product-card-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px;
+    font-style: italic;
+    font-weight: 500;
+    color: var(--bordeaux);
+    line-height: 1.2;
+    margin-bottom: 3px;
+    word-break: break-word;
+  }
+  .product-card-meta {
+    font-size: 11px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+  }
+  .product-card-meta strong { color: var(--ink-soft); font-weight: 600; }
+
+  .product-card-status {
+    flex-shrink: 0;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 100px;
+  }
+  .status-draft { background: var(--cream-warm); color: var(--bordeaux); }
+  .status-finalized { background: rgba(107,127,92,0.15); color: var(--success); }
+
+  .product-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .product-action {
+    flex: 1;
+    min-width: 70px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--cream);
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .product-action.primary {
+    background: var(--bordeaux);
+    color: var(--white);
+    border-color: var(--bordeaux);
+  }
+  .product-action.danger {
+    flex: 0 0 auto;
+    min-width: 40px;
+    color: var(--danger);
+  }
+  .product-action.danger:active {
+    background: var(--danger);
+    color: var(--white);
+    border-color: var(--danger);
+  }
+
+  .products-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--ink-muted);
+  }
+  .products-empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+  .products-empty-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-style: italic;
+    color: var(--bordeaux);
+    margin-bottom: 6px;
+  }
+  .products-empty-desc {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Détail produit (overlay 2nd niveau) */
+  .product-detail-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(42,31,31,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 260;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .product-detail-overlay.active { display: flex; }
+  .product-detail-modal {
+    background: var(--cream);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    width: 100%;
+    max-width: 700px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+  }
+  .product-detail-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .detail-row {
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--line);
+    font-size: 13px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-key {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--bordeaux);
+    margin-bottom: 4px;
+  }
+  .detail-value {
+    color: var(--ink);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .detail-value.muted { color: var(--ink-muted); font-style: italic; }
+
   /* ═══════════════════ DESKTOP ═══════════════════ */
   @media (min-width: 700px) {
     .container { padding: 24px 24px 0; }
@@ -988,9 +1277,17 @@
 
 <!-- ═══════════════════════ HEADER + STEPPER ═══════════════════════ -->
 <header>
-  <div class="brand">Cataleya Paris</div>
-  <h1>Nouveau produit</h1>
-  <div class="subtitle">Remplis les 6 étapes — Sousou s'occupe du reste.</div>
+  <div class="header-top">
+    <div class="header-content">
+      <div class="brand">Cataleya Paris</div>
+      <h1>Nouveau produit</h1>
+      <div class="subtitle">Remplis les 6 étapes — Sousou s'occupe du reste.</div>
+    </div>
+    <button class="btn-products" onclick="openProductsView()" title="Voir tous mes produits">
+      <span class="icon">📦</span>
+      <span class="label">Mes produits</span>
+    </button>
+  </div>
 
   <div class="stepper" id="stepper">
     <div class="step-pill active" data-step="1">1</div>
@@ -1298,7 +1595,6 @@
       <div style="margin-bottom:18px">
         <div style="font-size:11px;font-weight:700;color:var(--bordeaux);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Tissu principal <span class="req">*</span></div>
 
-        <!-- Suggestions auto à partir de la matière étape 4 -->
         <div id="comp-suggestions" style="display:none;margin-bottom:12px">
           <div class="desc-preview-label" style="margin-bottom:6px">✨ Suggestions basées sur la matière saisie</div>
           <div id="comp-suggestions-list"></div>
@@ -1311,7 +1607,6 @@
           </div>
         </div>
 
-        <!-- Composition principale sélectionnée -->
         <div id="composition-selected" style="display:none;background:var(--cream-warm);border:1px solid var(--terracotta-soft);border-radius:var(--radius-md);padding:10px 12px;margin-top:8px">
           <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
             <div>
@@ -1415,20 +1710,17 @@
       <button class="btn-close" onclick="closeOverlay()">×</button>
     </div>
 
-    <!-- Onglets -->
     <div style="display:flex;gap:0;padding:0 20px;border-bottom:1px solid var(--line);background:var(--cream)">
       <button type="button" class="recap-tab active" id="tab-list" onclick="switchRecapTab('list')" style="flex:1;padding:12px 0;background:none;border:none;border-bottom:2px solid var(--bordeaux);font-size:13px;font-weight:600;color:var(--bordeaux);cursor:pointer">📋 Liste des produits</button>
       <button type="button" class="recap-tab" id="tab-csv" onclick="switchRecapTab('csv')" style="flex:1;padding:12px 0;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:var(--ink-muted);cursor:pointer">📄 CSV brut</button>
     </div>
 
     <div class="modal-body">
-      <!-- Vue Liste -->
       <div id="view-list">
         <p style="font-size:13px;color:var(--ink-muted);margin-bottom:14px">Vérifie tes produits avant de télécharger. Tu peux supprimer une ligne ou un produit complet.</p>
         <div id="recap-list"></div>
       </div>
 
-      <!-- Vue CSV -->
       <div id="view-csv" style="display:none">
         <p style="font-size:13px;color:var(--ink-muted);margin-bottom:12px">Format CSV brut prêt à importer dans PrestaShop.</p>
         <div class="csv-content" id="csv-content"></div>
@@ -1440,6 +1732,41 @@
       <button class="btn-download" onclick="downloadCSV()">⬇ Télécharger</button>
       <button class="btn-reset" onclick="resetAll()">Recommencer un nouveau lot</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ VUE MES PRODUITS (overlay plein écran) ═══════════════════ -->
+<div class="products-overlay" id="products-overlay">
+  <div class="products-header">
+    <button class="products-back" onclick="closeProductsView()">‹</button>
+    <h2>Mes produits</h2>
+  </div>
+
+  <div class="products-tabs">
+    <button class="products-tab active" id="ptab-drafts" onclick="switchProductsTab('drafts')">
+      📁 Brouillons <span class="tab-count" id="ptab-count-drafts">0</span>
+    </button>
+    <button class="products-tab" id="ptab-finalized" onclick="switchProductsTab('finalized')">
+      ✓ Finalisés <span class="tab-count" id="ptab-count-finalized">0</span>
+    </button>
+  </div>
+
+  <div class="products-search">
+    <input type="text" id="products-search-input" placeholder="🔍 Rechercher par nom ou référence…" oninput="renderProductsList()" />
+  </div>
+
+  <div class="products-body" id="products-body"></div>
+</div>
+
+<!-- ═══════════════════ DÉTAIL PRODUIT (overlay 2nd niveau) ═══════════════════ -->
+<div class="product-detail-overlay" id="product-detail-overlay" onclick="closeProductDetail(event)">
+  <div class="product-detail-modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="detail-modal-title">Détail produit</h2>
+      <button class="btn-close" onclick="closeProductDetail()">×</button>
+    </div>
+    <div class="product-detail-body" id="product-detail-body"></div>
   </div>
 </div>
 
@@ -1456,17 +1783,14 @@ const stepCompleted = { 1: false, 2: false, 3: false, 4: false, 5: false, 6: fal
 
 function goToStep(n) {
   if (n < 1 || n > TOTAL_STEPS) return;
-  // Masquer ancienne étape
   document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
   document.querySelector(`.step-content[data-step="${n}"]`).classList.add('active');
-  // Update stepper
   document.querySelectorAll('.step-pill').forEach(p => {
     const s = parseInt(p.dataset.step);
     p.classList.remove('active', 'done');
     if (s === n) p.classList.add('active');
     else if (stepCompleted[s]) p.classList.add('done');
   });
-  // Update sticky bar selon l'étape (toujours reconstruite en entier)
   const stickyBar = document.getElementById('sticky-bar');
   if (n === TOTAL_STEPS) {
     stickyBar.innerHTML = `
@@ -1481,7 +1805,6 @@ function goToStep(n) {
     `;
   }
   currentStep = n;
-  // Scroll up
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1490,7 +1813,6 @@ function nextStep() {
   if (currentStep < TOTAL_STEPS) goToStep(currentStep + 1);
 }
 
-// Click sur stepper
 document.getElementById('stepper').addEventListener('click', (e) => {
   const pill = e.target.closest('.step-pill');
   if (!pill) return;
@@ -1498,7 +1820,7 @@ document.getElementById('stepper').addEventListener('click', (e) => {
 });
 
 // ═══════════════════════════════════════════════════
-// GROUPES PRINCIPAUX (Taille / Option / Option2)
+// GROUPES PRINCIPAUX
 // ═══════════════════════════════════════════════════
 const groupState = { taille: true, option: false, option2: false };
 
@@ -1509,7 +1831,6 @@ function toggleGroup(name) {
   updateSummary();
 }
 
-// Sous-groupes taille
 const subDefs = {
   adulte: ['t-50','t-52','t-54','t-56','t-58','t-60','t-62'],
   morpho: ['t-t1','t-t2','t-t3'],
@@ -1531,9 +1852,6 @@ function toggleSub(name) {
   updateSummary();
 }
 
-// ═══════════════════════════════════════════════════
-// TYPE TOGGLE
-// ═══════════════════════════════════════════════════
 document.querySelectorAll('input[name="type"]').forEach(r => {
   r.addEventListener('change', () => {
     const isDecl = document.getElementById('type-decl').checked;
@@ -1575,7 +1893,7 @@ function removePhoto(btn) {
 }
 
 // ═══════════════════════════════════════════════════
-// COULEURS PERSONNALISÉES (localStorage)
+// COULEURS
 // ═══════════════════════════════════════════════════
 const COLORS_KEY = 'cataleya_custom_colors';
 const baseColors = ['Beige','Blanc','Bleu','Bleu marine','Bordeaux','Camel','Crème','Gris','Kaki','Mauve','Noir','Olive','Prune','Rose','Taupe','Terracotta','Vert'];
@@ -1603,7 +1921,6 @@ function rebuildColorChips() {
     const isChecked = checked.has(c) ? ' checked' : '';
     return `<span class="chip"><input type="checkbox" id="${id}" value="${c}"${isChecked}><label for="${id}">${c}</label></span>`;
   }).join('');
-  // Re-bind change listeners on new inputs
   container.querySelectorAll('input').forEach(i => i.addEventListener('change', updateSummary));
 }
 
@@ -1682,7 +1999,6 @@ function updateSummary() {
   }
 }
 
-// Bind summary updates sur tous les inputs
 document.querySelectorAll('input, textarea').forEach(el => {
   el.addEventListener('input', updateSummary);
   el.addEventListener('change', updateSummary);
@@ -1727,7 +2043,6 @@ function collectProducts() {
   if (dm) descriptionFR += (descriptionFR ? '\n\n' : '') + 'Matière :\n\n' + dm;
   if (dq) descriptionFR += (descriptionFR ? '\n\n' : '') + 'Pour qui ? :\n\n' + dq;
 
-  // Traduction EN si dispo
   let descriptionEN = '';
   const trad = getCurrentTranslation();
   if (trad) {
@@ -1736,7 +2051,6 @@ function collectProducts() {
     if (trad.pourQui) descriptionEN += (descriptionEN ? '\n\n' : '') + 'Who is it for?:\n\n' + trad.pourQui;
   }
 
-  // Composition : sélectionnée dans le dropdown (2 emplacements)
   let comp = '', hs = '', comp2 = '', hs2 = '';
   if (selectedComposition) {
     comp = selectedComposition.nom + ' — ' + selectedComposition.desc;
@@ -1771,7 +2085,6 @@ function updateCounter() {
     counter.style.display = 'block';
     const n = allProducts.length;
     count.textContent = `${n} produit${n>1?'s':''} enregistré${n>1?'s':''}`;
-    // Liste unique des noms (sans doublon par couleur)
     const names = [...new Set(allProducts.map(p => p.nom.replace(/ (beige|blanc|bleu|bleu marine|bordeaux|camel|crème|gris|kaki|mauve|noir|olive|prune|rose|taupe|terracotta|vert).*$/i, '')))];
     text.textContent = names.join(' · ');
   } else {
@@ -1789,19 +2102,16 @@ function resetFormSilent() {
   document.getElementById('type-decl').checked = true;
   document.getElementById('bloc-declinaisons').style.display = 'block';
 
-  // Reset composition
   selectedComposition = null;
   selectedComposition2 = null;
   document.getElementById('composition-selected').style.display = 'none';
   document.getElementById('composition2-selected').style.display = 'none';
   document.getElementById('comp-suggestions').style.display = 'none';
 
-  // Reset traduction
   translationCache = {};
   document.getElementById('translation-block').style.display = 'none';
   document.getElementById('desc-preview-en').textContent = '';
 
-  // Reset groupes
   Object.keys(groupState).forEach(k => {
     groupState[k] = false;
     document.getElementById('grp-' + k).classList.remove('active');
@@ -1809,7 +2119,6 @@ function resetFormSilent() {
   groupState.taille = true;
   document.getElementById('grp-taille').classList.add('active');
 
-  // Reset sous-groupes
   subState.adulte = true;
   document.getElementById('sb-adulte').classList.add('active');
   document.getElementById('chips-adulte').classList.add('open');
@@ -1824,7 +2133,6 @@ function resetFormSilent() {
   ['o-xs','o-ml','o-xl','o-3xl'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = true; });
   ['o2-jupe','o2-pall'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = true; });
 
-  // Reset stepper
   Object.keys(stepCompleted).forEach(k => stepCompleted[k] = false);
 
   updatePreview();
@@ -1835,9 +2143,18 @@ function resetFormSilent() {
 function saveAndAdd() {
   const products = collectProducts();
   if (!products) return;
+  // Sauvegarder en Firebase comme produit finalisé (groupe)
+  saveFinalizedProduct(products);
   allProducts.push(...products);
   updateCounter();
   showToast(`✓ ${products.length} ligne${products.length>1?'s':''} enregistrée${products.length>1?'s':''}`);
+  // Supprimer le brouillon associé
+  const draftIdToDelete = currentDraftId;
+  currentDraftId = null;
+  if (draftIdToDelete && fb) {
+    fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
+    loadDraftsList();
+  }
   resetFormSilent();
 }
 
@@ -1846,8 +2163,16 @@ function saveAndFinish() {
   if (nom) {
     const products = collectProducts();
     if (!products) return;
+    saveFinalizedProduct(products);
     allProducts.push(...products);
     updateCounter();
+    // Supprimer le brouillon associé
+    const draftIdToDelete = currentDraftId;
+    currentDraftId = null;
+    if (draftIdToDelete && fb) {
+      fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
+      loadDraftsList();
+    }
   }
   if (!allProducts.length) {
     showToast('⚠ Aucun produit enregistré', 'error');
@@ -1879,7 +2204,7 @@ function generateCSV() {
   document.getElementById('csv-content').textContent = csvString;
   renderRecapList();
   document.getElementById('overlay').classList.add('active');
-  switchRecapTab('list'); // Ouvre toujours sur la liste d'abord
+  switchRecapTab('list');
 }
 
 function downloadCSV() {
@@ -1920,37 +2245,33 @@ function resetAll() {
   resetFormSilent();
   document.getElementById('overlay').classList.remove('active');
   showToast('Nouveau lot prêt');
+  if (currentDraftId && fb) {
+    fb.remove(fb.ref(fb.db, 'product_drafts/' + currentDraftId)).catch(()=>{});
+    currentDraftId = null;
+    loadDraftsList();
+  }
 }
 
 // ═══════════════════════════════════════════════════
-// AUTOCOMPLÉTION (Realtime Database — partagé tous appareils)
+// AUTOCOMPLÉTION (Realtime Database)
 // ═══════════════════════════════════════════════════
-const AC_KEY_LOCAL = 'cataleya_autocomplete'; // fallback si pas de Firebase
-const AC_PATH = 'product_autocomplete'; // nœud Firebase
+const AC_KEY_LOCAL = 'cataleya_autocomplete';
+const AC_PATH = 'product_autocomplete';
 
-// Cache en mémoire (chargé une fois, mis à jour à chaque ajout)
 let acCache = {};
 let acCacheLoaded = false;
 
 async function acLoadFromFirebase() {
-  // Toujours charger d'abord le cache local pour avoir des suggestions immédiates
   try { acCache = JSON.parse(localStorage.getItem(AC_KEY_LOCAL)) || {}; } catch { acCache = {}; }
-
-  if (!fb) {
-    acCacheLoaded = true;
-    return;
-  }
+  if (!fb) { acCacheLoaded = true; return; }
   try {
     const snap = await fb.get(fb.ref(fb.db, AC_PATH));
     if (snap.exists()) {
-      const remote = snap.val() || {};
-      // Fusionner : Firebase écrase le local
-      acCache = remote;
-      // Sauver aussi en local pour les futures sessions hors-ligne
+      acCache = snap.val() || {};
       localStorage.setItem(AC_KEY_LOCAL, JSON.stringify(acCache));
     }
   } catch (e) {
-    console.warn('AC load from Firebase failed, using local cache:', e);
+    console.warn('AC load from Firebase failed:', e);
   }
   acCacheLoaded = true;
 }
@@ -1958,18 +2279,13 @@ async function acLoadFromFirebase() {
 async function acAdd(fieldId, value) {
   if (!value || value.length < 2) return;
   if (!acCache[fieldId]) acCache[fieldId] = [];
-  // Dédup case-insensitive
   if (acCache[fieldId].some(v => v.toLowerCase() === value.toLowerCase())) return;
   acCache[fieldId].unshift(value);
   if (acCache[fieldId].length > 30) acCache[fieldId].pop();
-
-  // Sauvegarde locale (instantané)
   localStorage.setItem(AC_KEY_LOCAL, JSON.stringify(acCache));
-
-  // Sauvegarde Firebase (asynchrone, sans bloquer l'UI)
   if (fb) {
     fb.set(fb.ref(fb.db, AC_PATH + '/' + fieldId), acCache[fieldId]).catch(e => {
-      console.warn('AC sync to Firebase failed:', e);
+      console.warn('AC sync failed:', e);
     });
   }
 }
@@ -1981,17 +2297,6 @@ function acGet(fieldId, query) {
   return list.filter(v => v.toLowerCase().includes(q)).slice(0, 8);
 }
 
-const origSaveAndAdd_AC = saveAndAdd;
-saveAndAdd = function() {
-  acSaveCurrentFields();
-  origSaveAndAdd_AC();
-};
-const origSaveAndFinish_AC = saveAndFinish;
-saveAndFinish = function() {
-  acSaveCurrentFields();
-  origSaveAndFinish_AC();
-};
-
 function acSaveCurrentFields() {
   document.querySelectorAll('[data-ac]').forEach(el => {
     const val = el.value.trim();
@@ -1999,7 +2304,17 @@ function acSaveCurrentFields() {
   });
 }
 
-// Charger l'historique d'autocomplétion une fois Firebase prêt
+const _origSaveAndAdd_AC = saveAndAdd;
+saveAndAdd = function() {
+  acSaveCurrentFields();
+  _origSaveAndAdd_AC();
+};
+const _origSaveAndFinish_AC = saveAndFinish;
+saveAndFinish = function() {
+  acSaveCurrentFields();
+  _origSaveAndFinish_AC();
+};
+
 function loadAutocompleteHistory() {
   acLoadFromFirebase();
 }
@@ -2029,8 +2344,6 @@ function initAutocomplete() {
     list.className = 'ac-list';
     wrapper.appendChild(list);
 
-    let activeIdx = -1;
-
     function showSuggestions() {
       const suggestions = acGet(key, el.value.trim());
       if (!suggestions.length) { list.classList.remove('visible'); return; }
@@ -2038,7 +2351,6 @@ function initAutocomplete() {
         `<div class="ac-item" data-idx="${i}">${s.length > 80 ? s.substring(0, 80) + '…' : s}</div>`
       ).join('');
       list.classList.add('visible');
-      activeIdx = -1;
       list.querySelectorAll('.ac-item').forEach(item => {
         item.addEventListener('mousedown', (e) => {
           e.preventDefault();
@@ -2071,7 +2383,7 @@ function showToast(msg, type = 'success') {
 }
 
 // ═══════════════════════════════════════════════════
-// CATÉGORIES PERSONNALISÉES (localStorage)
+// CATÉGORIES
 // ═══════════════════════════════════════════════════
 const CAT_KEY = 'cataleya_custom_categories';
 const baseCategories = [
@@ -2123,7 +2435,7 @@ function addCustomCategory() {
 rebuildCategoryChips();
 
 // ═══════════════════════════════════════════════════
-// COMPOSITIONS (35 tissus avec codes HS)
+// COMPOSITIONS
 // ═══════════════════════════════════════════════════
 const COMPOSITIONS = [
   { id: 25, nom: 'Crêpe de soie coréenne mate', desc: '100% soie tissée', hs: '5007 20 11', keywords: ['crepe','soie','coreenne','mate','silk'] },
@@ -2262,7 +2574,6 @@ function clearComposition2() {
   scheduleAutoSave();
 }
 
-// Searchable dropdown : factorisé pour les 2 emplacements
 function setupCompositionSearch(inputId, listId, selectFn) {
   const input = document.getElementById(inputId);
   const list = document.getElementById(listId);
@@ -2296,9 +2607,8 @@ setupCompositionSearch('composition-search', 'composition-list', 'selectComposit
 setupCompositionSearch('composition2-search', 'composition2-list', 'selectComposition2');
 
 // ═══════════════════════════════════════════════════
-// TRADUCTION FR → EN (via Firebase Cloud Function)
+// TRADUCTION FR → EN
 // ═══════════════════════════════════════════════════
-// IMPORTANT : remplacer cette URL après déploiement de la Cloud Function
 const TRANSLATE_URL = 'https://europe-west1-usine-cataleya.cloudfunctions.net/translateProduct';
 
 let translationCache = {};
@@ -2328,7 +2638,6 @@ async function translateDescription() {
 
   try {
     if (TRANSLATE_URL.includes('YOUR-FUNCTION-URL')) {
-      // Mode dev : pas encore déployé
       throw new Error('CLOUD_FUNCTION_NOT_DEPLOYED');
     }
 
@@ -2346,7 +2655,7 @@ async function translateDescription() {
   } catch (e) {
     console.error('Translation error:', e);
     if (e.message === 'CLOUD_FUNCTION_NOT_DEPLOYED') {
-      showToast('⚠ Cloud Function pas encore déployée — voir consignes Sousou', 'error');
+      showToast('⚠ Cloud Function pas encore déployée', 'error');
     } else {
       showToast('⚠ Erreur de traduction : ' + e.message, 'error');
     }
@@ -2375,7 +2684,7 @@ function getCurrentTranslation() {
 }
 
 // ═══════════════════════════════════════════════════
-// VUE LISTE DES PRODUITS DANS LE MODAL
+// VUE LISTE DANS LE MODAL CSV
 // ═══════════════════════════════════════════════════
 function switchRecapTab(tab) {
   const tabList = document.getElementById('tab-list');
@@ -2411,7 +2720,6 @@ function renderRecapList() {
     return;
   }
 
-  // Grouper par produit "racine" (nom sans la couleur)
   const groups = {};
   allProducts.forEach((p, idx) => {
     const baseName = p.nom.replace(/ (beige|blanc|bleu|bleu marine|bordeaux|camel|crème|gris|kaki|mauve|noir|olive|prune|rose|taupe|terracotta|vert)([^a-z].*)?$/i, '').trim();
@@ -2451,7 +2759,6 @@ function removeProductLine(idx) {
 
 function removeProductGroup(baseName) {
   if (!confirm(`Supprimer toutes les déclinaisons de « ${baseName} » ?`)) return;
-  // Retirer toutes les lignes dont le nom commence par baseName
   for (let i = allProducts.length - 1; i >= 0; i--) {
     const cleanName = allProducts[i].nom.replace(/ (beige|blanc|bleu|bleu marine|bordeaux|camel|crème|gris|kaki|mauve|noir|olive|prune|rose|taupe|terracotta|vert)([^a-z].*)?$/i, '').trim();
     if (cleanName === baseName) allProducts.splice(i, 1);
@@ -2502,6 +2809,7 @@ function onAccessGranted() {
   if (!fb && window._firebase) fb = window._firebase;
   loadDraftsList();
   loadAutocompleteHistory();
+  loadFinalizedList();
 }
 
 // ═══════════════════════════════════════════════════
@@ -2513,6 +2821,7 @@ if (!fb) window.addEventListener('firebase-ready', () => {
   if (localStorage.getItem(ACCESS_KEY) === 'yes') {
     loadDraftsList();
     loadAutocompleteHistory();
+    loadFinalizedList();
   }
 });
 
@@ -2670,7 +2979,7 @@ async function saveDraft() {
     if (!currentDraftId) currentDraftId = generateDraftId();
     const nom = state.nom.trim() || '(Sans nom)';
     const now = Date.now();
-    const expiresAt = now + 30 * 24 * 60 * 60 * 1000; // 30 jours en ms
+    const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
 
     await fb.set(fb.ref(fb.db, 'product_drafts/' + currentDraftId), {
       id: currentDraftId,
@@ -2697,9 +3006,7 @@ async function loadDraftsList() {
       const data = snap.val();
       Object.keys(data).forEach(key => {
         const d = data[key];
-        // Filtrer ceux expirés (auto-suppression côté client)
         if (d.expiresAt && d.expiresAt < now) {
-          // Supprimer en arrière-plan
           fb.remove(fb.ref(fb.db, 'product_drafts/' + key)).catch(()=>{});
           return;
         }
@@ -2707,14 +3014,14 @@ async function loadDraftsList() {
       });
     }
 
-    // Tri par updatedAt décroissant
     drafts.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    // Limiter à 20
+    cachedDrafts = drafts;
     const visibleDrafts = drafts.slice(0, 20);
 
     const banner = document.getElementById('drafts-banner');
     const countEl = document.getElementById('drafts-count');
     const list = document.getElementById('drafts-list');
+    document.getElementById('ptab-count-drafts').textContent = drafts.length;
 
     if (!visibleDrafts.length) { banner.style.display = 'none'; return; }
 
@@ -2737,6 +3044,11 @@ async function loadDraftsList() {
         </div>
       </div>`;
     }).join('');
+
+    // Si la vue Mes produits est ouverte sur l'onglet brouillons, on rafraîchit
+    if (document.getElementById('products-overlay').classList.contains('active') && currentProductsTab === 'drafts') {
+      renderProductsList();
+    }
   } catch (e) {
     console.error('Load drafts error:', e);
   }
@@ -2773,6 +3085,7 @@ async function loadDraft(id) {
     showToast(`Brouillon « ${data.nom} » chargé`);
     document.getElementById('drafts-list').classList.remove('open');
     document.getElementById('drafts-toggle-icon').style.transform = 'rotate(0)';
+    closeProductsView(); // Fermer la vue Mes produits si ouverte
     loadDraftsList();
   } catch (e) { console.error('Load draft error:', e); showToast('Erreur chargement', 'error'); }
 }
@@ -2783,9 +3096,7 @@ async function viewDraft(id) {
     const snap = await fb.get(fb.ref(fb.db, 'product_drafts/' + id));
     if (!snap.exists()) return;
     const data = snap.val();
-    const s = data.state;
-    const summary = `📋 ${data.nom}\n\nNom : ${s.nom || '—'}\nSKU : ${s.sku || '—'}\nPrix : ${s.prix || '—'} €\nPoids : ${s.poids || '—'} kg\nCatégories : ${(s.categories || []).join(', ') || '—'}\nCouleurs : ${(s.couleurs || []).join(', ') || '—'}\nTailles : ${(s.tailles || []).join(', ') || '—'}\n\nDescription :\n${s.descPrincipale || '—'}\n\nMatière : ${s.descMatiere || '—'}\n\nPour qui :\n${s.descPourqui || '—'}\n\nEntretien : ${s.entretien || '—'}\nNotes : ${s.notes || '—'}`;
-    alert(summary);
+    showProductDetail({ ...data, _kind: 'draft' });
   } catch (e) { showToast('Erreur', 'error'); }
 }
 
@@ -2816,26 +3127,241 @@ document.querySelectorAll('input, textarea').forEach(el => {
   el.addEventListener('change', scheduleAutoSave);
 });
 
-const _origSaveAndAdd = saveAndAdd;
-saveAndAdd = function() {
-  const draftIdToDelete = currentDraftId;
-  _origSaveAndAdd();
-  if (draftIdToDelete && fb) {
-    fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
-    currentDraftId = null;
-    loadDraftsList();
-  }
-};
+// ═══════════════════════════════════════════════════
+// FIREBASE PRODUITS FINALISÉS
+// ═══════════════════════════════════════════════════
+let cachedDrafts = [];
+let cachedFinalized = [];
+let currentProductsTab = 'drafts';
 
-const _origResetAll = resetAll;
-resetAll = function() {
-  _origResetAll();
-  if (currentDraftId && fb) {
-    fb.remove(fb.ref(fb.db, 'product_drafts/' + currentDraftId)).catch(()=>{});
-    currentDraftId = null;
-    loadDraftsList();
+function generateFinalizedId() { return 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8); }
+
+// On sauvegarde un "groupe" finalisé : la fiche produit telle que saisie (avant explosion par couleur)
+async function saveFinalizedProduct(products) {
+  if (!fb || !products || !products.length) return;
+  try {
+    // On capture aussi le state du formulaire pour pouvoir éditer plus tard
+    const state = captureFormState();
+    const id = generateFinalizedId();
+    const baseName = state.nom.trim() || products[0].nom;
+    await fb.set(fb.ref(fb.db, 'product_finalized/' + id), {
+      id,
+      nom: baseName,
+      state,
+      products,
+      createdAt: Date.now()
+    });
+    loadFinalizedList();
+  } catch (e) {
+    console.error('Save finalized error:', e);
+    showToast('⚠ Sauvegarde Firebase échouée', 'error');
   }
-};
+}
+
+async function loadFinalizedList() {
+  if (!fb) return;
+  try {
+    const snap = await fb.get(fb.ref(fb.db, 'product_finalized'));
+    const items = [];
+    if (snap.exists()) {
+      const data = snap.val();
+      Object.keys(data).forEach(key => items.push(data[key]));
+    }
+    items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    cachedFinalized = items;
+    document.getElementById('ptab-count-finalized').textContent = items.length;
+
+    if (document.getElementById('products-overlay').classList.contains('active') && currentProductsTab === 'finalized') {
+      renderProductsList();
+    }
+  } catch (e) {
+    console.error('Load finalized error:', e);
+  }
+}
+
+async function deleteFinalized(id) {
+  if (!confirm('Supprimer ce produit finalisé ? Cette action est définitive.')) return;
+  if (!fb) return;
+  try {
+    await fb.remove(fb.ref(fb.db, 'product_finalized/' + id));
+    loadFinalizedList();
+    showToast('Produit supprimé');
+  } catch (e) { showToast('Erreur', 'error'); }
+}
+
+async function editFinalized(id) {
+  if (!fb) return;
+  try {
+    const snap = await fb.get(fb.ref(fb.db, 'product_finalized/' + id));
+    if (!snap.exists()) { showToast('Produit introuvable', 'error'); return; }
+    const data = snap.val();
+    if (!confirm(`Éditer « ${data.nom} » ? Une copie sera créée comme brouillon — l'original reste dans Finalisés.`)) return;
+    // On charge dans le formulaire, mais en créant un NOUVEAU brouillon (pas en modifiant le finalisé)
+    currentDraftId = null;
+    restoreFormState(data.state);
+    showToast(`« ${data.nom} » chargé pour édition`);
+    closeProductsView();
+  } catch (e) { showToast('Erreur', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════
+// VUE MES PRODUITS (overlay plein écran)
+// ═══════════════════════════════════════════════════
+function openProductsView() {
+  document.getElementById('products-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  // Recharger pour avoir les données fraîches
+  loadDraftsList();
+  loadFinalizedList();
+  renderProductsList();
+}
+
+function closeProductsView() {
+  document.getElementById('products-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function switchProductsTab(tab) {
+  currentProductsTab = tab;
+  document.getElementById('ptab-drafts').classList.toggle('active', tab === 'drafts');
+  document.getElementById('ptab-finalized').classList.toggle('active', tab === 'finalized');
+  // Reset recherche
+  document.getElementById('products-search-input').value = '';
+  renderProductsList();
+}
+
+function renderProductsList() {
+  const body = document.getElementById('products-body');
+  const search = document.getElementById('products-search-input').value.trim().toLowerCase();
+  const items = currentProductsTab === 'drafts' ? cachedDrafts : cachedFinalized;
+
+  if (!items.length) {
+    body.innerHTML = `
+      <div class="products-empty">
+        <div class="products-empty-icon">${currentProductsTab === 'drafts' ? '📁' : '✓'}</div>
+        <div class="products-empty-title">Aucun ${currentProductsTab === 'drafts' ? 'brouillon' : 'produit finalisé'}</div>
+        <div class="products-empty-desc">${currentProductsTab === 'drafts' ? 'Les produits que tu commences apparaîtront ici.' : 'Les produits que tu finalises seront stockés ici.'}</div>
+      </div>`;
+    return;
+  }
+
+  // Filtre recherche (nom + sku)
+  const filtered = items.filter(item => {
+    if (!search) return true;
+    const nom = (item.nom || '').toLowerCase();
+    const sku = (item.state && item.state.sku || '').toLowerCase();
+    return nom.includes(search) || sku.includes(search);
+  });
+
+  if (!filtered.length) {
+    body.innerHTML = `
+      <div class="products-empty">
+        <div class="products-empty-icon">🔍</div>
+        <div class="products-empty-title">Aucun résultat</div>
+        <div class="products-empty-desc">Aucun produit ne correspond à « ${search} ».</div>
+      </div>`;
+    return;
+  }
+
+  body.innerHTML = filtered.map(item => {
+    const isDraft = currentProductsTab === 'drafts';
+    const date = new Date(isDraft ? (item.updatedAt || 0) : (item.createdAt || 0));
+    const dateStr = formatRelativeTime(date);
+    const state = item.state || {};
+    const sku = state.sku || '';
+    const prix = state.prix || '';
+    const couleurs = state.couleurs || [];
+    const cats = state.categories || [];
+    const isCurrent = isDraft && item.id === currentDraftId;
+
+    const safeNom = (item.nom || '(Sans nom)').replace(/</g, '&lt;');
+    const safeSku = sku.replace(/</g, '&lt;');
+
+    return `
+      <div class="product-card" ${isCurrent ? 'style="border-color:var(--terracotta);background:var(--cream-warm)"' : ''}>
+        <div class="product-card-head">
+          <div class="product-card-info">
+            <div class="product-card-name">${safeNom}${isCurrent ? ' <span style="font-size:10px;color:var(--terracotta);font-weight:700;font-style:normal">• EN COURS</span>' : ''}</div>
+            <div class="product-card-meta">
+              ${sku ? `<strong>${safeSku}</strong> · ` : ''}${prix ? prix + ' € · ' : ''}${dateStr}
+              ${cats.length ? `<br>${cats.slice(0, 2).join(', ')}${cats.length > 2 ? '…' : ''}` : ''}
+              ${couleurs.length ? `<br>${couleurs.length} couleur${couleurs.length > 1 ? 's' : ''} : ${couleurs.slice(0, 3).join(', ')}${couleurs.length > 3 ? '…' : ''}` : ''}
+            </div>
+          </div>
+          <span class="product-card-status ${isDraft ? 'status-draft' : 'status-finalized'}">${isDraft ? 'Brouillon' : 'Finalisé'}</span>
+        </div>
+        <div class="product-card-actions">
+          <button class="product-action" onclick="${isDraft ? `viewDraft('${item.id}')` : `viewFinalized('${item.id}')`}">👁 Voir</button>
+          <button class="product-action primary" onclick="${isDraft ? `loadDraft('${item.id}')` : `editFinalized('${item.id}')`}">✏️ ${isDraft ? 'Reprendre' : 'Éditer'}</button>
+          <button class="product-action danger" onclick="${isDraft ? `deleteDraft('${item.id}')` : `deleteFinalized('${item.id}')`}" title="Supprimer">🗑</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function viewFinalized(id) {
+  if (!fb) return;
+  try {
+    const snap = await fb.get(fb.ref(fb.db, 'product_finalized/' + id));
+    if (!snap.exists()) return;
+    const data = snap.val();
+    showProductDetail({ ...data, _kind: 'finalized' });
+  } catch (e) { showToast('Erreur', 'error'); }
+}
+
+function showProductDetail(item) {
+  const s = item.state || {};
+  const isDraft = item._kind === 'draft';
+  const comp = s.compositionId ? COMPOSITIONS.find(c => c.id === s.compositionId) : null;
+  const comp2 = s.composition2Id ? COMPOSITIONS.find(c => c.id === s.composition2Id) : null;
+
+  document.getElementById('detail-modal-title').textContent = item.nom || '(Sans nom)';
+
+  const rows = [];
+  function addRow(key, value, muted = false) {
+    if (!value && value !== 0) return;
+    const val = Array.isArray(value) ? value.join(', ') : String(value);
+    if (!val.trim()) return;
+    rows.push(`<div class="detail-row">
+      <div class="detail-key">${key}</div>
+      <div class="detail-value ${muted ? 'muted' : ''}">${val.replace(/</g, '&lt;')}</div>
+    </div>`);
+  }
+
+  addRow('Statut', isDraft ? 'Brouillon (en cours)' : 'Finalisé ✓');
+  addRow('Référence / SKU', s.sku || '');
+  addRow('Prix', s.prix ? s.prix + ' €' : '');
+  addRow('Poids', s.poids ? s.poids + ' kg' : '');
+  addRow('Catégories', s.categories || []);
+  addRow('Type', s.type === 'simple' ? 'Produit simple' : 'Avec déclinaisons');
+  addRow('Couleurs', s.couleurs || []);
+  if (s.tailles && s.tailles.length) addRow('Tailles', s.tailles);
+  if (s.optionsChecked && s.optionsChecked.length) addRow('Option', s.optionsChecked);
+  if (s.options2Checked && s.options2Checked.length) addRow('Option 2', s.options2Checked);
+  addRow('Description', s.descPrincipale || '');
+  addRow('Matière', s.descMatiere || '');
+  addRow('Pour qui ?', s.descPourqui || '');
+  if (comp) addRow('Tissu principal', `${comp.nom} — ${comp.desc} (HS: ${comp.hs})`);
+  if (comp2) addRow('Tissu secondaire', `${comp2.nom} — ${comp2.desc} (HS: ${comp2.hs})`);
+  addRow('Entretien', s.entretien || '');
+  const photos = (s.photos || []).filter(Boolean);
+  if (photos.length) addRow('Photos', photos);
+  addRow('Notes', s.notes || '');
+  if (item.products && item.products.length) {
+    addRow('Lignes CSV générées', `${item.products.length} ligne${item.products.length>1?'s':''}`);
+  }
+
+  if (!rows.length) rows.push('<div class="detail-row"><div class="detail-value muted">Aucune information</div></div>');
+
+  document.getElementById('product-detail-body').innerHTML = rows.join('');
+  document.getElementById('product-detail-overlay').classList.add('active');
+}
+
+function closeProductDetail(e) {
+  if (!e || e.target === document.getElementById('product-detail-overlay')) {
+    document.getElementById('product-detail-overlay').classList.remove('active');
+  }
+}
 
 updateSummary();
 </script>
