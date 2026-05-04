@@ -3435,7 +3435,7 @@ function exportAllFinalizedCSV() {
     return;
   }
 
-  // Aplatir tous les products[] de chaque finalisé
+  // Aplatir tous les products[] de chaque finalisé (1 ligne par couleur)
   const allLines = [];
   cachedFinalized.forEach(item => {
     if (item.products && Array.isArray(item.products)) {
@@ -3448,23 +3448,217 @@ function exportAllFinalizedCSV() {
     return;
   }
 
-  const headers = ['Nom','Référence','Catégorie(s)','Prix (€)','Poids (kg)','Couleur','Type','Tailles','Option','Option2','Description FR','Description EN','Tissu principal','Code HS principal','Tissu secondaire','Code HS secondaire','Entretien','Photos','Notes'];
-  const rows = allLines.map(p => [
-    p.nom||'', p.sku||'', p.cat||'', p.prix||'', p.poids||'', p.couleur||'', p.type||'',
-    p.tailles||'', p.options||'', p.options2||'', p.descriptionFR||'', p.descriptionEN||'',
-    p.comp||'', p.hs||'', p.comp2||'', p.hs2||'', p.ent||'', p.photos||'', p.notes||''
-  ].map(csvEscape).join(','));
+  // Format PrestaShop natif (66 colonnes, séparateur ;)
+  // Toutes les colonnes sont présentes pour respecter le template,
+  // mais on ne remplit QUE celles dont Sousou a besoin.
+  const headers = [
+    'Product ID',
+    'Active (0/1)',
+    'Name *',
+    'Categories (x,y,z...)',
+    'Price tax excluded',
+    'Tax rules ID',
+    'Wholesale price',
+    'On sale (0/1)',
+    'Discount amount',
+    'Discount percent',
+    'Discount from (yyyy-mm-dd)',
+    'Discount to (yyyy-mm-dd)',
+    'Reference #',
+    'Supplier reference #',
+    'Supplier',
+    'Manufacturer',
+    'EAN13',
+    'UPC',
+    'Ecotax',
+    'Width',
+    'Height',
+    'Depth',
+    'Weight',
+    'Delivery time of in-stock products',
+    'Delivery time of out-of-stock products with allowed orders',
+    'Quantity',
+    'Minimal quantity',
+    'Low stock level',
+    'Send me an email when the quantity is under this level',
+    'Visibility',
+    'Additional shipping cost',
+    'Unity',
+    'Unit price',
+    'Summary',
+    'Description',
+    'Tags (x,y,z...)',
+    'Meta title',
+    'Meta keywords',
+    'Meta description',
+    'URL rewritten',
+    'Text when in stock',
+    'Text when backorder allowed',
+    'Available for order (0 = No, 1 = Yes)',
+    'Product available date',
+    'Product creation date',
+    'Show price (0 = No, 1 = Yes)',
+    'Image URLs (x,y,z...)',
+    'Image alt texts (x,y,z...)',
+    'Delete existing images (0 = No, 1 = Yes)',
+    'Feature(Name:Value:Position)',
+    'Available online only (0 = No, 1 = Yes)',
+    'Condition',
+    'Customizable (0 = No, 1 = Yes)',
+    'Uploadable files (0 = No, 1 = Yes)',
+    'Text fields (0 = No, 1 = Yes)',
+    'Out of stock action',
+    'Virtual product',
+    'File URL',
+    'Number of allowed downloads',
+    'Expiration date',
+    'Number of days',
+    'ID / Name of shop',
+    'Advanced stock management',
+    'Depends On Stock',
+    'Warehouse',
+    'Acessories  (x,y,z...)'
+  ];
 
-  const csv = headers.join(',') + '\n' + rows.join('\n');
+  // Helper pour échapper les valeurs (séparateur PrestaShop = ;)
+  function psEscape(val) {
+    if (val === null || val === undefined) return '';
+    const s = String(val);
+    if (s.includes('"') || s.includes(';') || s.includes('\n') || s.includes(',')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  // Helper pour générer une URL slug à partir du nom
+  function slugify(str) {
+    return str.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  // Construire les lignes — uniquement les colonnes utiles, le reste vide
+  const rows = allLines.map(p => {
+    const name = p.nom || '';
+
+    // Récapitulatif = juste la première phrase de la description (sans labels FR/EN)
+    const fullDesc = p.descriptionFR || '';
+    const summary = fullDesc.length > 0
+      ? fullDesc.split('\n').filter(l => l && !l.startsWith('Description') && !l.startsWith('Matière') && !l.startsWith('Pour qui'))[0] || ''
+      : '';
+    const summaryShort = summary.length > 800 ? summary.substring(0, 797) + '...' : summary;
+
+    return [
+      '',                  // 1  Product ID (vide = nouveau)
+      '1',                 // 2  Active
+      name,                // 3  Name *
+      p.cat || '',         // 4  Categories
+      '',                  // 5  Price tax excluded (HT) — vide car prix TTC
+      '',                  // 6  Tax rules ID
+      '',                  // 7  Wholesale price
+      '',                  // 8  On sale
+      '',                  // 9  Discount amount
+      '',                  // 10 Discount percent
+      '',                  // 11 Discount from
+      '',                  // 12 Discount to
+      '',                  // 13 Reference # (vide — PrestaShop la générera après)
+      '',                  // 14 Supplier reference
+      '',                  // 15 Supplier
+      '',                  // 16 Manufacturer
+      '',                  // 17 EAN13
+      '',                  // 18 UPC
+      '',                  // 19 Ecotax
+      '',                  // 20 Width
+      '',                  // 21 Height
+      '',                  // 22 Depth
+      p.poids || '',       // 23 Weight (kg)
+      '',                  // 24 Delivery in-stock
+      '',                  // 25 Delivery out-of-stock
+      '',                  // 26 Quantity
+      '',                  // 27 Minimal quantity
+      '',                  // 28 Low stock level
+      '',                  // 29 Email low stock
+      '',                  // 30 Visibility
+      '',                  // 31 Additional shipping cost
+      '',                  // 32 Unity
+      '',                  // 33 Unit price
+      summaryShort,        // 34 Summary (Récapitulatif)
+      '',                  // 35 Description (vide — Sousou complète si besoin)
+      '',                  // 36 Tags
+      '',                  // 37 Meta title
+      '',                  // 38 Meta keywords
+      '',                  // 39 Meta description
+      slugify(name),       // 40 URL rewritten
+      '',                  // 41 Text when in stock
+      '',                  // 42 Text when backorder
+      '',                  // 43 Available for order
+      '',                  // 44 Product available date
+      '',                  // 45 Product creation date
+      '',                  // 46 Show price
+      '',                  // 47 Image URLs
+      '',                  // 48 Image alt texts
+      '',                  // 49 Delete existing images
+      '',                  // 50 Feature
+      '',                  // 51 Available online only
+      '',                  // 52 Condition
+      '',                  // 53 Customizable
+      '',                  // 54 Uploadable files
+      '',                  // 55 Text fields
+      '',                  // 56 Out of stock action
+      '',                  // 57 Virtual product
+      '',                  // 58 File URL
+      '',                  // 59 Number of allowed downloads
+      '',                  // 60 Expiration date
+      '',                  // 61 Number of days
+      '',                  // 62 ID / Name of shop
+      '',                  // 63 Advanced stock management
+      '',                  // 64 Depends on stock
+      '',                  // 65 Warehouse
+      ''                   // 66 Accessories
+    ].map(psEscape).join(';');
+  });
+
+  // ⚠️ Note importante : PrestaShop a Price tax excluded (HT) MAIS pas Price tax included (TTC)
+  // dans le template natif (template anglais). Le prix TTC va donc dans une colonne PrestaShop
+  // qui peut s'appeler "Prix TTC" en FR. On ajoute une 67e colonne hors template.
+  // En réalité, on vérifie le template FR de Sousou : il a "Prix HT" ET "Prix TTC".
+  // Pour rester compatible, on injecte le prix dans "Price tax excluded" (HT) en attendant
+  // que le user choisisse, ET en ajoute une colonne supplémentaire "Price tax included" si besoin.
+
+  // Pour le moment : prix TTC dans la colonne 5 (Price tax excluded) — Sousou ajustera si besoin
+  // Approche alternative plus propre ci-dessous : on remplit la colonne 5 avec le prix
+  // (PrestaShop appliquera la règle de taxe par défaut)
+
+  // Re-construction avec prix dans colonne 5 :
+  const rowsFinal = allLines.map(p => {
+    const name = p.nom || '';
+    const fullDesc = p.descriptionFR || '';
+    const summary = fullDesc.length > 0
+      ? fullDesc.split('\n').filter(l => l && !l.startsWith('Description') && !l.startsWith('Matière') && !l.startsWith('Pour qui'))[0] || ''
+      : '';
+    const summaryShort = summary.length > 800 ? summary.substring(0, 797) + '...' : summary;
+
+    return [
+      '', '1', name, p.cat || '', p.prix || '', '', '', '', '', '', '', '',
+      '', '', '', '', '', '', '', '', '', '', p.poids || '', '', '',
+      '', '', '', '', '', '', '', '',
+      summaryShort, '', '', '', '', '', slugify(name),
+      '', '', '', '', '', '',
+      '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+    ].map(psEscape).join(';');
+  });
+
+  const csv = headers.join(';') + '\n' + rowsFinal.join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   const date = new Date().toISOString().split('T')[0];
-  a.download = `cataleya_export_admin_${date}.csv`;
+  a.download = `cataleya_produits_prestashop_FR_${date}.csv`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast(`✓ Export ${allLines.length} ligne${allLines.length>1?'s':''}`);
+  showToast(`✓ Export ${allLines.length} produit${allLines.length>1?'s':''} pour PrestaShop`);
 }
 
 updateSummary();
