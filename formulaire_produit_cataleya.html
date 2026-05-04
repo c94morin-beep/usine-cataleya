@@ -6,6 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#6B2737">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Nouveau produit — Cataleya Paris</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2143,6 +2146,7 @@ function resetFormSilent() {
 function saveAndAdd() {
   const products = collectProducts();
   if (!products) return;
+  acSaveCurrentFields();
   // Sauvegarder en Firebase comme produit finalisé (groupe)
   saveFinalizedProduct(products);
   allProducts.push(...products);
@@ -2163,6 +2167,7 @@ function saveAndFinish() {
   if (nom) {
     const products = collectProducts();
     if (!products) return;
+    acSaveCurrentFields();
     saveFinalizedProduct(products);
     allProducts.push(...products);
     updateCounter();
@@ -2303,17 +2308,6 @@ function acSaveCurrentFields() {
     if (val) acAdd(el.getAttribute('data-ac'), val);
   });
 }
-
-const _origSaveAndAdd_AC = saveAndAdd;
-saveAndAdd = function() {
-  acSaveCurrentFields();
-  _origSaveAndAdd_AC();
-};
-const _origSaveAndFinish_AC = saveAndFinish;
-saveAndFinish = function() {
-  acSaveCurrentFields();
-  _origSaveAndFinish_AC();
-};
 
 function loadAutocompleteHistory() {
   acLoadFromFirebase();
