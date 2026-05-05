@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Coûts de fabrication — Cataleya Paris</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getDatabase, ref, onValue, set, update, remove, get
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import {
+    getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDVpN0cbCqDYI2klKrWqZJAcYDX2ayx8F0",
+    authDomain: "usine-cataleya.firebaseapp.com",
+    databaseURL: "https://usine-cataleya-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "usine-cataleya",
+    storageBucket: "usine-cataleya.firebasestorage.app",
+    messagingSenderId: "218489156781",
+    appId: "1:218489156781:web:92f657e50e63222a130224"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+  window.db = db;
+  window.firebaseRef = ref;
+  window.firebaseGet = get;
+  window.firebaseOnValue = onValue;
+  window.firebaseSet = set;
+  window.firebaseUpdate = update;
+  window.firebaseRemove = remove;
+  window.firebaseSignIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
+  window.firebaseSignOut = () => signOut(auth);
+  window.firebaseOnAuthStateChanged = (cb) => onAuthStateChanged(auth, cb);
+  window.__firebaseReady = true;
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<style>
+:root {
+  --bordeaux: #6b1f2e;
+  --bordeaux-dark: #4a1520;
+  --bordeaux-light: #8a3a4a;
+  --terracotta: #c87454;
+  --terracotta-light: #e8a585;
+  --creme: #faf6f0;
+  --creme-warm: #f5ede0;
+  --ink: #2a1a1a;
+  --ink-soft: #5a4848;
+  --gold: #b8956a;
+  --success: #5a8a5f;
+  --danger: #b54848;
+}
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--creme);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+.font-display { font-family: 'Cormorant Garamond', serif; }
+.bg-creme { background: var(--creme); }
+.bg-creme-warm { background: var(--creme-warm); }
+.bg-bordeaux { background: var(--bordeaux); }
+.bg-bordeaux-dark { background: var(--bordeaux-dark); }
+.bg-terracotta { background: var(--terracotta); }
+.text-bordeaux { color: var(--bordeaux); }
+.text-terracotta { color: var(--terracotta); }
+.text-ink { color: var(--ink); }
+.text-ink-soft { color: var(--ink-soft); }
+.text-gold { color: var(--gold); }
+.border-bordeaux { border-color: var(--bordeaux); }
+.border-terracotta { border-color: var(--terracotta); }
+.border-creme-warm { border-color: var(--creme-warm); }
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+.fade-in { animation: fadeIn 0.3s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.flash-saved { animation: flashSaved 1.5s ease-out; }
+@keyframes flashSaved {
+  0% { background-color: rgba(90, 138, 95, 0.3); }
+  100% { background-color: transparent; }
+}
+
+.card-shadow { box-shadow: 0 1px 3px rgba(74, 21, 32, 0.06), 0 4px 12px rgba(74, 21, 32, 0.04); }
+.card-shadow-lg { box-shadow: 0 4px 6px rgba(74, 21, 32, 0.07), 0 10px 30px rgba(74, 21, 32, 0.08); }
+
+.btn-primary {
+  background: var(--bordeaux);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+}
+.btn-primary:hover { background: var(--bordeaux-dark); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-secondary {
+  background: white;
+  color: var(--bordeaux);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: 1px solid var(--bordeaux);
+  transition: all 0.15s;
+}
+.btn-secondary:hover { background: var(--creme-warm); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+}
+.btn-ghost:hover { background: rgba(107, 31, 46, 0.08); color: var(--bordeaux); }
+
+.input-field {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d4c5b0;
+  border-radius: 0.375rem;
+  background: white;
+  font-size: 0.875rem;
+  transition: border-color 0.15s;
+}
+.input-field:focus {
+  outline: none;
+  border-color: var(--bordeaux);
+  box-shadow: 0 0 0 2px rgba(107, 31, 46, 0.1);
+}
+
+.cost-input {
+  background: #fef9f0 !important;
+  border-color: var(--gold) !important;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+}
+.cost-input:focus {
+  background: white !important;
+  border-color: var(--bordeaux) !important;
+  box-shadow: 0 0 0 2px rgba(107, 31, 46, 0.15) !important;
+}
+
+table { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 768px) {
+  .desktop-only { display: none; }
+}
+@media (min-width: 769px) {
+  .mobile-only { display: none; }
+}
+
+.toast {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(107, 31, 46, 0.2), transparent);
+}
+
+.login-bg {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(200, 116, 84, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(107, 31, 46, 0.12) 0%, transparent 50%),
+    var(--creme);
+}
+</style>
+</head>
+<body>
+<div id="root"><div class="login-bg" style="min-height:100vh;display:flex;align-items:center;justify-content:center;"><div style="color:#5a4848;font-family:Inter,sans-serif;">Chargement…</div></div></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext, Fragment } = React;
+
+// ===================== ALGO REGROUPEMENT PAR MODELE =====================
+const COULEURS = new Set([
+  'noir','noire','black','blanc','blanche','white','gris','grise','grey','gray',
+  'rouge','red','rose','pink','bleu','bleue','blue','vert','verte','green',
+  'jaune','yellow','orange','violet','purple','lilas','beige','marron','brown',
+  'camel','mocha','mokka','taupe','greige','ivoire','ecru','nude','creme','marine',
+  'navy','bordeaux','burgundy','kaki','khaki','ocre','sable','corail','coral',
+  'aubergine','terracotta','terracota','gold','dore','argent','silver','cognac',
+  'caramel','chocolat','miel','latte','cappuccino','espresso','praline','noisette',
+  'poudre','poudree','emeraude','amande','grenat','cobalt',
+  'indigo','saphir','saphyr','sapphire','turquoise','teal','aqua','cyan','lavande',
+  'menthe','olive','anthracite','charbon','ebony','pearl','champagne','cuivre',
+  'copper','bronze','sienna','rouille','rust','blush','peach','abricot','citron',
+  'vanille','vanilla','cacao','stone','sand','clay','smoke','ash','coal','ivory',
+  'mist','sage','plum','cerise','framboise','magenta','fuchsia','fushia',
+  'nuit','roi','mate','satin','vif','doux','nacre','irise','brule','fume','velvet',
+  'glace','intense','profond','deep','dark','light','bright','soft','baby','dusty',
+  'pale','vivid','lime','mint','sky','forest','ocean','denim','electric','neon',
+  'fluo','pastel','naturel','naturelle','multicolore'
+].map(c => c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+
+const norm = (w) => (w||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+const isCouleur = (w) => COULEURS.has(norm(w));
+const cleanName = (raw) => (raw || '').replace(/\s*\(.*?\)/g, '').trim();
+const getModele = (raw) => {
+  const cleaned = cleanName(raw);
+  const words = cleaned.split(' ');
+  let end = words.length;
+  while (end > 1) {
+    const w = words[end - 1];
+    const prev = end >= 2 ? words[end - 2] : '';
+    const pprev = end >= 3 ? words[end - 3] : '';
+    if (isCouleur(w)) {
+      if (prev === '&' && isCouleur(pprev)) end -= 3;
+      else if (prev === '&') end -= 2;
+      else if (isCouleur(prev)) end -= 2;
+      else end -= 1;
+    } else { break; }
+  }
+  return words.slice(0, end).join(' ') || cleaned;
+};
+
+const modeleKey = (modele) => {
+  return (modele || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.#$\[\]\/]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+};
+
+// ===================== TOAST =====================
+const ToastContext = createContext(null);
+function ToastProvider({ children }) {
+  const [toast, setToast] = useState(null);
+  const show = useCallback((msg, type) => {
+    const t = type || 'success';
+    setToast({ msg, type: t, id: Date.now() });
+    // Erreurs : 6s pour avoir le temps de lire. Sinon : 2.5s.
+    const duration = t === 'error' ? 6000 : 2500;
+    setTimeout(() => setToast(null), duration);
+  }, []);
+  return (
+    <ToastContext.Provider value={show}>
+      {children}
+      {toast && (
+        <div
+          className="toast"
+          style={{
+            background: toast.type === 'success' ? 'var(--success)' : toast.type === 'error' ? 'var(--danger)' : 'var(--bordeaux)',
+            color: 'white'
+          }}
+        >
+          {toast.type === 'success' ? '✓ ' : toast.type === 'error' ? '⚠ ' : ''}{toast.msg}
+        </div>
+      )}
+    </ToastContext.Provider>
+  );
+}
+const useToast = () => useContext(ToastContext);
+
+// ===================== LOGIN =====================
+function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await window.firebaseSignIn(email, password);
+    } catch (err) {
+      setError('Email ou mot de passe incorrect');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-bg min-h-screen flex items-center justify-center p-6">
+      <div className="bg-white rounded-2xl card-shadow-lg p-8 w-full max-w-md fade-in">
+        <div className="text-center mb-8">
+          <div className="font-display text-4xl text-bordeaux mb-1" style={{ letterSpacing: '0.05em' }}>Cataleya</div>
+          <div className="text-xs uppercase tracking-widest text-ink-soft mb-4">Paris</div>
+          <div className="divider mb-4"></div>
+          <h2 className="font-display text-2xl text-ink">Coûts de fabrication</h2>
+          <p className="text-sm text-ink-soft mt-1">Connecte-toi pour continuer</p>
+        </div>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-ink-soft mb-1.5">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="input-field"
+              autoComplete="email"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-ink-soft mb-1.5">Mot de passe</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="input-field"
+              autoComplete="current-password"
+            />
+          </div>
+          {error && <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</div>}
+          <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
+            {loading ? 'Connexion…' : 'Se connecter'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ===================== HEADER =====================
+function Header({ user, onLogout }) {
+  return (
+    <header className="bg-white border-b border-creme-warm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <div>
+          <div className="font-display text-2xl sm:text-3xl text-bordeaux leading-none" style={{ letterSpacing: '0.04em' }}>
+            Cataleya <span className="text-terracotta">·</span> Coûts
+          </div>
+          <div className="text-xs uppercase tracking-widest text-ink-soft mt-1">Fabrication & Collection</div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right hidden sm:block">
+            <div className="text-xs text-ink-soft">Connecté</div>
+            <div className="text-sm font-semibold text-ink">{user.email}</div>
+          </div>
+          <button onClick={onLogout} className="btn-ghost text-sm">Déconnexion</button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ===================== IMPORT MODAL =====================
+function ImportModal({ existingModeles, onImport, onClose }) {
+  const [loading, setLoading] = useState(true);
+  const [candidates, setCandidates] = useState([]);
+  const [selected, setSelected] = useState({});
+  const [mode, setMode] = useState('new'); // 'new' = nouveaux, 'all' = mise à jour des qtés
+  const [debugInfo, setDebugInfo] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await window.firebaseGet(window.firebaseRef(window.db, 'lists'));
+        const lists = snap.val() || {};
+        const modeleCount = {};
+        const debug = {
+          listsCount: 0,
+          listsArchived: 0,
+          ordersTotal: 0,
+          ordersWithName: 0,
+          ordersSkipped: 0,
+          listBreakdown: []
+        };
+        const allLists = Array.isArray(lists) ? lists : Object.values(lists);
+        allLists.forEach(list => {
+          if (!list) return;
+          if (list.archived) { debug.listsArchived++; return; }
+          debug.listsCount++;
+          const orders = list.orders || [];
+          const orderArr = Array.isArray(orders) ? orders : Object.values(orders);
+          let listOrderCount = 0;
+          let listWithName = 0;
+          orderArr.forEach(o => {
+            debug.ordersTotal++;
+            listOrderCount++;
+            if (o && o.name) {
+              const modele = getModele(o.name);
+              if (modele) {
+                modeleCount[modele] = (modeleCount[modele] || 0) + 1;
+                debug.ordersWithName++;
+                listWithName++;
+              } else {
+                debug.ordersSkipped++;
+              }
+            } else {
+              debug.ordersSkipped++;
+            }
+          });
+          debug.listBreakdown.push({
+            name: list.name || '(sans nom)',
+            id: list.id,
+            total: listOrderCount,
+            withName: listWithName
+          });
+        });
+        debug.modelesDistinct = Object.keys(modeleCount).length;
+        debug.totalUnites = Object.values(modeleCount).reduce((s, n) => s + n, 0);
+        setDebugInfo(debug);
+
+        const existingKeys = new Set(Object.keys(existingModeles || {}));
+        const arr = Object.entries(modeleCount)
+          .map(([modele, occurrences]) => {
+            const k = modeleKey(modele);
+            const existing = (existingModeles || {})[k];
+            return {
+              modele,
+              key: k,
+              occurrences,
+              alreadyExists: existingKeys.has(k),
+              previousQuantite: existing ? (existing.quantite || 0) : null,
+              quantiteChanged: existing ? (existing.quantite !== occurrences) : true
+            };
+          })
+          .sort((a, b) => b.occurrences - a.occurrences || a.modele.localeCompare(b.modele, 'fr'));
+        setCandidates(arr);
+        const presel = {};
+        arr.forEach(c => {
+          if (!c.alreadyExists || c.quantiteChanged) presel[c.modele] = true;
+        });
+        setSelected(presel);
+        setLoading(false);
+      } catch (err) {
+        console.error('Import error:', err);
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const visibleCandidates = useMemo(() => {
+    if (mode === 'new') return candidates.filter(c => !c.alreadyExists);
+    return candidates;
+  }, [candidates, mode]);
+
+  const toggleAll = () => {
+    const allVisibleSelected = visibleCandidates.every(c => selected[c.modele]);
+    if (allVisibleSelected) {
+      const next = { ...selected };
+      visibleCandidates.forEach(c => delete next[c.modele]);
+      setSelected(next);
+    } else {
+      const next = { ...selected };
+      visibleCandidates.forEach(c => { next[c.modele] = true; });
+      setSelected(next);
+    }
+  };
+
+  const handleImport = () => {
+    const toImport = candidates
+      .filter(c => selected[c.modele])
+      .map(c => ({ modele: c.modele, quantite: c.occurrences, alreadyExists: c.alreadyExists }));
+    onImport(toImport);
+  };
+
+  const selectedCount = Object.values(selected).filter(Boolean).length;
+  const newCount = candidates.filter(c => !c.alreadyExists).length;
+  const updateCount = candidates.filter(c => c.alreadyExists && c.quantiteChanged).length;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl card-shadow-lg w-full max-w-2xl max-h-[85vh] flex flex-col fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 border-b border-creme-warm flex items-center justify-between">
+          <div>
+            <h3 className="font-display text-2xl text-bordeaux">Importer depuis usine-cataleya</h3>
+            <p className="text-sm text-ink-soft">Modèles regroupés depuis les commandes (couleurs fusionnées)</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {debugInfo && (
+              <button
+                onClick={() => setShowDebug(d => !d)}
+                className="btn-ghost text-xs"
+                title="Diagnostic"
+              >🔍 Diag.</button>
+            )}
+            <button onClick={onClose} className="btn-ghost text-2xl px-2 py-0">&times;</button>
+          </div>
+        </div>
+
+        {showDebug && debugInfo && (
+          <div className="px-5 pt-3 pb-2 border-b border-creme-warm bg-creme-warm">
+            <div className="text-xs space-y-1">
+              <div><b>Listes actives :</b> {debugInfo.listsCount} (archivées ignorées : {debugInfo.listsArchived})</div>
+              <div><b>Total commandes lues :</b> {debugInfo.ordersTotal}</div>
+              <div><b>Commandes avec nom :</b> {debugInfo.ordersWithName} <span className="text-ink-soft">→ comptées</span></div>
+              <div><b>Commandes ignorées :</b> {debugInfo.ordersSkipped} <span className="text-ink-soft">(sans nom ou null)</span></div>
+              <div className="text-bordeaux font-bold">→ Total unités : {debugInfo.totalUnites} ({debugInfo.modelesDistinct} modèles distincts)</div>
+              <details className="mt-2">
+                <summary className="cursor-pointer font-semibold text-ink-soft">Détail par liste</summary>
+                <div className="mt-1 pl-2 space-y-0.5">
+                  {debugInfo.listBreakdown.map((l, i) => (
+                    <div key={i} className="flex justify-between text-xs">
+                      <span className="text-ink">📋 {l.name}</span>
+                      <span className="text-ink-soft">{l.withName}/{l.total} commandes</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
+          </div>
+        )}
+
+        {/* Tabs : Nouveaux / Tous */}
+        {!loading && candidates.length > 0 && (
+          <div className="px-5 pt-3 border-b border-creme-warm flex gap-1">
+            <button
+              onClick={() => setMode('new')}
+              className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition ${mode === 'new' ? 'bg-creme-warm text-bordeaux border-b-2 border-bordeaux' : 'text-ink-soft hover:text-bordeaux'}`}
+            >
+              Nouveaux ({newCount})
+            </button>
+            <button
+              onClick={() => setMode('all')}
+              className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition ${mode === 'all' ? 'bg-creme-warm text-bordeaux border-b-2 border-bordeaux' : 'text-ink-soft hover:text-bordeaux'}`}
+            >
+              Tous ({candidates.length})
+              {updateCount > 0 && <span className="ml-1 text-xs bg-terracotta text-white px-1.5 py-0.5 rounded-full">{updateCount} maj</span>}
+            </button>
+          </div>
+        )}
+
+        <div className="p-5 overflow-y-auto flex-1">
+          {loading ? (
+            <div className="text-center py-12 text-ink-soft">Chargement des commandes…</div>
+          ) : candidates.length === 0 ? (
+            <div className="text-center py-12 text-ink-soft">Aucune commande trouvée</div>
+          ) : visibleCandidates.length === 0 ? (
+            <div className="text-center py-12 text-ink-soft">
+              {mode === 'new' ? 'Tous les modèles sont déjà importés. Va dans l\'onglet "Tous" pour mettre à jour les quantités.' : 'Aucun modèle'}
+            </div>
+          ) : (
+            <Fragment>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm text-ink-soft">
+                  {mode === 'new'
+                    ? `${visibleCandidates.length} nouveaux modèles à importer`
+                    : `${visibleCandidates.length} modèles • ${updateCount} avec quantité différente`}
+                </div>
+                {visibleCandidates.length > 0 && (
+                  <button onClick={toggleAll} className="btn-ghost text-xs">
+                    Tout {visibleCandidates.every(c => selected[c.modele]) ? 'désélectionner' : 'sélectionner'}
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1">
+                {visibleCandidates.map(c => {
+                  const isSel = !!selected[c.modele];
+                  const qtyDiff = c.alreadyExists ? c.occurrences - (c.previousQuantite || 0) : null;
+                  return (
+                    <label
+                      key={c.modele}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition hover:bg-creme-warm ${isSel ? 'bg-creme-warm' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSel}
+                        onChange={(e) => setSelected(s => ({ ...s, [c.modele]: e.target.checked }))}
+                        className="w-4 h-4 accent-bordeaux"
+                      />
+                      <span className="flex-1 text-sm text-ink">{c.modele}</span>
+                      {c.alreadyExists ? (
+                        <Fragment>
+                          {c.quantiteChanged ? (
+                            <span className="text-xs text-ink-soft">
+                              <span className="text-ink-soft">{c.previousQuantite}</span>
+                              <span className="mx-1">→</span>
+                              <span className="text-bordeaux font-semibold">{c.occurrences}</span>
+                              {qtyDiff > 0 && <span className="ml-1 text-green-700">(+{qtyDiff})</span>}
+                              {qtyDiff < 0 && <span className="ml-1 text-red-600">({qtyDiff})</span>}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-ink-soft">{c.occurrences}× • inchangé</span>
+                          )}
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-creme-warm text-ink-soft">déjà importé</span>
+                        </Fragment>
+                      ) : (
+                        <span className="text-xs text-bordeaux font-semibold">{c.occurrences}× commandé</span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </Fragment>
+          )}
+        </div>
+
+        <div className="p-5 border-t border-creme-warm flex items-center justify-between bg-creme-warm">
+          <span className="text-sm text-ink-soft">{selectedCount} sélectionnés</span>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="btn-ghost">Annuler</button>
+            <button onClick={handleImport} disabled={selectedCount === 0} className="btn-primary">
+              Importer {selectedCount > 0 ? `(${selectedCount})` : ''}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===================== ADD MANUAL MODAL =====================
+function AddModeleModal({ existingModeles, onAdd, onClose }) {
+  const [nom, setNom] = useState('');
+  const [error, setError] = useState('');
+
+  const handleAdd = () => {
+    const trimmed = nom.trim();
+    if (!trimmed) { setError('Nom requis'); return; }
+    const key = modeleKey(trimmed);
+    if (!key) { setError('Nom invalide'); return; }
+    if (existingModeles && existingModeles[key]) {
+      setError('Un modèle avec ce nom existe déjà');
+      return;
+    }
+    onAdd(trimmed);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl card-shadow-lg w-full max-w-md fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 border-b border-creme-warm">
+          <h3 className="font-display text-2xl text-bordeaux">Nouveau modèle</h3>
+          <p className="text-sm text-ink-soft">Ajout manuel d'un modèle</p>
+        </div>
+        <div className="p-5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-ink-soft mb-1.5">Nom du modèle</label>
+          <input
+            type="text"
+            value={nom}
+            onChange={(e) => { setNom(e.target.value); setError(''); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+            placeholder="Ex: Abaya Adela"
+            className="input-field"
+            autoFocus
+          />
+          {error && <div className="text-sm text-red-600 mt-2">{error}</div>}
+          <p className="text-xs text-ink-soft mt-2">
+            Évite d'inclure la couleur — un seul modèle pour toutes ses déclinaisons.
+          </p>
+        </div>
+        <div className="p-5 border-t border-creme-warm flex items-center justify-end gap-2 bg-creme-warm">
+          <button onClick={onClose} className="btn-ghost">Annuler</button>
+          <button onClick={handleAdd} className="btn-primary">Ajouter</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===================== CONFIRM MODAL =====================
+function ConfirmModal({ title, message, confirmLabel, danger, onConfirm, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl card-shadow-lg w-full max-w-md fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5">
+          <h3 className="font-display text-xl text-bordeaux mb-2">{title}</h3>
+          <p className="text-sm text-ink-soft">{message}</p>
+        </div>
+        <div className="p-5 border-t border-creme-warm flex items-center justify-end gap-2 bg-creme-warm">
+          <button onClick={onClose} className="btn-ghost">Annuler</button>
+          <button
+            onClick={() => { onConfirm(); onClose(); }}
+            className="btn-primary"
+            style={danger ? { background: 'var(--danger)' } : {}}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===================== STAT CARD =====================
+function StatCard({ label, value, suffix, highlight }) {
+  return (
+    <div className={`rounded-xl p-4 ${highlight ? 'bg-bordeaux text-white' : 'bg-white card-shadow'}`}>
+      <div className={`text-xs uppercase tracking-wider ${highlight ? 'text-creme opacity-80' : 'text-ink-soft'}`}>
+        {label}
+      </div>
+      <div className={`font-display text-2xl sm:text-3xl mt-1 ${highlight ? 'text-white' : 'text-bordeaux'}`}>
+        {value}<span className="text-sm font-normal opacity-70">{suffix || ''}</span>
+      </div>
+    </div>
+  );
+}
+
+// ===================== COST INPUT =====================
+function CostInput({ value, placeholder, onSave, flashKey, flashMap }) {
+  const inputRef = useRef(null);
+  useEffect(() => {
+    if (inputRef.current && document.activeElement !== inputRef.current) {
+      const dom = (value == null || value === '') ? '' : String(value);
+      if (inputRef.current.value !== dom) {
+        inputRef.current.value = dom;
+      }
+    }
+  }, [value]);
+  const isFlash = flashKey && flashMap && !!flashMap[flashKey];
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="number"
+        inputMode="decimal"
+        step="0.01"
+        min="0"
+        placeholder={placeholder}
+        defaultValue={value == null ? '' : value}
+        onBlur={(e) => onSave(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+        className={`input-field cost-input ${isFlash ? 'flash-saved' : ''}`}
+      />
+      {isFlash && (
+        <span
+          className="absolute -right-1 -top-1 text-white bg-green-600 rounded-full flex items-center justify-center"
+          style={{ fontSize: '10px', width: '16px', height: '16px' }}
+        >✓</span>
+      )}
+    </div>
+  );
+}
+
+// ===================== MODELE ROW (DESKTOP) =====================
+function ModeleRow({ modele, isAlt, savedFlash, onSaveField, onDelete }) {
+  return (
+    <tr className={isAlt ? 'bg-creme' : 'bg-white'}>
+      <td className="py-2 px-4 text-ink font-medium">{modele.nom}</td>
+      <td className="py-2 px-3">
+        <CostInput
+          value={modele.prixMetre}
+          placeholder="0"
+          onSave={(v) => onSaveField(modele.key, 'prixMetre', v)}
+          flashKey={`${modele.key}-prixMetre`}
+          flashMap={savedFlash}
+        />
+      </td>
+      <td className="py-2 px-3">
+        <CostInput
+          value={modele.metresModele}
+          placeholder="0"
+          onSave={(v) => onSaveField(modele.key, 'metresModele', v)}
+          flashKey={`${modele.key}-metresModele`}
+          flashMap={savedFlash}
+        />
+      </td>
+      <td className="py-2 px-3">
+        <CostInput
+          value={modele.coutSupp}
+          placeholder="0"
+          onSave={(v) => onSaveField(modele.key, 'coutSupp', v)}
+          flashKey={`${modele.key}-coutSupp`}
+          flashMap={savedFlash}
+        />
+      </td>
+      <td className="py-2 px-3 text-right font-display text-lg text-bordeaux">
+        {modele.coutUnit > 0 ? `${modele.coutUnit.toFixed(2)}` : <span className="text-ink-soft text-base">—</span>}
+      </td>
+      <td className="py-2 px-3 text-center">
+        <span className="inline-block px-2 py-0.5 rounded-full bg-creme-warm text-terracotta font-bold text-sm">
+          {modele.quantite || 0}
+        </span>
+      </td>
+      <td className="py-2 px-4 text-right font-display text-xl text-bordeaux">
+        {modele.coutTotalModele > 0 ? `${modele.coutTotalModele.toFixed(2)} dhs` : <span className="text-ink-soft text-base">—</span>}
+      </td>
+      <td className="py-2 px-2 text-center">
+        <button onClick={onDelete} className="text-ink-soft hover:text-red-600 transition p-1 rounded text-lg" title="Supprimer">×</button>
+      </td>
+    </tr>
+  );
+}
+
+// ===================== MODELE CARD (MOBILE) =====================
+function ModeleCard({ modele, savedFlash, onSaveField, onDelete }) {
+  return (
+    <div className="bg-white rounded-xl card-shadow p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h4 className="font-display text-xl text-ink leading-tight">{modele.nom}</h4>
+          <div className="text-xs text-terracotta font-semibold mt-0.5">{modele.quantite || 0} unité{(modele.quantite || 0) > 1 ? 's' : ''} vendue{(modele.quantite || 0) > 1 ? 's' : ''}</div>
+        </div>
+        <button onClick={onDelete} className="text-ink-soft hover:text-red-600 transition p-1 text-lg" title="Supprimer">×</button>
+      </div>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block text-xs uppercase tracking-wider text-ink-soft mb-1">Prix / m</label>
+          <CostInput value={modele.prixMetre} placeholder="0" onSave={(v) => onSaveField(modele.key, 'prixMetre', v)} flashKey={`${modele.key}-prixMetre`} flashMap={savedFlash} />
+        </div>
+        <div>
+          <label className="block text-xs uppercase tracking-wider text-ink-soft mb-1">Mètres / modèle</label>
+          <CostInput value={modele.metresModele} placeholder="0" onSave={(v) => onSaveField(modele.key, 'metresModele', v)} flashKey={`${modele.key}-metresModele`} flashMap={savedFlash} />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs uppercase tracking-wider text-ink-soft mb-1">Coût supplémentaire</label>
+          <CostInput value={modele.coutSupp} placeholder="0" onSave={(v) => onSaveField(modele.key, 'coutSupp', v)} flashKey={`${modele.key}-coutSupp`} flashMap={savedFlash} />
+        </div>
+      </div>
+      <div className="pt-3 border-t border-creme-warm space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="text-xs uppercase tracking-wider text-ink-soft">Coût unitaire</span>
+          <span className="font-display text-lg text-ink">
+            {modele.coutUnit > 0 ? `${modele.coutUnit.toFixed(2)} dhs` : '—'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs uppercase tracking-wider text-bordeaux font-semibold">× {modele.quantite || 0} = Total</span>
+          <span className="font-display text-2xl text-bordeaux">
+            {modele.coutTotalModele > 0 ? `${modele.coutTotalModele.toFixed(2)} dhs` : '—'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===================== EMPTY STATE =====================
+function EmptyState({ search, onImport, onAdd }) {
+  if (search) {
+    return (
+      <div className="text-center py-16 px-4">
+        <div className="font-display text-2xl text-ink mb-2">Aucun résultat</div>
+        <p className="text-sm text-ink-soft">Aucun modèle ne correspond à « {search} »</p>
+      </div>
+    );
+  }
+  return (
+    <div className="text-center py-16 px-4">
+      <div className="font-display text-3xl text-bordeaux mb-2">Bienvenue</div>
+      <p className="text-sm text-ink-soft mb-6 max-w-md mx-auto">
+        Aucun modèle pour le moment. Importe-les depuis tes commandes existantes ou ajoute-les manuellement.
+      </p>
+      <div className="flex items-center justify-center gap-2 flex-wrap">
+        <button onClick={onImport} className="btn-secondary">↓ Importer depuis usine-cataleya</button>
+        <button onClick={onAdd} className="btn-primary">+ Nouveau modèle</button>
+      </div>
+    </div>
+  );
+}
+
+// ===================== MAIN APP =====================
+function App() {
+  const [authState, setAuthState] = useState({ loading: true, user: null });
+  const [modeles, setModeles] = useState({});
+  const [meta, setMeta] = useState({});
+  const [search, setSearch] = useState('');
+  const [showImport, setShowImport] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [savedFlash, setSavedFlash] = useState({});
+  const [sortBy, setSortBy] = useState('nom');
+  const [sortDir, setSortDir] = useState('asc');
+  const showToast = useToast();
+  const menuRef = useRef(null);
+
+  // Fermer le menu quand on clique ailleurs
+  useEffect(() => {
+    if (!showMenu) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showMenu]);
+
+  useEffect(() => {
+    const unsub = window.firebaseOnAuthStateChanged((u) => {
+      setAuthState({ loading: false, user: u });
+    });
+    return () => unsub && unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!authState.user) return;
+    const r = window.firebaseRef(window.db, 'coutCataleya/modeles');
+    const unsub = window.firebaseOnValue(r, (snap) => {
+      setModeles(snap.val() || {});
+    });
+    return () => unsub();
+  }, [authState.user]);
+
+  useEffect(() => {
+    if (!authState.user) return;
+    const r = window.firebaseRef(window.db, 'coutCataleya/meta');
+    const unsub = window.firebaseOnValue(r, (snap) => {
+      setMeta(snap.val() || {});
+    });
+    return () => unsub();
+  }, [authState.user]);
+
+  const handleLogout = async () => {
+    await window.firebaseSignOut();
+  };
+
+  const flashSaved = (key, field) => {
+    const id = `${key}-${field}`;
+    setSavedFlash(s => ({ ...s, [id]: Date.now() }));
+    setTimeout(() => {
+      setSavedFlash(s => {
+        const c = { ...s };
+        delete c[id];
+        return c;
+      });
+    }, 1500);
+  };
+
+  const saveField = async (key, field, value) => {
+    const num = (value === '' || value == null) ? null : parseFloat(value);
+    if (num !== null && (isNaN(num) || num < 0)) return;
+    const existing = modeles[key] || {};
+    const updated = {
+      ...existing,
+      [field]: num,
+      updatedAt: Date.now(),
+      updatedBy: (authState.user && authState.user.email) || 'admin'
+    };
+    try {
+      await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/modeles/' + key), updated);
+      flashSaved(key, field);
+    } catch (err) {
+      console.error('Save error:', err);
+      const msg = err.code || err.message || 'inconnue';
+      showToast('Erreur sauvegarde : ' + msg, 'error');
+    }
+  };
+
+  const handleImport = async (items) => {
+    let createdCount = 0;
+    let updatedCount = 0;
+    const failures = []; // [{nom, error}]
+    try {
+      for (const item of items) {
+        const { modele: nom, quantite, alreadyExists } = item;
+        const key = modeleKey(nom);
+        if (!key) {
+          failures.push({ nom, error: 'clé vide (nom invalide)' });
+          continue;
+        }
+        try {
+          if (alreadyExists) {
+            const existing = modeles[key] || {};
+            await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/modeles/' + key), {
+              ...existing,
+              quantite,
+              updatedAt: Date.now(),
+              updatedBy: (authState.user && authState.user.email) || 'admin',
+              lastImportAt: Date.now()
+            });
+            updatedCount++;
+          } else {
+            await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/modeles/' + key), {
+              nom,
+              prixMetre: null,
+              metresModele: null,
+              coutSupp: null,
+              quantite,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              updatedBy: (authState.user && authState.user.email) || 'admin',
+              lastImportAt: Date.now(),
+              source: 'import'
+            });
+            createdCount++;
+          }
+        } catch (innerErr) {
+          console.error('Save failed for', nom, '(key:', key, ')', innerErr);
+          failures.push({ nom, key, error: innerErr.code || innerErr.message || 'inconnue' });
+        }
+      }
+      try {
+        await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/meta/lastImportAt'), Date.now());
+      } catch (e) { /* ok */ }
+
+      if (createdCount === 0 && updatedCount === 0 && failures.length === 0) {
+        showToast('Aucun changement', 'info');
+        return;
+      }
+      let msg = '';
+      if (createdCount > 0) msg += `${createdCount} nouveau${createdCount > 1 ? 'x' : ''}`;
+      if (updatedCount > 0) {
+        if (msg) msg += ' • ';
+        msg += `${updatedCount} mis à jour`;
+      }
+      if (failures.length > 0) {
+        // Affiche les échecs sous forme d'alerte non auto-fermante
+        const failNames = failures.map(f => `• ${f.nom} : ${f.error}`).join('\n');
+        alert(`${failures.length} modèle(s) n'ont pas pu être sauvegardés :\n\n${failNames}`);
+      }
+      if (msg) showToast(msg);
+      if (failures.length === 0) {
+        setShowImport(false);
+      }
+    } catch (err) {
+      console.error('Import error (outer):', err);
+      const msg = err.code || err.message || 'inconnue';
+      showToast('Erreur import : ' + msg, 'error');
+    }
+  };
+
+  const handleResetAll = async () => {
+    try {
+      // 1. Supprimer toute la collection
+      await window.firebaseRemove(window.firebaseRef(window.db, 'coutCataleya/modeles'));
+      // 2. Lire les commandes depuis usine-cataleya
+      const snap = await window.firebaseGet(window.firebaseRef(window.db, 'lists'));
+      const lists = snap.val() || {};
+      const modeleCount = {};
+      const allLists = Array.isArray(lists) ? lists : Object.values(lists);
+      allLists.forEach(list => {
+        if (!list || list.archived) return;
+        const orders = list.orders || [];
+        const orderArr = Array.isArray(orders) ? orders : Object.values(orders);
+        orderArr.forEach(o => {
+          if (o && o.name) {
+            const modele = getModele(o.name);
+            if (modele) {
+              modeleCount[modele] = (modeleCount[modele] || 0) + 1;
+            }
+          }
+        });
+      });
+      // 3. Réimporter tous les modèles séquentiellement
+      let createdCount = 0;
+      const failures = [];
+      const modeleEntries = Object.entries(modeleCount);
+      const now = Date.now();
+      const userEmail = (authState.user && authState.user.email) || 'admin';
+      for (const [nom, quantite] of modeleEntries) {
+        const key = modeleKey(nom);
+        if (!key) { failures.push({ nom, error: 'clé vide' }); continue; }
+        try {
+          await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/modeles/' + key), {
+            nom,
+            prixMetre: null,
+            metresModele: null,
+            coutSupp: null,
+            quantite,
+            createdAt: now,
+            updatedAt: now,
+            updatedBy: userEmail,
+            lastImportAt: now,
+            source: 'import'
+          });
+          createdCount++;
+        } catch (err) {
+          console.error('Reset save failed for', nom, '(key:', key, ')', err);
+          failures.push({ nom, key, error: err.code || err.message || 'inconnue' });
+        }
+      }
+      try {
+        await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/meta/lastImportAt'), now);
+      } catch (e) {}
+
+      const totalUnits = modeleEntries.reduce((s, [, q]) => s + q, 0);
+      const importedUnits = modeleEntries
+        .filter(([nom]) => !failures.find(f => f.nom === nom))
+        .reduce((s, [, q]) => s + q, 0);
+
+      let recap = `Réinitialisation terminée\n\n`;
+      recap += `Modèles trouvés : ${modeleEntries.length}\n`;
+      recap += `Modèles importés : ${createdCount}\n`;
+      recap += `Total unités lues : ${totalUnits}\n`;
+      recap += `Total unités importées : ${importedUnits}`;
+      if (failures.length > 0) {
+        recap += `\n\nÉchecs (${failures.length}) :\n` + failures.map(f => `• ${f.nom} : ${f.error}`).join('\n');
+      }
+      alert(recap);
+      showToast(`Reset OK · ${createdCount} modèles · ${importedUnits} unités`);
+    } catch (err) {
+      console.error('Reset error:', err);
+      const msg = err.code || err.message || 'inconnue';
+      alert('Erreur lors du reset : ' + msg);
+      showToast('Erreur reset : ' + msg, 'error');
+    }
+  };
+
+  const handleAdd = async (nom) => {
+    const key = modeleKey(nom);
+    if (!key) return;
+    try {
+      await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/modeles/' + key), {
+        nom,
+        prixMetre: null,
+        metresModele: null,
+        coutSupp: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        updatedBy: (authState.user && authState.user.email) || 'admin',
+        source: 'manual'
+      });
+      showToast('Modèle ajouté');
+      setShowAdd(false);
+    } catch (err) {
+      console.error('Add error:', err);
+      const msg = err.code || err.message || 'inconnue';
+      showToast('Erreur ajout : ' + msg, 'error');
+    }
+  };
+
+  const handleDelete = async (key) => {
+    try {
+      await window.firebaseRemove(window.firebaseRef(window.db, 'coutCataleya/modeles/' + key));
+      showToast('Modèle supprimé');
+    } catch (err) {
+      console.error('Delete error:', err);
+      const msg = err.code || err.message || 'inconnue';
+      showToast('Erreur suppression : ' + msg, 'error');
+    }
+  };
+
+  const modeleList = useMemo(() => {
+    const arr = Object.entries(modeles).map(([key, m]) => {
+      const prixM = parseFloat(m.prixMetre) || 0;
+      const metres = parseFloat(m.metresModele) || 0;
+      const coutSupp = parseFloat(m.coutSupp) || 0;
+      const coutUnit = (prixM * metres) + coutSupp;
+      const quantite = parseInt(m.quantite) || 0;
+      const coutTotalModele = coutUnit * quantite;
+      return { key, ...m, coutUnit, quantite, coutTotalModele };
+    });
+    const q = search.trim().toLowerCase();
+    const filtered = q ? arr.filter(m => (m.nom || '').toLowerCase().includes(q)) : arr;
+    const sorted = [...filtered].sort((a, b) => {
+      let va, vb;
+      if (sortBy === 'nom') { va = (a.nom || '').toLowerCase(); vb = (b.nom || '').toLowerCase(); }
+      else if (sortBy === 'cout') { va = a.coutUnit; vb = b.coutUnit; }
+      else if (sortBy === 'metres') { va = parseFloat(a.metresModele) || 0; vb = parseFloat(b.metresModele) || 0; }
+      else if (sortBy === 'quantite') { va = a.quantite; vb = b.quantite; }
+      else if (sortBy === 'total') { va = a.coutTotalModele; vb = b.coutTotalModele; }
+      else { va = a.nom || ''; vb = b.nom || ''; }
+      if (typeof va === 'string') return sortDir === 'asc' ? va.localeCompare(vb, 'fr') : vb.localeCompare(va, 'fr');
+      return sortDir === 'asc' ? va - vb : vb - va;
+    });
+    return sorted;
+  }, [modeles, search, sortBy, sortDir]);
+
+  const stats = useMemo(() => {
+    const total = modeleList.length;
+    const completed = modeleList.filter(m => m.coutUnit > 0).length;
+    const collectionCoutUnitaire = modeleList.reduce((s, m) => s + m.coutUnit, 0);
+    const collectionTotalReel = modeleList.reduce((s, m) => s + m.coutTotalModele, 0);
+    const totalQuantite = modeleList.reduce((s, m) => s + m.quantite, 0);
+    const moyenne = completed > 0 ? collectionCoutUnitaire / completed : 0;
+    return { total, completed, collectionCoutUnitaire, collectionTotalReel, totalQuantite, moyenne };
+  }, [modeleList]);
+
+  const toggleSort = (col) => {
+    if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(col); setSortDir('asc'); }
+  };
+
+  const exportXLSX = () => {
+    const data = [['Modèle', 'Prix/m (dhs)', 'Mètres/modèle', 'Coût supp. (dhs)', 'Coût unitaire (dhs)', 'Qté vendue', 'Coût total modèle (dhs)']];
+    modeleList.forEach(m => {
+      data.push([
+        m.nom,
+        m.prixMetre || '',
+        m.metresModele || '',
+        m.coutSupp || '',
+        m.coutUnit || '',
+        m.quantite || 0,
+        m.coutTotalModele || ''
+      ]);
+    });
+    data.push([]);
+    data.push(['TOTAL COLLECTION', '', '', '', '', stats.totalQuantite, stats.collectionTotalReel]);
+    const ws = window.XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 22 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Coûts');
+    const date = new Date().toLocaleDateString('fr-FR').replace(/\//g, '-');
+    window.XLSX.writeFile(wb, `CoutsCataleya_${date}.xlsx`);
+  };
+
+  const exportPDF = () => {
+    const dateStr = new Date().toLocaleDateString('fr-FR');
+    let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Coûts de fabrication — Cataleya</title>
+    <style>
+      @page { size: A4 landscape; margin: 12mm; }
+      body { font-family: Georgia, 'Cormorant Garamond', serif; color: #2a1a1a; }
+      .head { border-bottom: 2px solid #6b1f2e; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+      h1 { font-size: 22px; color: #6b1f2e; margin: 0; font-weight: 600; letter-spacing: 0.04em; }
+      .meta { font-size: 10px; color: #5a4848; }
+      table { width: 100%; border-collapse: collapse; font-family: Helvetica, Arial, sans-serif; font-size: 10px; }
+      th { background: #faf6f0; border-bottom: 2px solid #6b1f2e; padding: 8px 10px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #4a1520; }
+      td { border-bottom: 1px solid #e8ddc8; padding: 8px 10px; }
+      td.num { text-align: right; font-variant-numeric: tabular-nums; }
+      td.qte { text-align: center; font-weight: 600; color: #c87454; }
+      td.cost { font-weight: 600; color: #6b1f2e; }
+      td.total { font-weight: 700; color: #6b1f2e; font-size: 11px; }
+      tr:nth-child(even) td { background: #faf6f0; }
+      .total-row td { background: #6b1f2e !important; color: white; font-weight: 600; font-size: 12px; padding: 12px 10px; }
+      .no-print { position: fixed; top: 10px; right: 10px; background: #6b1f2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+      @media print { .no-print { display: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style></head><body>
+    <button class="no-print" onclick="window.print()">🖨️ Imprimer</button>
+    <div class="head">
+      <div>
+        <h1>Cataleya · Coûts de fabrication</h1>
+        <div class="meta" style="margin-top:4px;">Exporté le ${dateStr} • ${modeleList.length} modèles • ${stats.totalQuantite} unités</div>
+      </div>
+      <div class="meta" style="text-align:right;">
+        Total collection<br>
+        <span style="font-size:18px;color:#6b1f2e;font-weight:600;">${stats.collectionTotalReel.toFixed(2)} dhs</span>
+      </div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Modèle</th>
+        <th style="text-align:right;">Prix/m</th>
+        <th style="text-align:right;">Mètres</th>
+        <th style="text-align:right;">Coût supp.</th>
+        <th style="text-align:right;">Coût unit.</th>
+        <th style="text-align:center;">Qté</th>
+        <th style="text-align:right;">Total modèle</th>
+      </tr></thead>
+      <tbody>`;
+    modeleList.forEach(m => {
+      html += `<tr>
+        <td>${m.nom || ''}</td>
+        <td class="num">${m.prixMetre != null ? Number(m.prixMetre).toFixed(2) : '—'}</td>
+        <td class="num">${m.metresModele != null ? Number(m.metresModele).toFixed(2) : '—'}</td>
+        <td class="num">${m.coutSupp != null ? Number(m.coutSupp).toFixed(2) : '—'}</td>
+        <td class="num cost">${m.coutUnit > 0 ? m.coutUnit.toFixed(2) : '—'}</td>
+        <td class="qte">${m.quantite || 0}</td>
+        <td class="num total">${m.coutTotalModele > 0 ? m.coutTotalModele.toFixed(2) + ' dhs' : '—'}</td>
+      </tr>`;
+    });
+    html += `<tr class="total-row">
+      <td colspan="5">TOTAL COLLECTION</td>
+      <td style="text-align:center;">${stats.totalQuantite}</td>
+      <td class="num">${stats.collectionTotalReel.toFixed(2)} dhs</td>
+    </tr></tbody></table></body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    window.open(URL.createObjectURL(blob), '_blank');
+  };
+
+  if (authState.loading) {
+    return (
+      <div className="login-bg min-h-screen flex items-center justify-center">
+        <div className="text-ink-soft">Chargement…</div>
+      </div>
+    );
+  }
+
+  if (!authState.user) {
+    return <LoginScreen />;
+  }
+
+  return (
+    <div className="min-h-screen">
+      <Header user={authState.user} onLogout={handleLogout} />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <StatCard label="Modèles" value={stats.total} suffix={stats.totalQuantite > 0 ? ` · ${stats.totalQuantite} u.` : ''} />
+          <StatCard label="Avec coût" value={stats.completed} suffix={stats.total > 0 ? ` / ${stats.total}` : ''} />
+          <StatCard label="Coût moyen / modèle" value={stats.moyenne.toFixed(0)} suffix=" dhs" />
+          <StatCard label="Coût total collection" value={stats.collectionTotalReel.toFixed(0)} suffix=" dhs" highlight />
+        </div>
+
+        <div className="bg-white rounded-xl card-shadow p-4 mb-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              placeholder="Rechercher un modèle…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input-field flex-1 min-w-[180px]"
+            />
+            <button onClick={() => setShowImport(true)} className="btn-primary whitespace-nowrap">↓ Importer</button>
+            <div className="w-px h-8 bg-creme-warm hidden sm:block"></div>
+            <button onClick={exportPDF} className="btn-ghost whitespace-nowrap" disabled={modeleList.length === 0}>🖨 PDF</button>
+            <button onClick={exportXLSX} className="btn-ghost whitespace-nowrap" disabled={modeleList.length === 0}>📊 XLSX</button>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowMenu(m => !m)}
+                className="btn-ghost px-3 whitespace-nowrap"
+                title="Options avancées"
+              >⋯</button>
+              {showMenu && (
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg card-shadow-lg border border-creme-warm py-1 z-20 min-w-[240px]">
+                  <button
+                    onClick={() => { setShowAdd(true); setShowMenu(false); }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-creme-warm text-ink transition"
+                  >+ Nouveau modèle (manuel)</button>
+                  <div className="border-t border-creme-warm my-1"></div>
+                  <button
+                    onClick={() => { setConfirmReset(true); setShowMenu(false); }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-700 transition"
+                  >⟲ Tout réinitialiser & ré-importer</button>
+                </div>
+              )}
+            </div>
+          </div>
+          {meta.lastImportAt && (
+            <div className="mt-2 text-xs text-ink-soft">
+              Dernier import : {new Date(meta.lastImportAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl card-shadow overflow-hidden desktop-only">
+          {modeleList.length === 0 ? (
+            <EmptyState search={search} onImport={() => setShowImport(true)} onAdd={() => setShowAdd(true)} />
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="bg-creme-warm">
+                  <th className="text-left py-3 px-4 text-xs uppercase tracking-wider text-bordeaux font-semibold cursor-pointer hover:bg-creme" onClick={() => toggleSort('nom')}>
+                    Modèle {sortBy === 'nom' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th className="text-right py-3 px-3 text-xs uppercase tracking-wider text-bordeaux font-semibold w-28">Prix / m</th>
+                  <th className="text-right py-3 px-3 text-xs uppercase tracking-wider text-bordeaux font-semibold w-28 cursor-pointer hover:bg-creme" onClick={() => toggleSort('metres')}>
+                    Mètres {sortBy === 'metres' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th className="text-right py-3 px-3 text-xs uppercase tracking-wider text-bordeaux font-semibold w-28">Coût supp.</th>
+                  <th className="text-right py-3 px-3 text-xs uppercase tracking-wider text-bordeaux font-semibold w-32 cursor-pointer hover:bg-creme" onClick={() => toggleSort('cout')}>
+                    Coût unit. {sortBy === 'cout' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th className="text-center py-3 px-3 text-xs uppercase tracking-wider text-terracotta font-semibold w-20 cursor-pointer hover:bg-creme" onClick={() => toggleSort('quantite')}>
+                    Qté {sortBy === 'quantite' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th className="text-right py-3 px-4 text-xs uppercase tracking-wider text-bordeaux font-semibold w-40 cursor-pointer hover:bg-creme" onClick={() => toggleSort('total')}>
+                    Total modèle {sortBy === 'total' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th className="w-12"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {modeleList.map((m, idx) => (
+                  <ModeleRow
+                    key={m.key}
+                    modele={m}
+                    isAlt={idx % 2 === 1}
+                    savedFlash={savedFlash}
+                    onSaveField={saveField}
+                    onDelete={() => setConfirmDelete({ key: m.key, nom: m.nom })}
+                  />
+                ))}
+                <tr className="bg-bordeaux text-white">
+                  <td className="py-4 px-4 font-display text-lg" colSpan={5}>Total collection</td>
+                  <td className="py-4 px-3 text-center font-display text-lg">{stats.totalQuantite} u.</td>
+                  <td className="py-4 px-4 text-right font-display text-2xl">{stats.collectionTotalReel.toFixed(2)} dhs</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="mobile-only space-y-3">
+          {modeleList.length === 0 ? (
+            <div className="bg-white rounded-xl card-shadow">
+              <EmptyState search={search} onImport={() => setShowImport(true)} onAdd={() => setShowAdd(true)} />
+            </div>
+          ) : (
+            <Fragment>
+              {modeleList.map(m => (
+                <ModeleCard
+                  key={m.key}
+                  modele={m}
+                  savedFlash={savedFlash}
+                  onSaveField={saveField}
+                  onDelete={() => setConfirmDelete({ key: m.key, nom: m.nom })}
+                />
+              ))}
+              <div className="bg-bordeaux text-white rounded-xl card-shadow-lg p-5">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="font-display text-lg">Total collection</div>
+                  <div className="font-display text-2xl">{stats.collectionTotalReel.toFixed(2)} dhs</div>
+                </div>
+                <div className="text-xs opacity-80 text-right">{stats.totalQuantite} unités · {stats.total} modèles</div>
+              </div>
+            </Fragment>
+          )}
+        </div>
+
+        <div className="mt-6 text-center text-xs text-ink-soft">
+          Données enregistrées automatiquement dans Firebase · projet usine-cataleya
+        </div>
+      </main>
+
+      {showImport && (
+        <ImportModal
+          existingModeles={modeles}
+          onImport={handleImport}
+          onClose={() => setShowImport(false)}
+        />
+      )}
+      {showAdd && (
+        <AddModeleModal
+          existingModeles={modeles}
+          onAdd={handleAdd}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+      {confirmDelete && (
+        <ConfirmModal
+          title="Supprimer ce modèle ?"
+          message={`« ${confirmDelete.nom} » sera définitivement supprimé. Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          danger
+          onConfirm={() => handleDelete(confirmDelete.key)}
+          onClose={() => setConfirmDelete(null)}
+        />
+      )}
+      {confirmReset && (
+        <ConfirmModal
+          title="Tout réinitialiser ?"
+          message="ATTENTION : tous les modèles et tous les prix saisis (prix/m, mètres, coût supp.) seront DÉFINITIVEMENT supprimés. Ensuite tous les modèles seront ré-importés depuis usine-cataleya avec leurs quantités. Action irréversible."
+          confirmLabel="Tout supprimer & ré-importer"
+          danger
+          onConfirm={handleResetAll}
+          onClose={() => setConfirmReset(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ===================== MOUNT =====================
+function mount() {
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(
+    <ToastProvider>
+      <App />
+    </ToastProvider>
+  );
+}
+
+if (window.__firebaseReady) {
+  mount();
+} else {
+  window.addEventListener('firebase-ready', mount, { once: true });
+}
+</script>
+</body>
+</html>
