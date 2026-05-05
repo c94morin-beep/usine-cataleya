@@ -1041,9 +1041,7 @@ function App() {
 
   const handleResetAll = async () => {
     try {
-      // 1. Supprimer toute la collection
-      await window.firebaseRemove(window.firebaseRef(window.db, 'coutCataleya/modeles'));
-      // 2. Lire les commandes depuis usine-cataleya
+      // 1. Lire les commandes depuis usine-cataleya
       const snap = await window.firebaseGet(window.firebaseRef(window.db, 'lists'));
       const lists = snap.val() || {};
       const modeleCount = {};
@@ -1061,53 +1059,88 @@ function App() {
           }
         });
       });
-      // 3. Réimporter tous les modèles séquentiellement
-      let createdCount = 0;
-      const failures = [];
-      const modeleEntries = Object.entries(modeleCount);
+
+      // 2. Construire l'objet complet en mémoire (clé → modèle)
       const now = Date.now();
       const userEmail = (authState.user && authState.user.email) || 'admin';
-      for (const [nom, quantite] of modeleEntries) {
+      const newModeles = {};
+      const failures = [];
+      Object.entries(modeleCount).forEach(([nom, quantite]) => {
         const key = modeleKey(nom);
-        if (!key) { failures.push({ nom, error: 'clé vide' }); continue; }
-        try {
-          await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/modeles/' + key), {
-            nom,
-            prixMetre: null,
-            metresModele: null,
-            coutSupp: null,
-            quantite,
-            createdAt: now,
-            updatedAt: now,
-            updatedBy: userEmail,
-            lastImportAt: now,
-            source: 'import'
-          });
-          createdCount++;
-        } catch (err) {
-          console.error('Reset save failed for', nom, '(key:', key, ')', err);
-          failures.push({ nom, key, error: err.code || err.message || 'inconnue' });
+        if (!key) {
+          failures.push({ nom, error: 'clé vide (nom invalide)' });
+          return;
         }
-      }
-      try {
-        await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/meta/lastImportAt'), now);
-      } catch (e) {}
+        if (newModeles[key]) {
+          // Collision de clés : deux noms différents génèrent la même clé Firebase
+          failures.push({
+            nom,
+            error: `collision avec "${newModeles[key].nom}" (même clé : ${key})`
+          });
+          // On additionne quand même les quantités pour ne pas les perdre
+          newModeles[key].quantite += quantite;
+          return;
+        }
+        newModeles[key] = {
+          nom,
+          prixMetre: null,
+          metresModele: null,
+          coutSupp: null,
+          quantite,
+          createdAt: now,
+          updatedAt: now,
+          updatedBy: userEmail,
+          lastImportAt: now,
+          source: 'import'
+        };
+      });
 
-      const totalUnits = modeleEntries.reduce((s, [, q]) => s + q, 0);
-      const importedUnits = modeleEntries
-        .filter(([nom]) => !failures.find(f => f.nom === nom))
-        .reduce((s, [, q]) => s + q, 0);
+      // 3. Écriture atomique : un seul firebaseSet pour TOUT remplacer d'un coup
+      // Cela évite les états intermédiaires et garantit la cohérence
+      await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/modeles'), newModeles);
+      await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/meta/lastImportAt'), now);
+
+      // 3.5 VÉRIFICATION POST-ÉCRITURE : relire ce qu'on a vraiment écrit
+      const verifySnap = await window.firebaseGet(window.firebaseRef(window.db, 'coutCataleya/modeles'));
+      const verifyData = verifySnap.val() || {};
+      const verifyKeys = Object.keys(verifyData);
+      const verifyUnits = Object.values(verifyData).reduce((s, m) => s + (parseInt(m.quantite) || 0), 0);
+
+      // Identifier les modèles "perdus" (envoyés mais absents après lecture)
+      const sentKeys = new Set(Object.keys(newModeles));
+      const receivedKeys = new Set(verifyKeys);
+      const lostKeys = [...sentKeys].filter(k => !receivedKeys.has(k));
+      const lostModeles = lostKeys.map(k => ({
+        key: k,
+        nom: newModeles[k].nom,
+        quantite: newModeles[k].quantite
+      }));
+
+      // 4. Récap basé sur ce qu'on a EFFECTIVEMENT écrit (pas sur l'intention)
+      const importedKeys = Object.keys(newModeles);
+      const importedUnits = Object.values(newModeles).reduce((s, m) => s + (m.quantite || 0), 0);
+      const totalLus = Object.values(modeleCount).reduce((s, n) => s + n, 0);
 
       let recap = `Réinitialisation terminée\n\n`;
-      recap += `Modèles trouvés : ${modeleEntries.length}\n`;
-      recap += `Modèles importés : ${createdCount}\n`;
-      recap += `Total unités lues : ${totalUnits}\n`;
-      recap += `Total unités importées : ${importedUnits}`;
+      recap += `Modèles trouvés dans usine-cataleya : ${Object.keys(modeleCount).length}\n`;
+      recap += `Modèles envoyés à Firebase : ${importedKeys.length}\n`;
+      recap += `Modèles présents en base après écriture : ${verifyKeys.length}\n`;
+      recap += `Total unités lues : ${totalLus}\n`;
+      recap += `Total unités envoyées : ${importedUnits}\n`;
+      recap += `Total unités présentes en base : ${verifyUnits}\n`;
+      if (totalLus !== verifyUnits) {
+        recap += `\n⚠ ÉCART : ${totalLus - verifyUnits} unités perdues`;
+      }
+      if (lostModeles.length > 0) {
+        recap += `\n\n🔴 ${lostModeles.length} modèles ENVOYÉS mais ABSENTS de Firebase :\n`;
+        recap += lostModeles.map(m => `• "${m.nom}" (clé: ${m.key}) — ${m.quantite} unités`).join('\n');
+        recap += `\n\nFirebase a probablement rejeté ces clés silencieusement.`;
+      }
       if (failures.length > 0) {
-        recap += `\n\nÉchecs (${failures.length}) :\n` + failures.map(f => `• ${f.nom} : ${f.error}`).join('\n');
+        recap += `\n\nProblèmes de génération de clés (${failures.length}) :\n` + failures.map(f => `• ${f.nom} : ${f.error}`).join('\n');
       }
       alert(recap);
-      showToast(`Reset OK · ${createdCount} modèles · ${importedUnits} unités`);
+      showToast(`Reset · ${verifyKeys.length} modèles · ${verifyUnits} unités`);
     } catch (err) {
       console.error('Reset error:', err);
       const msg = err.code || err.message || 'inconnue';
