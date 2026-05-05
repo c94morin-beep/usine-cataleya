@@ -1580,9 +1580,10 @@
     </div>
 
     <!-- Onglets -->
-    <div style="display:flex;gap:0;padding:0 20px;border-bottom:1px solid var(--line);background:var(--cream)">
-      <button type="button" class="recap-tab active" id="tab-list" onclick="switchRecapTab('list')" style="flex:1;padding:12px 0;background:none;border:none;border-bottom:2px solid var(--bordeaux);font-size:13px;font-weight:600;color:var(--bordeaux);cursor:pointer">📋 Liste des produits</button>
-      <button type="button" class="recap-tab" id="tab-csv" onclick="switchRecapTab('csv')" style="flex:1;padding:12px 0;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:var(--ink-muted);cursor:pointer">📄 Aperçu CSV</button>
+    <div style="display:flex;gap:0;padding:0 12px;border-bottom:1px solid var(--line);background:var(--cream);overflow-x:auto">
+      <button type="button" class="recap-tab active" id="tab-list" onclick="switchRecapTab('list')" style="flex:1;min-width:90px;padding:12px 8px;background:none;border:none;border-bottom:2px solid var(--bordeaux);font-size:12px;font-weight:600;color:var(--bordeaux);cursor:pointer;white-space:nowrap">📋 Produits</button>
+      <button type="button" class="recap-tab" id="tab-ids" onclick="switchRecapTab('ids')" style="flex:1;min-width:130px;padding:12px 8px;background:none;border:none;border-bottom:2px solid transparent;font-size:12px;font-weight:600;color:var(--ink-muted);cursor:pointer;white-space:nowrap">🔢 IDs PrestaShop</button>
+      <button type="button" class="recap-tab" id="tab-csv" onclick="switchRecapTab('csv')" style="flex:1;min-width:100px;padding:12px 8px;background:none;border:none;border-bottom:2px solid transparent;font-size:12px;font-weight:600;color:var(--ink-muted);cursor:pointer;white-space:nowrap">📄 Aperçu CSV</button>
     </div>
 
     <div class="modal-body">
@@ -1592,17 +1593,34 @@
         <div id="recap-list"></div>
       </div>
 
+      <!-- Vue IDs PrestaShop (étape intermédiaire) -->
+      <div id="view-ids" style="display:none">
+        <div style="background:var(--cream-warm);border:1.5px solid var(--terracotta-soft);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px">
+          <div style="font-weight:700;color:var(--bordeaux);font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span>📌</span> Workflow d'import en 2 étapes
+          </div>
+          <ol style="font-size:12.5px;color:var(--ink-soft);line-height:1.65;padding-left:18px;margin:0">
+            <li><strong>Télécharge et importe d'abord le CSV Produits</strong> dans PrestaShop</li>
+            <li>Va dans <em>Catalogue → Produits</em>, repère chaque produit que tu viens de créer</li>
+            <li>Note l'<strong>ID</strong> de chacun (visible dans la colonne ID ou dans l'URL)</li>
+            <li>Reviens ici, saisis les IDs ci-dessous</li>
+            <li>Télécharge le CSV Combinaisons et importe-le</li>
+          </ol>
+        </div>
+        <p style="font-size:12px;color:var(--ink-muted);margin-bottom:10px;font-style:italic">L'ID PrestaShop est un nombre (ex. 234, 1567…) attribué automatiquement par PrestaShop à chaque produit créé.</p>
+        <div id="ids-list"></div>
+      </div>
+
       <!-- Vue CSV -->
       <div id="view-csv" style="display:none">
-        <p style="font-size:13px;color:var(--ink-muted);margin-bottom:14px">Aperçu des 2 fichiers CSV à importer dans PrestaShop. <strong>Importe d'abord le CSV Produits</strong>, puis le CSV Combinaisons (PrestaShop fait le matching automatique grâce au nom du produit).</p>
+        <p style="font-size:13px;color:var(--ink-muted);margin-bottom:14px">Aperçu des 2 fichiers CSV à importer dans PrestaShop. <strong>Importe d'abord le CSV Produits</strong>, puis remplis les IDs (onglet précédent), puis télécharge et importe le CSV Combinaisons.</p>
         <div id="csv-content"></div>
       </div>
     </div>
 
     <div class="modal-actions" style="grid-template-columns: 1fr; gap: 8px;">
-      <button class="btn-download" onclick="downloadCSV('products')" style="background:var(--bordeaux);color:var(--cream)">📦 Télécharger CSV Produits</button>
-      <button class="btn-download" onclick="downloadCSV('combinations')" style="background:var(--terracotta);color:var(--white)">🧵 Télécharger CSV Combinaisons</button>
-      <button class="btn-download" onclick="downloadCSV()" style="background:var(--success);color:var(--white)">⬇ Télécharger les 2</button>
+      <button class="btn-download" onclick="downloadCSV('products')" style="background:var(--bordeaux);color:var(--cream)">📦 1. Télécharger CSV Produits</button>
+      <button class="btn-download" id="btn-download-combinations" onclick="downloadCSV('combinations')" style="background:var(--terracotta);color:var(--white);opacity:0.45;cursor:not-allowed" disabled>🧵 2. Télécharger CSV Combinaisons</button>
       <button class="btn-reset" onclick="resetAll()">Recommencer un nouveau lot</button>
     </div>
   </div>
@@ -2310,7 +2328,7 @@ function generateProductsCSV() {
 // ───────────────────────────────────────────
 // CSV 2 — COMBINAISONS (déclinaisons PrestaShop)
 // Colonnes : Product ID* ; Attribute (Name:Type:Position)* ; Value (Value:Position)* ; Quantity ; Default
-// Product ID = NOM du produit (PrestaShop fait le matching automatique)
+// Product ID = ID numérique PrestaShop saisi par l'utilisateur dans l'onglet IDs
 // ───────────────────────────────────────────
 function generateCombinationsCSV() {
   const headers = ['Product ID*', 'Attribute (Name:Type:Position)*', 'Value (Value:Position)*', 'Quantity', 'Default (0 = No, 1 = Yes)'];
@@ -2318,11 +2336,16 @@ function generateCombinationsCSV() {
   const QUANTITY = 30;
   const rows = [];
   const seen = new Set();
+  const psIds = loadPsIds();
 
   allProducts.forEach(p => {
     if (seen.has(p.nom)) return;
     seen.add(p.nom);
     if (p.type !== 'Déclinaisons') return; // pas de combinaisons pour produit simple
+
+    // Récupérer le vrai ID PrestaShop saisi par l'utilisateur
+    const psId = psIds[p.nom];
+    if (!psId) return; // skip si pas d'ID saisi (le bouton est désactivé de toute façon)
 
     // Construire la liste des attributs actifs avec leurs valeurs
     const activeAttrs = [];
@@ -2332,7 +2355,7 @@ function generateCombinationsCSV() {
 
     if (!activeAttrs.length) return;
 
-    // Produit cartésien des valeurs (ex. tailles × options × options2)
+    // Produit cartésien des valeurs
     const combinations = cartesianProduct(activeAttrs.map(a => a.values));
 
     // Header attribut (constant pour ce produit)
@@ -2342,7 +2365,7 @@ function generateCombinationsCSV() {
     combinations.forEach(combo => {
       const valueStr = combo.map((v, i) => `${v}:${i}`).join(', ');
       rows.push([
-        p.nom,                                              // Product ID = nom (matching auto)
+        psId,                                               // Product ID = vrai ID PrestaShop
         attrHeader,                                         // Attribute name:type:position
         valueStr,                                           // Value:position
         QUANTITY,                                           // Quantity = 30
@@ -2392,7 +2415,6 @@ function generateCSV() {
 }
 
 function downloadCSV(which) {
-  // which = 'products' ou 'combinations' ou (vide) = les 2
   const date = new Date().toISOString().split('T')[0];
 
   if (which === 'products' || !which) {
@@ -2405,8 +2427,13 @@ function downloadCSV(which) {
     URL.revokeObjectURL(url);
   }
 
-  if ((which === 'combinations' || !which) && csvCombinationsString) {
-    // Petit délai pour pas que les 2 téléchargements se chevauchent
+  if (which === 'combinations' || !which) {
+    // Régénérer à la volée pour utiliser les IDs PrestaShop fraîchement saisis
+    generateCombinationsCSV();
+    if (!csvCombinationsString || csvCombinationsString.split('\n').length < 2) {
+      showToast('⚠ Aucune combinaison à exporter', 'error');
+      return;
+    }
     setTimeout(() => {
       const blob = new Blob(['\uFEFF' + csvCombinationsString], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -2439,6 +2466,8 @@ function resetAll() {
   allProducts.length = 0;
   csvProductsString = '';
   csvCombinationsString = '';
+  // Vider aussi les IDs PrestaShop saisis (lot terminé)
+  localStorage.removeItem(PS_IDS_KEY);
   updateCounter();
   resetFormSilent();
   document.getElementById('overlay').classList.remove('active');
@@ -2903,30 +2932,24 @@ function getCurrentTranslation() {
 // VUE LISTE DES PRODUITS DANS LE MODAL
 // ═══════════════════════════════════════════════════
 function switchRecapTab(tab) {
-  const tabList = document.getElementById('tab-list');
-  const tabCsv = document.getElementById('tab-csv');
-  const viewList = document.getElementById('view-list');
-  const viewCsv = document.getElementById('view-csv');
-
-  if (tab === 'list') {
-    tabList.classList.add('active');
-    tabList.style.color = 'var(--bordeaux)';
-    tabList.style.borderBottomColor = 'var(--bordeaux)';
-    tabCsv.classList.remove('active');
-    tabCsv.style.color = 'var(--ink-muted)';
-    tabCsv.style.borderBottomColor = 'transparent';
-    viewList.style.display = 'block';
-    viewCsv.style.display = 'none';
-  } else {
-    tabCsv.classList.add('active');
-    tabCsv.style.color = 'var(--bordeaux)';
-    tabCsv.style.borderBottomColor = 'var(--bordeaux)';
-    tabList.classList.remove('active');
-    tabList.style.color = 'var(--ink-muted)';
-    tabList.style.borderBottomColor = 'transparent';
-    viewCsv.style.display = 'block';
-    viewList.style.display = 'none';
-  }
+  const tabs = ['list', 'ids', 'csv'];
+  tabs.forEach(t => {
+    const tabBtn = document.getElementById('tab-' + t);
+    const view = document.getElementById('view-' + t);
+    if (t === tab) {
+      tabBtn.classList.add('active');
+      tabBtn.style.color = 'var(--bordeaux)';
+      tabBtn.style.borderBottomColor = 'var(--bordeaux)';
+      view.style.display = 'block';
+    } else {
+      tabBtn.classList.remove('active');
+      tabBtn.style.color = 'var(--ink-muted)';
+      tabBtn.style.borderBottomColor = 'transparent';
+      view.style.display = 'none';
+    }
+  });
+  // Si on ouvre l'onglet IDs, on (re)génère la liste
+  if (tab === 'ids') renderIdsList();
 }
 
 function renderRecapList() {
@@ -2988,6 +3011,86 @@ function removeProductGroup(baseName) {
   } else {
     updateCounter();
     generateCSV();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// IDs PRESTASHOP (workflow 2 étapes)
+// ═══════════════════════════════════════════════════
+const PS_IDS_KEY = 'cataleya_ps_ids';
+
+function loadPsIds() {
+  try { return JSON.parse(localStorage.getItem(PS_IDS_KEY)) || {}; } catch { return {}; }
+}
+function savePsIds(map) {
+  localStorage.setItem(PS_IDS_KEY, JSON.stringify(map));
+}
+
+function renderIdsList() {
+  const container = document.getElementById('ids-list');
+
+  // Liste des produits uniques (1 par couleur = 1 produit PrestaShop)
+  const uniqueNames = [];
+  const seen = new Set();
+  allProducts.forEach(p => {
+    if (!seen.has(p.nom)) { seen.add(p.nom); uniqueNames.push(p.nom); }
+  });
+
+  if (!uniqueNames.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--ink-muted);padding:20px 0">Aucun produit</p>';
+    return;
+  }
+
+  // Charger les IDs déjà saisis
+  const savedIds = loadPsIds();
+
+  container.innerHTML = uniqueNames.map(nom => {
+    const safeName = nom.replace(/'/g, "\\'");
+    const savedId = savedIds[nom] || '';
+    return `<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:500;color:var(--bordeaux);font-style:italic;line-height:1.3">${nom}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:11px;color:var(--ink-muted);font-weight:600">ID :</label>
+        <input type="number" inputmode="numeric" placeholder="ex. 234" value="${savedId}" data-prod-name="${safeName}" oninput="updatePsId(this)" style="width:90px;padding:8px 10px;border:1.5px solid var(--line);border-radius:var(--radius-sm);font-size:14px;text-align:center;background:var(--cream)" />
+      </div>
+    </div>`;
+  }).join('');
+
+  updateCombinationsButtonState();
+}
+
+function updatePsId(inputEl) {
+  const name = inputEl.getAttribute('data-prod-name');
+  const id = inputEl.value.trim();
+  const map = loadPsIds();
+  if (id) map[name] = id;
+  else delete map[name];
+  savePsIds(map);
+  updateCombinationsButtonState();
+}
+
+function updateCombinationsButtonState() {
+  // Vérifier si tous les IDs sont remplis
+  const map = loadPsIds();
+  const uniqueNames = [];
+  const seen = new Set();
+  allProducts.forEach(p => {
+    if (!seen.has(p.nom)) { seen.add(p.nom); uniqueNames.push(p.nom); }
+  });
+  const allFilled = uniqueNames.every(n => map[n] && /^\d+$/.test(map[n]));
+  const btn = document.getElementById('btn-download-combinations');
+  if (btn) {
+    btn.disabled = !allFilled;
+    btn.style.opacity = allFilled ? '1' : '0.45';
+    btn.style.cursor = allFilled ? 'pointer' : 'not-allowed';
+    if (!allFilled) {
+      const filled = uniqueNames.filter(n => map[n]).length;
+      btn.textContent = `🧵 CSV Combinaisons (${filled}/${uniqueNames.length} IDs remplis)`;
+    } else {
+      btn.textContent = '🧵 Télécharger CSV Combinaisons';
+    }
   }
 }
 
