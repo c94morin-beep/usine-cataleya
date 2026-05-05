@@ -2262,11 +2262,10 @@ function slugify(str) {
 // Colonnes : Active (0/1) ; Name * ; Categories ; Price tax excluded ; Weight ; Summary ; URL rewritten
 // ───────────────────────────────────────────
 function generateProductsCSV() {
-  const headers = ['Active (0/1)', 'Name *', 'Categories (x,y,z...)', 'Price tax excluded', 'Weight', 'Summary', 'URL rewritten'];
+  const headers = ['Active (0/1)', 'Name *', 'Categories (x,y,z...)', 'Price tax excluded', 'Weight', 'Summary', 'URL rewritten', 'Feature(Name:Value:Position)'];
   const SEP = ';';
 
   // Dédupliquer : 1 ligne par produit racine (= par couleur)
-  // Le nom porte déjà la couleur, donc chaque ligne unique correspond à 1 produit PrestaShop
   const seen = new Set();
   const rows = [];
 
@@ -2275,20 +2274,31 @@ function generateProductsCSV() {
     seen.add(p.nom);
 
     // Summary = description complète : Description + Matière + Pour qui
-    // Format identique à l'aperçu (sections séparées par sauts de ligne)
+    // Format HTML pour respecter la mise en forme dans PrestaShop
     let summary = '';
-    if (p.descPrincipale) summary += 'Description\n\n' + p.descPrincipale;
-    if (p.descMatiere)    summary += (summary ? '\n\n\n' : '') + 'Matière\n\n' + p.descMatiere;
-    if (p.descPourqui)    summary += (summary ? '\n\n\n' : '') + 'Pour qui ?\n\n' + p.descPourqui;
+    if (p.descPrincipale) summary += '<p><strong>Description</strong></p><p>' + p.descPrincipale.replace(/\n/g, '<br>') + '</p>';
+    if (p.descMatiere)    summary += '<p><strong>Matière</strong></p><p>' + p.descMatiere.replace(/\n/g, '<br>') + '</p>';
+    if (p.descPourqui)    summary += '<p><strong>Pour qui ?</strong></p><p>' + p.descPourqui.replace(/\n/g, '<br>') + '</p>';
+
+    // Feature(Name:Value:Position) = caractéristique Matière (tissu principal uniquement)
+    // Format : "Matière:Lin — 100% lin tissé (5309 11):0"
+    let feature = '';
+    if (p.comp && p.hs) {
+      // p.comp est déjà au format "Lin — 100% lin tissé"
+      // On veut "Lin — 100% lin tissé (5309 11)"
+      const matiereValue = `${p.comp} (${p.hs})`;
+      feature = `Matière:${matiereValue}:0`;
+    }
 
     rows.push([
       '1',                                    // Active
       p.nom,                                  // Name
-      p.cat,                                  // Categories (déjà séparées par virgules)
+      p.cat,                                  // Categories
       p.prix,                                 // Price tax excluded
-      p.poids || '',                          // Weight (peut être vide)
+      p.poids || '',                          // Weight
       summary,                                // Summary
-      slugify(p.nom)                          // URL rewritten
+      slugify(p.nom),                         // URL rewritten
+      feature                                 // Feature
     ].map(v => csvEscape(v, SEP)).join(SEP));
   });
 
