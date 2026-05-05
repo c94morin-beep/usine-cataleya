@@ -2262,7 +2262,7 @@ function slugify(str) {
 // Colonnes : Active (0/1) ; Name * ; Categories ; Price tax excluded ; Weight ; Summary ; URL rewritten
 // ───────────────────────────────────────────
 function generateProductsCSV() {
-  const headers = ['Active (0/1)', 'Name *', 'Categories (x,y,z...)', 'Price tax excluded', 'Weight', 'Summary', 'URL rewritten', 'Feature(Name:Value:Position)'];
+  const headers = ['Active (0/1)', 'Name *', 'Categories (x,y,z...)', 'Price tax excluded', 'Weight', 'Summary', 'URL rewritten', 'Feature(Name:Value:Position:Personnalisé)'];
   const SEP = ';';
 
   // Dédupliquer : 1 ligne par produit racine (= par couleur)
@@ -2280,14 +2280,13 @@ function generateProductsCSV() {
     if (p.descMatiere)    summary += '<p><strong>Matière</strong></p><p>' + p.descMatiere.replace(/\n/g, '<br>') + '</p>';
     if (p.descPourqui)    summary += '<p><strong>Pour qui ?</strong></p><p>' + p.descPourqui.replace(/\n/g, '<br>') + '</p>';
 
-    // Feature(Name:Value:Position) = caractéristique Matière (tissu principal uniquement)
-    // Format : "Matière:Lin — 100% lin tissé (5309 11):0"
+    // Feature(Name:Value:Position:Personnalisé) = caractéristique Matière (tissu principal uniquement)
+    // Format : "Matière:Lin — 100% lin tissé (5309 11):0:0"
+    // Le 4ème élément "0" = Personnalisé : Non (valeur prédéfinie)
     let feature = '';
     if (p.comp && p.hs) {
-      // p.comp est déjà au format "Lin — 100% lin tissé"
-      // On veut "Lin — 100% lin tissé (5309 11)"
       const matiereValue = `${p.comp} (${p.hs})`;
-      feature = `Matière:${matiereValue}:0`;
+      feature = `Matière:${matiereValue}:0:0`;
     }
 
     rows.push([
