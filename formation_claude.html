@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maîtrise de Claude — Formation pour Sousou</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bordeaux: #6b1e2e;
+  --bordeaux-deep: #4a1320;
+  --terracotta: #c75b12;
+  --terracotta-soft: #e08654;
+  --cream: #f5f1e8;
+  --cream-warm: #ede5d3;
+  --paper: #fbf8f1;
+  --ink: #2a1f1a;
+  --ink-soft: #5a4a42;
+  --gold: #b8924a;
+  --line: #d4c8b5;
+  --green-success: #5a7d3f;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.7;
+  font-weight: 400;
+  background-image:
+    radial-gradient(at 20% 10%, rgba(199, 91, 18, 0.04) 0%, transparent 40%),
+    radial-gradient(at 80% 80%, rgba(107, 30, 46, 0.04) 0%, transparent 40%);
+  min-height: 100vh;
+}
+
+/* ===== TOP BAR ===== */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(251, 248, 241, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--bordeaux);
+  font-style: italic;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.logo .amp {
+  color: var(--terracotta);
+  font-weight: 400;
+}
+
+.progress-shell {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 6px;
+  background: var(--cream-warm);
+  border-radius: 100px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--bordeaux) 0%, var(--terracotta) 100%);
+  border-radius: 100px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 0%;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 16px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4));
+}
+
+.progress-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--bordeaux);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-reset {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.btn-reset:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+
+/* ===== LAYOUT ===== */
+.layout {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 32px 80px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 56px;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  position: sticky;
+  top: 96px;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--line); border-radius: 100px; }
+
+.toc-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 400;
+}
+
+.toc {
+  list-style: none;
+}
+
+.toc-item {
+  margin-bottom: 4px;
+}
+
+.toc-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+
+.toc-link:hover {
+  background: var(--cream);
+  color: var(--bordeaux);
+}
+
+.toc-link.active {
+  background: var(--bordeaux);
+  color: var(--paper);
+}
+
+.toc-link.active .toc-num {
+  color: var(--terracotta-soft);
+}
+
+.toc-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--terracotta);
+  font-style: italic;
+  min-width: 18px;
+}
+
+.toc-check {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.toc-check.completed {
+  background: var(--green-success);
+  border-color: var(--green-success);
+}
+
+.toc-check.completed::after {
+  content: '✓';
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.toc-link.active .toc-check {
+  border-color: var(--terracotta-soft);
+}
+
+/* ===== MAIN CONTENT ===== */
+.content {
+  max-width: 780px;
+  min-width: 0;
+}
+
+.section {
+  display: none;
+  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.section.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== SECTION HEADER ===== */
+.section-eyebrow {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-eyebrow::before {
+  content: '';
+  width: 32px;
+  height: 1px;
+  background: var(--terracotta);
+}
+
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 56px;
+  font-weight: 500;
+  line-height: 1.05;
+  color: var(--bordeaux-deep);
+  margin-bottom: 24px;
+  letter-spacing: -0.02em;
+}
+
+.section-title em {
+  font-style: italic;
+  color: var(--terracotta);
+  font-weight: 400;
+}
+
+.section-lead {
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin-bottom: 48px;
+  font-weight: 300;
+  max-width: 680px;
+}
+
+/* ===== TYPOGRAPHY ===== */
+h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--bordeaux);
+  margin: 56px 0 16px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+h2::before {
+  content: '§';
+  color: var(--terracotta);
+  font-style: italic;
+  font-weight: 400;
+  margin-right: 12px;
+  opacity: 0.6;
+}
+
+h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 36px 0 12px;
+  line-height: 1.3;
+}
+
+h4 {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--terracotta);
+  margin: 24px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+p {
+  margin-bottom: 16px;
+  color: var(--ink);
+}
+
+p.lead {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--ink);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+strong {
+  color: var(--bordeaux);
+  font-weight: 600;
+}
+
+em {
+  color: var(--terracotta);
+  font-style: italic;
+}
+
+ul, ol {
+  margin: 16px 0 24px;
+  padding-left: 0;
+  list-style: none;
+}
+
+ul li, ol li {
+  position: relative;
+  padding-left: 28px;
+  margin-bottom: 12px;
+  line-height: 1.65;
+}
+
+ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 8px;
+  height: 1px;
+  background: var(--terracotta);
+}
+
+ol {
+  counter-reset: ord;
+}
+
+ol li {
+  counter-increment: ord;
+}
+
+ol li::before {
+  content: counter(ord);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+/* ===== CALLOUT ===== */
+.callout {
+  background: linear-gradient(135deg, var(--cream) 0%, var(--cream-warm) 100%);
+  border-left: 3px solid var(--terracotta);
+  padding: 24px 28px;
+  margin: 32px 0;
+  border-radius: 0 6px 6px 0;
+  position: relative;
+}
+
+.callout.bordeaux {
+  border-left-color: var(--bordeaux);
+}
+
+.callout-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--bordeaux);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.callout-title::before {
+  content: '◆';
+  color: var(--terracotta);
+  font-size: 14px;
+}
+
+.callout p:last-child { margin-bottom: 0; }
+
+/* ===== TABLE ===== */
+.table-wrap {
+  margin: 32px 0;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--paper);
+  font-size: 14px;
+}
+
+th {
+  background: var(--bordeaux);
+  color: var(--paper);
+  text-align: left;
+  padding: 14px 18px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+
+td {
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+tr:nth-child(even) td {
+  background: rgba(245, 241, 232, 0.5);
+}
+
+td strong { color: var(--bordeaux); }
+
+/* ===== CODE ===== */
+pre, code.inline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+code.inline {
+  background: var(--cream);
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: var(--bordeaux);
+  font-size: 13px;
+  border: 1px solid var(--line);
+}
+
+pre {
+  background: #1f1816;
+  color: #e8d9c8;
+  padding: 20px 24px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 24px 0;
+  line-height: 1.65;
+  border-left: 3px solid var(--terracotta);
+}
+
+pre .kw { color: #e08654; }
+pre .str { color: #b8c97a; }
+pre .com { color: #7a6a5e; font-style: italic; }
+pre .fn { color: #d4a05a; }
+
+/* ===== EXERCISES ===== */
+.exercises {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px 32px;
+  margin: 40px 0;
+  position: relative;
+}
+
+.exercises::before {
+  content: 'Exercices';
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  background: var(--bordeaux);
+  color: var(--paper);
+  padding: 4px 14px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.exercise-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--cream-warm);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.exercise-item:last-child {
+  border-bottom: none;
+}
+
+.exercise-item:hover {
+  background: var(--cream);
+  margin: 0 -16px;
+  padding: 12px 16px;
+  border-radius: 4px;
+  border-bottom-color: transparent;
+}
+
+.checkbox {
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.exercise-item:hover .checkbox {
+  border-color: var(--terracotta);
+}
+
+.checkbox.checked {
+  background: var(--green-success);
+  border-color: var(--green-success);
+}
+
+.checkbox.checked::after {
+  content: '✓';
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.exercise-text {
+  flex: 1;
+  line-height: 1.55;
+  font-size: 15px;
+}
+
+.exercise-item.completed .exercise-text {
+  text-decoration: line-through;
+  color: var(--ink-soft);
+}
+
+/* ===== NAV BUTTONS ===== */
+.nav-buttons {
+  display: flex;
+  gap: 16px;
+  margin-top: 80px;
+  padding-top: 40px;
+  border-top: 1px solid var(--line);
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 18px 24px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  text-align: left;
+  transition: all 0.2s;
+  text-decoration: none;
+  color: var(--ink);
+  display: block;
+}
+
+.nav-btn:hover {
+  border-color: var(--terracotta);
+  background: var(--cream);
+  transform: translateY(-1px);
+}
+
+.nav-btn-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.nav-btn-title {
+  font-weight: 500;
+  color: var(--bordeaux);
+}
+
+.nav-btn-prev { text-align: left; }
+.nav-btn-next { text-align: right; }
+
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mark-done-btn {
+  background: var(--bordeaux);
+  color: var(--paper);
+  border: none;
+  padding: 14px 32px;
+  border-radius: 100px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+.mark-done-btn:hover {
+  background: var(--bordeaux-deep);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(107, 30, 46, 0.2);
+}
+
+.mark-done-btn.completed {
+  background: var(--green-success);
+}
+
+.mark-done-btn.completed::after {
+  content: '✓';
+}
+
+/* ===== HOMEPAGE / COVER ===== */
+.cover {
+  text-align: center;
+  padding: 60px 20px 40px;
+}
+
+.cover-eyebrow {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  font-size: 18px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+
+.cover-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 96px;
+  line-height: 0.95;
+  color: var(--bordeaux-deep);
+  font-weight: 500;
+  margin-bottom: 24px;
+  letter-spacing: -0.03em;
+}
+
+.cover-title em {
+  font-style: italic;
+  color: var(--terracotta);
+  font-weight: 400;
+}
+
+.cover-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 28px;
+  color: var(--ink-soft);
+  margin-bottom: 48px;
+  font-weight: 400;
+}
+
+.cover-meta {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  margin: 64px 0;
+  padding: 32px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.meta-item {
+  text-align: center;
+}
+
+.meta-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 56px;
+  font-weight: 600;
+  color: var(--terracotta);
+  line-height: 1;
+  font-style: italic;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: var(--ink-soft);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.cover-cta {
+  background: var(--bordeaux);
+  color: var(--paper);
+  border: none;
+  padding: 18px 48px;
+  border-radius: 100px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
+  margin-top: 16px;
+}
+
+.cover-cta:hover {
+  background: var(--bordeaux-deep);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(107, 30, 46, 0.25);
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 48px 0;
+}
+
+.level-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.level-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--terracotta);
+  transform: scaleY(0);
+  transition: transform 0.3s;
+  transform-origin: bottom;
+}
+
+.level-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--terracotta);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.level-card:hover::before {
+  transform: scaleY(1);
+}
+
+.level-card-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  font-size: 14px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.level-card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--bordeaux);
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.level-card-desc {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.level-card-progress {
+  height: 3px;
+  background: var(--cream-warm);
+  border-radius: 100px;
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.level-card-progress-fill {
+  height: 100%;
+  background: var(--terracotta);
+  border-radius: 100px;
+  transition: width 0.5s;
+  width: 0%;
+}
+
+/* ===== ORNAMENT ===== */
+.ornament {
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  margin: 48px 0;
+  letter-spacing: 0.4em;
+  opacity: 0.6;
+  font-size: 18px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 968px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .sidebar {
+    position: static;
+    height: auto;
+    max-height: 60vh;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .cover-title { font-size: 64px; }
+  .cover-sub { font-size: 22px; }
+  .section-title { font-size: 40px; }
+  .cover-meta { flex-wrap: wrap; gap: 24px; }
+  .meta-num { font-size: 40px; }
+}
+
+@media (max-width: 640px) {
+  .layout { padding: 24px 16px 60px; }
+  .topbar-inner { padding: 12px 16px; gap: 12px; }
+  .logo { font-size: 18px; }
+  .progress-label { font-size: 16px; }
+  .btn-reset { display: none; }
+  .cover-title { font-size: 48px; }
+  .section-title { font-size: 32px; }
+  h2 { font-size: 28px; }
+  h3 { font-size: 22px; }
+  .nav-buttons { flex-direction: column; }
+}
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: var(--bordeaux);
+  color: var(--paper);
+  padding: 14px 24px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Loading state */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: var(--ink-soft);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">Maîtrise <span class="amp">de</span> Claude</div>
+    <div class="progress-shell">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">0%</div>
+    </div>
+    <button class="btn-reset" onclick="resetProgress()">Réinitialiser</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="toc-title">Sommaire</div>
+    <ul class="toc" id="toc"></ul>
+  </aside>
+
+  <main class="content" id="content">
+    <div class="loading">Chargement de votre progression…</div>
+  </main>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONTENT
+// ============================================================
+
+const SECTIONS = [
+  {
+    id: 'cover',
+    label: 'Accueil',
+    num: '',
+    isHome: true,
+    html: `
+      <div class="cover">
+        <div class="cover-eyebrow">Formation complète · Mai 2026</div>
+        <h1 class="cover-title">Maîtrise <em>de</em><br>Claude</h1>
+        <div class="cover-sub">Des fondations à la monétisation</div>
+
+        <p style="max-width: 580px; margin: 0 auto 32px; font-size: 17px; color: var(--ink-soft);">
+          Préparée pour Sousou, opérateur de Cataleya Paris &amp; Lywwane.<br>
+          Cinq niveaux progressifs, du prompt engineering à la vente de prestations IA.
+        </p>
+
+        <div class="cover-meta">
+          <div class="meta-item">
+            <div class="meta-num">5</div>
+            <div class="meta-label">Niveaux</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-num">28</div>
+            <div class="meta-label">Exercices</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-num">90</div>
+            <div class="meta-label">Jours plan</div>
+          </div>
+        </div>
+
+        <button class="cover-cta" onclick="navigateToFirst()">Commencer la formation</button>
+
+        <div class="level-grid" id="levelGrid"></div>
+
+        <div class="ornament">· · ·</div>
+
+        <div style="text-align: left; max-width: 640px; margin: 0 auto;">
+          <h3 style="margin-top: 0;">Comment utiliser cette formation</h3>
+          <p>Chaque niveau combine <strong>théorie courte</strong>, <strong>pratique</strong> et <strong>applications concrètes</strong> sur tes vrais projets. Coche les exercices au fil de l'eau — ta progression est sauvegardée automatiquement.</p>
+          <p>Tu peux lire dans l'ordre ou sauter directement à un niveau via le sommaire. Mais l'ordre 1→5 est recommandé : chaque niveau s'appuie sur le précédent.</p>
+
+          <div class="callout bordeaux" style="margin-top: 32px;">
+            <div class="callout-title">Note sur la confiance</div>
+            <p>Sousou, ton blocage principal n'est pas la technique — tu es déjà plus opérationnel que 80% des consultants IA actuels. Le Niveau 5 attaque frontalement la confiance et l'acquisition client. Garde en tête : les compétences que tu vas formaliser ici, 95% des dirigeants e-commerce ne les ont pas.</p>
+          </div>
+        </div>
+      </div>
+    `,
+    exercises: []
+  },
+
+  {
+    id: 'level1',
+    label: 'Fondations',
+    num: 'I',
+    html: `
+      <div class="section-eyebrow">Niveau Premier</div>
+      <h1 class="section-title">Comprendre vraiment <em>Claude</em></h1>
+      <p class="section-lead">L'erreur la plus fréquente quand on utilise Claude (ou n'importe quel LLM) est de le traiter comme un moteur de recherche, ou comme un humain. Ce n'est ni l'un ni l'autre — c'est une troisième catégorie d'outil. Bien comprendre ce qu'il est te fait gagner des années.</p>
+
+      <h2>Qu'est-ce que Claude, mécaniquement</h2>
+      <p>Claude est un grand modèle de langage (LLM) entraîné par Anthropic. Concrètement : il prédit le mot suivant le plus probable étant donné tout ce qui précède. Cette définition réductrice est la clé de tout — si tu la comprends, tu comprends pourquoi Claude est génial à certaines choses et nul à d'autres.</p>
+
+      <h3>Ce qui découle de ce fonctionnement</h3>
+      <ul>
+        <li>Claude n'a pas de mémoire interne entre conversations (sauf via Memory et Projects, qu'on verra plus tard).</li>
+        <li>Claude n'a pas accès au web par défaut — il utilise des outils (web_search) quand on les lui donne.</li>
+        <li>Claude peut <em>halluciner</em> : inventer une fonction PHP, une propriété Firebase, une URL. Toujours vérifier ce qui est critique.</li>
+        <li>Plus tu donnes de contexte, plus la qualité monte. C'est non-négociable.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="callout-title">La règle d'or : contexte = qualité</div>
+        <p>À chaque interaction, demande-toi : « Si je donnais cette même demande à un nouvel employé qui débarque, comprendrait-il ce que j'attends ? » Si non, tu dois ajouter du contexte. C'est 80% du prompt engineering.</p>
+      </div>
+
+      <h2>La famille de modèles (mai 2026)</h2>
+      <p>Tu n'as pas à mémoriser les chiffres, mais tu dois comprendre la philosophie : trois modèles, chacun avec un rapport intelligence/vitesse/coût différent.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Modèle</th><th>Pour quoi</th><th>Quand l'utiliser</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Opus 4.7</strong></td><td>Le plus intelligent. Raisonnement complexe, code agentique.</td><td>Architecture difficile, refacto complexe, projets clients haut de gamme.</td></tr>
+            <tr><td><strong>Sonnet 4.6</strong></td><td>Le « cheval de bataille ». 99% de la qualité d'Opus à 40% du prix.</td><td>Par défaut pour 80% de tes usages.</td></tr>
+            <tr><td><strong>Haiku 4.5</strong></td><td>Rapide et économique.</td><td>Tâches simples à fort volume : classification, routage, OCR.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Tarifs API (par million de tokens)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Modèle</th><th>Input</th><th>Output</th></tr></thead>
+          <tbody>
+            <tr><td>Opus 4.7 / 4.6</td><td>$5</td><td>$25</td></tr>
+            <tr><td>Sonnet 4.6</td><td>$3</td><td>$15</td></tr>
+            <tr><td>Haiku 4.5</td><td>$1</td><td>$5</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout bordeaux">
+        <div class="callout-title">Pricing &amp; consulting</div>
+        <p>Quand tu factureras tes prestations, le coût API est minuscule par rapport à ta valeur ajoutée. Une automation qui fait gagner 10h/semaine peut se facturer 2 000–5 000 € même si ton coût API mensuel est de 30 €. Ne jamais confondre <em>coût technique</em> et <em>prix de marché</em>.</p>
+      </div>
+
+      <h2>Les plans Claude.ai</h2>
+      <p>Pour tes débuts, tu n'as pas besoin de l'API tout de suite. 90% du travail se fait dans Claude.ai.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Plan</th><th>Pour qui</th><th>Note</th></tr></thead>
+          <tbody>
+            <tr><td>Free</td><td>Tester, usage occasionnel</td><td>Limites de messages, pas tous les modèles.</td></tr>
+            <tr><td><strong>Pro (~20 $/mois)</strong></td><td>Usage individuel intensif</td><td>Le minimum recommandé pour toi.</td></tr>
+            <tr><td>Max (~100-200 $/mois)</td><td>Power users, dev solo</td><td>Plus de messages, Claude Code inclus.</td></tr>
+            <tr><td>Team / Enterprise</td><td>Équipes</td><td>Pour quand tu auras des collaborateurs sur tes projets clients.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Prompt engineering : les vraies règles</h2>
+      <p>Six principes solides — si tu les maîtrises, tu écris des prompts 3× meilleurs que la moyenne.</p>
+
+      <ol>
+        <li><strong>Sois clair et spécifique.</strong> « Écris un email » est nul. « Écris un email de relance pour un client e-commerce qui n'a pas répondu à ma facture depuis 15 jours, ton ferme mais respectueux, FR, 100 mots max » est bon.</li>
+        <li><strong>Donne du contexte.</strong> Qui tu es, à qui tu t'adresses, dans quel cadre.</li>
+        <li><strong>Donne des exemples</strong> (few-shot prompting). Si tu veux un format précis, montre-en un.</li>
+        <li><strong>Décompose les tâches complexes.</strong> Au lieu d'un truc énorme, plusieurs étapes.</li>
+        <li><strong>Demande à Claude de raisonner étape par étape.</strong> « Réfléchis avant de répondre » améliore la qualité sur les tâches complexes.</li>
+        <li><strong>Itère.</strong> Le premier prompt n'est jamais le meilleur. Tu affines, puis tu sauvegardes ce qui marche.</li>
+      </ol>
+
+      <h3>Structure CRISPE — pour les prompts pro</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Composant</th><th>À quoi ça sert</th></tr></thead>
+          <tbody>
+            <tr><td><strong>C</strong>apacité</td><td>Qui Claude doit être. Ex : « Tu es un expert e-commerce PrestaShop. »</td></tr>
+            <tr><td><strong>R</strong>ôle</td><td>Quelle posture il prend. Ex : « Agis comme un consultant qui audite. »</td></tr>
+            <tr><td><strong>I</strong>nsight</td><td>Le contexte précis. Ex : « Je vends de la mode modeste, panier moyen 80 €. »</td></tr>
+            <tr><td><strong>S</strong>tatement</td><td>Ce qu'il doit faire. Ex : « Identifie 5 leviers d'optimisation conversion. »</td></tr>
+            <tr><td><strong>P</strong>ersonnalité</td><td>Le ton. Ex : « Direct, chiffré, sans bullshit. »</td></tr>
+            <tr><td><strong>E</strong>xpérimentation</td><td>Le format. Ex : « Liste numérotée, max 3 phrases par point. »</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">Prompt SAV Cataleya — exemple</div>
+        <pre><span class="com">// À sauvegarder dans tes Projects</span>
+<span class="kw">Tu es</span> agent SAV pour Cataleya Paris, marque de mode modeste française.
+<span class="kw">Ton</span> : chaleureux, professionnel, jamais sur la défensive.
+<span class="kw">Langues</span> : réponds dans la langue du client (FR/EN/AR).
+<span class="kw">Contexte</span> : nous expédions depuis Alfortville via Mondial Relay,
+Packlink, UPS, Chronopost.
+<span class="kw">Politique</span> : retours sous 14 jours, frais retour à charge client
+sauf produit défectueux.
+
+<span class="kw">Voici l'email</span> :
+[COLLER ICI]
+
+<span class="kw">Rédige une réponse</span> :
+1. Reconnaît son problème en 1 phrase
+2. Donne une solution claire avec étapes
+3. Termine par une formule chaleureuse
+
+<span class="kw">Format</span> : objet + corps email.</pre>
+      </div>
+
+      <h2>Limites &amp; pièges</h2>
+      <p><strong>Hallucinations.</strong> Claude peut inventer avec assurance. Particulièrement sur : chiffres précis, fonctions de bibliothèques peu connues, URLs, références bibliographiques, dates récentes.</p>
+      <p><strong>Knowledge cutoff.</strong> Sa connaissance fiable s'arrête fin janvier 2026. Pour le récent : web_search ou contexte fourni.</p>
+      <p><strong>Context window.</strong> Opus &amp; Sonnet 4.6/4.7 acceptent 1M tokens (≈ un roman entier). Mais : plus c'est rempli, plus la qualité d'attention baisse, plus ça coûte. Reste compact et pertinent.</p>
+    `,
+    exercises: [
+      "Réécrire ensemble 3 prompts que tu utilises actuellement pour les rendre plus efficaces",
+      "Comparer le même prompt sur Sonnet vs Opus, observer les différences",
+      "Construire un prompt structuré CRISPE pour une tâche récurrente Cataleya",
+      "Identifier 2-3 cas où Claude pourrait halluciner et apprendre à les détecter"
+    ]
+  },
+
+  {
+    id: 'level2',
+    label: 'Maîtrise Claude.ai',
+    num: 'II',
+    html: `
+      <div class="section-eyebrow">Niveau Second</div>
+      <h1 class="section-title">Maîtrise complète de <em>Claude.ai</em></h1>
+      <p class="section-lead">Claude.ai est ton outil principal au quotidien. La plupart des gens l'utilisent à 10% de son potentiel. À la fin de ce niveau, tu seras dans les 5% qui en tirent vraiment quelque chose.</p>
+
+      <h2>L'interface chat — bases avancées</h2>
+      <ul>
+        <li>Une conversation = un contexte unique. Si tu changes radicalement de sujet, ouvre une nouvelle conversation.</li>
+        <li>Tu peux uploader des fichiers : PDF, images, code, CSV, Word, Excel. Claude les lit et les analyse.</li>
+        <li>Tu peux <strong>éditer tes messages précédents</strong> pour relancer Claude — utile pour itérer sans polluer le contexte.</li>
+        <li>Le bouton <em>regenerate</em> te donne une autre version de la dernière réponse.</li>
+      </ul>
+
+      <h2>Projects — ton arme nucléaire</h2>
+      <p>Les Projects sont la feature la plus sous-estimée. Ils résolvent le problème du <em>blank slate</em> — recommencer de zéro à chaque conversation.</p>
+
+      <h3>Anatomie d'un Project</h3>
+      <ul>
+        <li>Une <strong>knowledge base</strong> où tu uploades des documents pertinents.</li>
+        <li>Des <strong>custom instructions</strong> qui s'appliquent à toutes les conversations du projet.</li>
+        <li>Un historique de conversations regroupées.</li>
+        <li>Une mémoire <em>scoped</em> spécifique au projet.</li>
+      </ul>
+
+      <h3>Comment je structurerais tes Projects</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Project</th><th>Contenu</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Cataleya — Opérations</strong></td><td>PDF procédures Mondial Relay, schéma DB PrestaShop, scripts PHP custom.</td></tr>
+            <tr><td><strong>Lywwane — Opérations</strong></td><td>Spécifique PS9, modules adaptés.</td></tr>
+            <tr><td><strong>Code Facturation</strong></td><td>README repo, schéma Firestore, conventions, snippets React.</td></tr>
+            <tr><td><strong>Usine Cataleya</strong></td><td>Schéma Firebase RTDB, doc rôles, workflow SAV.</td></tr>
+            <tr><td><strong>Consulting IA</strong></td><td>Tes meilleurs prompts, livrables clients, devis, briefs.</td></tr>
+            <tr><td><strong>UFT — BJJ</strong></td><td>Programmes entraînement, communications membres, planning.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">La structure idéale d'un Project</div>
+        <p>Pour chaque project, mets en place 3 documents minimum :</p>
+        <ul>
+          <li><strong>README</strong> : contexte du projet (1 page).</li>
+          <li><strong>GLOSSARY</strong> : termes spécifiques (acronymes, modules, statuts).</li>
+          <li><strong>PLAYBOOK</strong> : procédures récurrentes (« comment je fais X »).</li>
+        </ul>
+        <p>Et dans les Custom Instructions : qui tu es, comment tu veux que Claude communique, contraintes universelles.</p>
+      </div>
+
+      <h2>Memory — la couche persistante</h2>
+      <p>Claude.ai possède maintenant une vraie feature Memory qui synthétise tes conversations et carrie le contexte d'une session à l'autre.</p>
+
+      <ul>
+        <li>Claude résume tes conversations standalone toutes les 24h.</li>
+        <li>Cette synthèse est dispo dans toutes tes conversations futures hors-Project.</li>
+        <li>Les Projects ont leur propre mémoire séparée (une par Project).</li>
+        <li>Tu peux désactiver, mettre en pause, ou reset dans Settings &gt; Capabilities.</li>
+      </ul>
+
+      <h3>Bien gérer ta mémoire</h3>
+      <ol>
+        <li>Active la feature dès maintenant si pas déjà fait.</li>
+        <li>Vérifie périodiquement (mensuel) ce que Claude a mémorisé.</li>
+        <li>Si une info n'est plus à jour, dis-le explicitement.</li>
+        <li>Pour les conversations sensibles, utilise le mode Incognito (icône fantôme).</li>
+      </ol>
+
+      <h2>Artifacts — générer des objets utilisables</h2>
+      <p>Les Artifacts sont des objets que Claude génère à part de la conversation : code, document, dashboard interactif, mini-app React, SVG, page HTML. Tu peux les éditer, les télécharger, les partager.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Type</th><th>Cas d'usage</th></tr></thead>
+          <tbody>
+            <tr><td>Code</td><td>Scripts complets, modules — copy/paste dans IDE.</td></tr>
+            <tr><td>HTML/CSS/JS</td><td>Pages web, prototypes, mini-outils internes.</td></tr>
+            <tr><td>React (TSX/JSX)</td><td>Composants, mini-apps complètes, dashboards.</td></tr>
+            <tr><td>Markdown</td><td>Documents, README, posts blog.</td></tr>
+            <tr><td>SVG / Mermaid</td><td>Schémas d'architecture, flowcharts, ERDs.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout bordeaux">
+        <div class="callout-title">Artifacts — applications Sousou</div>
+        <ul>
+          <li>Dashboard interne ventes Cataleya/Lywwane (React + recharts, comme tu fais déjà).</li>
+          <li>Calculateur de marge produit en HTML pour AbdAllah.</li>
+          <li>Diagramme Mermaid du workflow SAV pour ta doc interne.</li>
+          <li>Simulateur de coût d'expédition (Mondial Relay vs Packlink vs UPS) pour Sara.</li>
+          <li>Landing page « Hello World » pour ton offre consulting, à itérer rapidement.</li>
+        </ul>
+      </div>
+
+      <h2>Skills — super-pouvoirs spécialisés</h2>
+      <p>Les Skills sont des packages d'instructions et scripts qui donnent à Claude des compétences précises sur des tâches structurées.</p>
+
+      <h3>Skills officiels (sélection)</h3>
+      <ul>
+        <li><code class="inline">docx</code> — création de documents Word.</li>
+        <li><code class="inline">xlsx</code> — feuilles Excel avec formules, charts.</li>
+        <li><code class="inline">pptx</code> — présentations PowerPoint.</li>
+        <li><code class="inline">pdf</code> — création/manipulation de PDF.</li>
+        <li><code class="inline">frontend-design</code> — composants React production-grade.</li>
+        <li><code class="inline">skill-creator</code> — pour créer tes propres skills.</li>
+      </ul>
+
+      <p><strong>Pré-requis :</strong> activer Code Execution dans tes Settings Claude.ai.</p>
+
+      <h3>Tes propres Skills à packager</h3>
+      <ul>
+        <li><strong>« Cataleya — Fiche produit »</strong> : prend les infos brutes du designer et produit fiche FR + EN avec HS code.</li>
+        <li><strong>« SAV — Réponse type »</strong> : prend un email client et drafte une réponse dans le ton Cataleya.</li>
+        <li><strong>« Compta — Rapport mensuel »</strong> : prend un export PrestaShop et produit un Word/Excel mis en forme.</li>
+      </ul>
+
+      <h2>MCP Connectors — connecter Claude à tes outils</h2>
+      <p>MCP (Model Context Protocol) est un standard ouvert qui permet à Claude de se connecter à : Drive, Gmail, Calendar, Slack, GitHub, Notion, Asana, Linear, Jira, etc.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Connector</th><th>Cas Sousou</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Google Drive</strong></td><td>Lire docs business, factures, briefs sans upload manuel.</td></tr>
+            <tr><td><strong>Gmail</strong></td><td>Lire/trier emails, drafter réponses (avec validation).</td></tr>
+            <tr><td><strong>Calendar</strong></td><td>Planifier RDV, automatiser briefings clients.</td></tr>
+            <tr><td><strong>GitHub</strong></td><td>Lire repos (usine-cataleya, facturation), ouvrir issues.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">Custom MCP Servers — pour power users</div>
+        <p>Tu peux créer ton propre MCP server pour exposer tes données custom. Pour toi :</p>
+        <ul>
+          <li>MCP qui lit ta DB PrestaShop en lecture seule.</li>
+          <li>MCP pour ton Firebase usine-cataleya.</li>
+          <li>MCP Mondial Relay pour le statut des envois.</li>
+        </ul>
+        <p>C'est du dev — Node ou Python — mais tu sais déjà faire. Et <strong>c'est ULTRA vendable en consulting</strong>.</p>
+      </div>
+    `,
+    exercises: [
+      "Créer tes 6 Projects avec README + custom instructions",
+      "Activer la Memory et faire 3 conversations standalone pour tester",
+      "Générer un premier artifact React utile (ex : calculateur de marge)",
+      "Connecter 2 MCPs : Google Drive et GitHub",
+      "Créer ton premier Skill custom (suggestion : « réponse SAV Cataleya »)",
+      "Configurer un style personnalisé qui te ressemble"
+    ]
+  },
+
+  {
+    id: 'level3',
+    label: 'API & Claude Code',
+    num: 'III',
+    html: `
+      <div class="section-eyebrow">Niveau Troisième</div>
+      <h1 class="section-title">API <em>&amp;</em> Claude Code</h1>
+      <p class="section-lead">Si Claude.ai est l'interface, l'API et Claude Code sont les muscles. C'est là que tu passes de « j'utilise Claude » à « je construis avec Claude ». Pour ton profil dev, c'est ton plus gros levier de monétisation.</p>
+
+      <h2>Claude API — fondamentaux</h2>
+      <p>L'API Anthropic est un endpoint HTTP qui prend des messages et retourne une réponse. Tu peux l'appeler depuis n'importe quel langage : Node, Python, PHP (donc tes modules PrestaShop !), etc.</p>
+
+      <h3>Setup minimal</h3>
+      <ol>
+        <li>Créer un compte sur <code class="inline">console.anthropic.com</code>.</li>
+        <li>Générer une API key (jamais dans Git).</li>
+        <li>Acheter des crédits (paiement à l'usage).</li>
+        <li>Installer le SDK : <code class="inline">npm install @anthropic-ai/sdk</code> (Node) ou <code class="inline">pip install anthropic</code> (Python).</li>
+      </ol>
+
+      <h3>Premier appel (Node)</h3>
+      <pre><span class="kw">import</span> Anthropic <span class="kw">from</span> <span class="str">"@anthropic-ai/sdk"</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="fn">Anthropic</span>({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+<span class="kw">const</span> response = <span class="kw">await</span> client.messages.<span class="fn">create</span>({
+  model: <span class="str">"claude-sonnet-4-6"</span>,
+  max_tokens: <span class="str">1024</span>,
+  messages: [
+    { role: <span class="str">"user"</span>, content: <span class="str">"Bonjour, présente-toi."</span> }
+  ]
+});
+
+console.<span class="fn">log</span>(response.content[<span class="str">0</span>].text);</pre>
+
+      <h3>Concepts clés</h3>
+      <ul>
+        <li><strong>Messages API</strong> : liste de messages avec rôles user/assistant. Pas de mémoire — tu renvoies l'historique à chaque appel.</li>
+        <li><strong>System prompt</strong> : message système qui définit le comportement.</li>
+        <li><strong>Tool use</strong> : tu donnes des fonctions à Claude (<code class="inline">search_orders</code>, <code class="inline">send_email</code>). Il décide quand les utiliser.</li>
+        <li><strong>Streaming</strong> : réponse mot par mot en temps réel.</li>
+        <li><strong>Prompt caching</strong> : économise jusqu'à 90% sur les inputs répétés.</li>
+        <li><strong>Batch API</strong> : 50% de réduction sur les jobs asynchrones.</li>
+      </ul>
+
+      <h2>Tool use — le vrai pouvoir de l'API</h2>
+      <p>Le tool use transforme Claude d'un chatbot en agent. Tu décris des fonctions, Claude décide quand les appeler, toi tu les exécutes côté serveur.</p>
+
+      <pre><span class="kw">const</span> tools = [
+  {
+    name: <span class="str">"get_order_status"</span>,
+    description: <span class="str">"Récupère le statut d'une commande PrestaShop"</span>,
+    input_schema: {
+      type: <span class="str">"object"</span>,
+      properties: {
+        order_id: { type: <span class="str">"string"</span> }
+      },
+      required: [<span class="str">"order_id"</span>]
+    }
+  },
+  {
+    name: <span class="str">"send_tracking_email"</span>,
+    description: <span class="str">"Envoie un email avec le tracking au client"</span>,
+    input_schema: { <span class="com">/* ... */</span> }
+  }
+];
+
+<span class="kw">const</span> response = <span class="kw">await</span> client.messages.<span class="fn">create</span>({
+  model: <span class="str">"claude-sonnet-4-6"</span>,
+  max_tokens: <span class="str">1024</span>,
+  tools,
+  messages: [{ role: <span class="str">"user"</span>, content: emailDuClient }]
+});</pre>
+
+      <div class="callout bordeaux">
+        <div class="callout-title">Agent SAV autonome — application Sousou</div>
+        <p>Avec quelques tools comme ci-dessus + accès DB Cataleya + Zoho IMAP, tu peux construire un agent qui :</p>
+        <ul>
+          <li>Reçoit un email client via IMAP.</li>
+          <li>Identifie la commande mentionnée.</li>
+          <li>Récupère statut + tracking.</li>
+          <li>Drafte une réponse personnalisée.</li>
+          <li>Te demande validation avant envoi.</li>
+        </ul>
+        <p>C'est exactement le genre d'agent que tu peux ensuite vendre <strong>3 000–8 000 €</strong> à des clients PME e-commerce. Et c'est basé sur des compétences que tu as déjà.</p>
+      </div>
+
+      <h2>Prompt caching &amp; Batch — optimiser les coûts</h2>
+      <h3>Prompt caching</h3>
+      <p>Si tu envoies un long système prompt (5 000 mots de procédures Cataleya) à chaque appel, tu paies l'input plein tarif à chaque fois. Avec le caching, les appels suivants paient ~10% du tarif input pour cette portion.</p>
+
+      <pre>messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"..."</span> }],
+system: [
+  {
+    type: <span class="str">"text"</span>,
+    text: longSystemPrompt,
+    cache_control: { type: <span class="str">"ephemeral"</span> }  <span class="com">// ← cache activé</span>
+  }
+]</pre>
+
+      <h3>Batch API</h3>
+      <p>Pour les workloads non temps-réel (générer 1000 descriptions produit en une nuit), envoie tout en batch et reçois sous 24h pour 50% du prix. Idéal pour les imports massifs Cataleya/Lywwane.</p>
+
+      <h2>Claude Code — ton accélérateur dev</h2>
+      <p>Outil CLI qui te permet d'utiliser Claude directement dans ton terminal pour coder. Il a accès à tes fichiers, peut éditer, lancer des tests, exécuter des commandes — sous ton contrôle.</p>
+
+      <h3>Installation</h3>
+      <pre><span class="com"># Pré-requis : Node.js 18+</span>
+npm install -g @anthropic-ai/claude-code
+
+<span class="com"># Lancement dans un projet</span>
+cd ton-projet
+claude</pre>
+
+      <h3>Ce que ça change</h3>
+      <ul>
+        <li>Tu lui demandes une feature en langage naturel, il la code dans ton projet existant.</li>
+        <li>Il <strong>lit ton code avant d'éditer</strong> (vs copy/paste depuis Claude.ai).</li>
+        <li>Il peut lancer tests, linter, serveur dev.</li>
+        <li>Il garde un fichier <code class="inline">CLAUDE.md</code> à la racine avec conventions et contexte.</li>
+        <li>Mémoire entre sessions (stockée localement).</li>
+      </ul>
+
+      <h3>CLAUDE.md — ton fichier de contexte projet</h3>
+      <pre><span class="com"># Facturation Cataleya</span>
+
+<span class="com">## Stack</span>
+- React 18 + Vite + Tailwind
+- Firebase Hosting + Firestore (eur3)
+- Storage Blaze EU multi-regional
+
+<span class="com">## Commands</span>
+- npm run dev — lance dev server
+- npm run build — build production
+- npm run deploy — Firebase Hosting
+
+<span class="com">## Conventions</span>
+- Composants en PascalCase, hooks en camelCase
+- Toast utilise createPortal vers document.body
+- Snapshots Firestore : freeze couturierNom/typeNom
+
+<span class="com">## Notes critiques</span>
+- Bucket : factures/{factureId}/{fileName}, max 10MB
+- Palette : bordeaux/terracotta/crème
+- Fonts : Cormorant Garamond + Inter</pre>
+
+      <div class="callout">
+        <div class="callout-title">Vélocité dev × 3-5</div>
+        <p>Ton projet usine-cataleya est en v3.x avec des centaines d'itérations. Avec Claude Code, tu pourrais sortir des versions <strong>2 à 5× plus vite</strong> :</p>
+        <ul>
+          <li>Refacto modules : 1 jour au lieu d'1 semaine.</li>
+          <li>Ajout feature complète : 2-3h au lieu d'1 journée.</li>
+          <li>Migration PS9 modules custom : 1 semaine au lieu d'1 mois.</li>
+        </ul>
+        <p>C'est aussi ce que tu vendras : <em>« Je livre 3× plus vite que la concurrence. »</em></p>
+      </div>
+
+      <h2>Patterns d'intégration business</h2>
+
+      <h3>Pattern 1 — Embed dans une app existante</h3>
+      <p>Tu as déjà des apps React (facturation, usine). Ajouter Claude :</p>
+      <ul>
+        <li>Backend : endpoint Node/Express ou Cloud Function Firebase qui appelle l'API.</li>
+        <li>Frontend : composant qui poste des messages et streame la réponse.</li>
+      </ul>
+
+      <h3>Pattern 2 — Automation backend pure</h3>
+      <p>Pas d'UI, juste un script périodique :</p>
+      <ul>
+        <li>Cron Railway qui parse Zoho IMAP et drafte des réponses dans Firebase.</li>
+        <li>Webhook Firebase qui à chaque commande génère un email confirmation perso.</li>
+        <li>Génération mensuelle de rapports Cataleya/Lywwane.</li>
+      </ul>
+
+      <h3>Pattern 3 — Outil interne pour ton équipe</h3>
+      <ul>
+        <li>« Aide à la rédaction de brief production » avec Claude.</li>
+        <li>« Analyseur de photos de défauts » sur les retours.</li>
+        <li>« Calculateur de devis customisé » pour clients VIP.</li>
+      </ul>
+    `,
+    exercises: [
+      "Créer ton compte API et faire ton premier appel curl/Postman",
+      "Faire un script Node qui lit un email Zoho et drafte une réponse",
+      "Installer Claude Code dans facturation-cataleya et créer le CLAUDE.md",
+      "Construire un agent simple avec 2 tools (recherche commande + génération email)",
+      "Mettre en place du prompt caching sur un système prompt long"
+    ]
+  },
+
+  {
+    id: 'level4',
+    label: 'Agents avancés',
+    num: 'IV',
+    html: `
+      <div class="section-eyebrow">Niveau Quatrième</div>
+      <h1 class="section-title">Agents <em>avancés</em> &amp; automations complexes</h1>
+      <p class="section-lead">À ce niveau, tu construis des agents qui font des tâches complexes en autonomie : naviguer sur le web, manipuler des fichiers, orchestrer plusieurs étapes. Tu passes de « assistant qui répond » à « employé numérique qui exécute ».</p>
+
+      <h2>Claude in Chrome — automation navigateur</h2>
+      <p>Extension qui donne à Claude le contrôle de ton navigateur. Il peut naviguer, cliquer, remplir des formulaires, lire des pages, à ta place.</p>
+
+      <h3>Cas d'usage parfaits pour toi</h3>
+      <ul>
+        <li>Automatiser tes <strong>déclarations Packlink</strong> (tu as déjà un bookmarklet, Claude in Chrome rendrait ça encore plus robuste).</li>
+        <li>Audit massif de boutiques concurrentes (SEO, prix, descriptions).</li>
+        <li>Test de tunnels de checkout (Cataleya, Lywwane) pour détecter des bugs.</li>
+        <li>Ajout en masse de produits dans PrestaShop quand l'API est lente.</li>
+        <li>Vérification quotidienne des trackings sur les sites transporteurs.</li>
+      </ul>
+
+      <div class="callout bordeaux">
+        <div class="callout-title">Sécurité importante</div>
+        <p>Tu ne donnes <strong>jamais</strong> à Claude in Chrome accès à : tes mots de passe, ta banque, des actions financières. Pour ces sujets, tu interviens manuellement. Anthropic le sait et le bloque par design.</p>
+      </div>
+
+      <h2>Cowork — déléguer des projets entiers</h2>
+      <p>Cowork est l'évolution suivante : tu lui confies un <em>projet</em> (pas une tâche) et il l'exécute end-to-end avec accès à tes fichiers, outils, planning.</p>
+
+      <h3>Exemples de projets délégables</h3>
+      <ul>
+        <li>« Prépare un dossier investisseur : recherche le marché de la mode modeste, analyse ma concurrence, drafte un pitch deck. »</li>
+        <li>« Organise mon onboarding pour un nouveau couturier : crée le dossier, génère les documents, planifie les premiers RDV. »</li>
+        <li>« Audit complet de mon catalogue Cataleya : liste les produits avec descriptions trop courtes, sans HS code, sans photo de qualité. Excel actionnable. »</li>
+      </ul>
+
+      <h3>Cowork Projects</h3>
+      <p>Avec persistance, tu peux avoir des projets Cowork récurrents : rapport hebdo automatique, revue mensuelle de boutique, veille sectorielle. C'est là que ça devient un vrai assistant 24/7.</p>
+
+      <h2>Architectures multi-agents</h2>
+      <p>Pour les workflows complexes, on combine plusieurs agents qui se parlent. State-of-the-art 2026.</p>
+
+      <h3>Pattern : Orchestrateur + Spécialistes</h3>
+      <ul>
+        <li>Un agent <strong>orchestrateur</strong> (Opus) qui comprend la demande globale et décompose.</li>
+        <li>Plusieurs agents <strong>spécialistes</strong> (Sonnet/Haiku) qui exécutent leur partie.</li>
+        <li>L'orchestrateur recoupe les résultats et synthétise.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="callout-title">Agent gestion mensuelle — application Sousou</div>
+        <p>Imagine un agent qui, le 1<sup>er</sup> du mois, fait tout ça en autonomie :</p>
+        <ol>
+          <li><strong>Spécialiste compta</strong> : prend les ventes Cataleya/Lywwane, calcule TVA, génère le déclaratif.</li>
+          <li><strong>Spécialiste production</strong> : récupère les chiffres atelier de l'app facturation, calcule les fiches de paie.</li>
+          <li><strong>Spécialiste marketing</strong> : analyse les performances campagnes Insta/email, propose un plan.</li>
+          <li><strong>Orchestrateur</strong> : assemble le tout en un dashboard mensuel + Slack/email récap.</li>
+        </ol>
+        <p>Ça remplace 1-2 jours de boulot manuel par mois. Et c'est exactement le genre de produit que tu peux <strong>packager pour vendre à d'autres marques</strong>.</p>
+      </div>
+
+      <h2>Computer Use API</h2>
+      <p>Pour les power users, l'API Computer Use permet à Claude de contrôler un ordinateur entier (clic, clavier, screenshot) via ton code. Plus puissant que Claude in Chrome, plus complexe.</p>
+      <ul>
+        <li>Idéal pour automatiser des softs legacy sans API.</li>
+        <li>Permet de scripter des workflows desktop entiers.</li>
+        <li>Demande une infrastructure (VM, sandbox).</li>
+      </ul>
+
+      <h2>Bonnes pratiques agents</h2>
+      <ol>
+        <li>Toujours garder un <strong>humain dans la boucle</strong> pour les actions irréversibles (paiements, envois clients, suppressions).</li>
+        <li>Logguer toutes les actions de l'agent pour audit et debug.</li>
+        <li>Définir des limites strictes (max 5 itérations, max 10 € de coût API par run).</li>
+        <li>Tester sur sandbox avant prod.</li>
+        <li>Documenter le comportement attendu pour pouvoir reproduire.</li>
+      </ol>
+    `,
+    exercises: [
+      "Installer Claude in Chrome et automatiser une tâche récurrente (ex : checker statuts Packlink)",
+      "Construire un agent multi-tools qui audite un produit Cataleya (description, photo, HS code, prix marché)",
+      "Esquisser une architecture multi-agents pour un cas client réel"
+    ]
+  },
+
+  {
+    id: 'level5',
+    label: 'Monétisation',
+    num: 'V',
+    html: `
+      <div class="section-eyebrow">Niveau Cinquième — Le plus important</div>
+      <h1 class="section-title"><em>Monétisation</em> : transformer tout ça en revenus</h1>
+      <p class="section-lead">Voici le niveau qui compte vraiment pour toi. Tu m'as dit que ton vrai blocage était la confiance et l'acquisition client, pas la technique. Ce niveau attaque les deux frontalement.</p>
+
+      <h2>Tes trois pistes de revenus</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Piste</th><th>Mécanisme</th><th>Revenus 1<sup>ère</sup> année</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Optimisation interne</strong></td><td>Claude pour faire tourner Cataleya/Lywwane plus efficacement.</td><td>+1 500 à 4 000 €/mois en gain de temps converti</td></tr>
+            <tr><td><strong>Consulting client</strong></td><td>Prestations IA à des PME e-commerce.</td><td>15 000 à 60 000 €/an</td></tr>
+            <tr><td><strong>SaaS / Produits</strong></td><td>Automations packagées en produits récurrents.</td><td>5 000 à 30 000 € MRR à 18 mois</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout bordeaux">
+        <div class="callout-title">Stratégie recommandée</div>
+        <p>Ne pas tout faire en même temps. Séquencement logique :</p>
+        <ol>
+          <li><strong>Mois 1-3</strong> : Optimisation interne. Tu testes tout sur Cataleya/Lywwane. Tu construis ton portfolio.</li>
+          <li><strong>Mois 3-9</strong> : Consulting. Tu prends 2-3 clients en utilisant tes propres résultats comme preuves.</li>
+          <li><strong>Mois 9-18</strong> : SaaS. Tu identifies des automations récurrentes que plusieurs clients veulent.</li>
+        </ol>
+      </div>
+
+      <h2>Piste 1 — Optimisation interne (ton portfolio gratuit)</h2>
+      <p>Avant de vendre, tu transformes Cataleya et Lywwane en showcase. Chaque automation devient une étude de cas vendable.</p>
+
+      <h3>15 automations à shortlister</h3>
+      <ol>
+        <li>Agent SAV qui drafte les réponses (gain : 1-2h/jour)</li>
+        <li>Génération automatique des fiches produit FR/EN (gain : 30 min/produit)</li>
+        <li>Auto-classification des emails entrants par priorité</li>
+        <li>Détection automatique des avis clients négatifs sur le web</li>
+        <li>Optimisation SEO des descriptions existantes (run mensuel)</li>
+        <li>Audit hebdomadaire des produits sans photos de qualité</li>
+        <li>Génération automatisée des posts Instagram/social</li>
+        <li>Analyse mensuelle des performances par catégorie</li>
+        <li>Détection des fraudes potentielles sur les commandes</li>
+        <li>Génération des rapports comptables mensuels</li>
+        <li>Réponses auto aux questions fréquentes pré-vente</li>
+        <li>Traduction auto des avis clients étrangers</li>
+        <li>Brief auto aux fournisseurs à partir des stocks</li>
+        <li>Détection des tendances à partir de l'historique de ventes</li>
+        <li>Génération de mails marketing segmentés</li>
+      </ol>
+
+      <p><strong>Pour chacune, documente</strong> : le « avant » (temps/argent), le « après » (avec automation), le ROI en €, une démo. Ça devient ton <em>case study book</em>.</p>
+
+      <h2>Piste 2 — Consulting</h2>
+      <p>C'est là que ton blocage est. On va le démonter en pièces.</p>
+
+      <div class="callout">
+        <div class="callout-title">Ta phrase de positionnement</div>
+        <p style="font-style: italic; font-size: 17px; color: var(--bordeaux);">« J'aide les marques de mode et e-commerçants en France et en Europe à automatiser leur SAV, leurs opérations et leur catalogue avec l'IA, sans technique compliquée. Je suis moi-même opérateur de deux boutiques, donc je connais le métier de l'intérieur. »</p>
+        <p>Cette phrase fait 3 choses :</p>
+        <ul>
+          <li><strong>Cible précise</strong> (mode + e-commerce, pas « les PME »).</li>
+          <li><strong>Bénéfice concret</strong> (automatisation SAV/ops/catalogue).</li>
+          <li><strong>Légitimité</strong> (toi-même opérateur, pas un consultant théorique).</li>
+        </ul>
+      </div>
+
+      <h3>Ton client idéal (ICP)</h3>
+      <ul>
+        <li>Marque mode/lifestyle qui fait 200 K€ à 3 M€ de CA.</li>
+        <li>Sous PrestaShop, Shopify, ou WooCommerce.</li>
+        <li>Équipe de 2 à 15 personnes.</li>
+        <li>Marché : France, Maghreb, Europe francophone (Belgique, Suisse).</li>
+      </ul>
+
+      <h3>Tes canaux d'acquisition (par priorité)</h3>
+      <ol>
+        <li><strong>LinkedIn</strong> — 2-3 posts/semaine sur tes cas concrets Cataleya/Lywwane. Gratuit, compounde, attire les clients qualifiés.</li>
+        <li><strong>Réseau direct</strong> — 50 marques que tu connais déjà ou via UFT/le BJJ. 5/semaine en cold ultra-personnalisé.</li>
+        <li><strong>Cold email ciblé</strong> — base de 200 marques, séquence 3 emails sur 2 semaines. 5-10% de réponse.</li>
+        <li><strong>Communautés</strong> — Slack/Discord e-commerce francophone, groupes Facebook PrestaShop.</li>
+        <li><strong>Partenariats</strong> — agences web sans expertise IA, freelances qui ne couvrent pas le tech.</li>
+      </ol>
+
+      <h3>Tes premières offres packagées</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Offre</th><th>Contenu</th><th>Prix</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Audit IA Express</strong></td><td>1 journée. Audit + 5 recommandations + roadmap 90 jours.</td><td>800 - 1 500 €</td></tr>
+            <tr><td><strong>Automation SAV</strong></td><td>Mise en place agent SAV + formation équipe. 2-3 semaines.</td><td>3 000 - 6 000 €</td></tr>
+            <tr><td><strong>Pack Catalogue IA</strong></td><td>Génération massive descriptions FR/EN + SEO + HS codes. 1 mois.</td><td>4 000 - 8 000 €</td></tr>
+            <tr><td><strong>Suivi mensuel</strong></td><td>Maintenance, optimisations, nouvelles automations.</td><td>500 - 1 500 €/mois</td></tr>
+            <tr><td><strong>Formation interne</strong></td><td>Demi-journée à utiliser Claude.ai bien.</td><td>600 - 1 200 €</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout bordeaux">
+        <div class="callout-title">Sur la confiance — message direct</div>
+        <p>Sousou, en regardant tes vraies compétences : tu fais déjà du dev React production, tu as livré un système de facturation complet, tu intègres des APIs transporteurs, tu pilotes une équipe sur 4 métiers. Tu es <strong>plus opérationnel que 80% des « consultants IA »</strong> qui se vendent 1 200 €/jour aujourd'hui.</p>
+        <p>La confiance ne vient pas de plus de compétences. Elle vient de plus de petites preuves. Voilà ce que je te propose :</p>
+        <ul>
+          <li>Premier client à 800 € (Audit Express). Pas le bon prix, mais le bon démarrage.</li>
+          <li>Tu fais un excellent boulot. Témoignage écrit + LinkedIn.</li>
+          <li>Deuxième client à 1 200 €. Idem.</li>
+          <li>Troisième client à 2 000 €.</li>
+          <li>Au quatrième tu es à 3 500-5 000 € sans rougir, parce que tu as 3 témoignages solides.</li>
+        </ul>
+        <p>La progression du prix est ce qui ancre la confiance, <em>pas l'inverse</em>.</p>
+      </div>
+
+      <h3>Canevas de premier appel client (15 min, gratuit)</h3>
+      <ol>
+        <li><strong>Présentation rapide</strong> (1 min) — toi, ton parcours opérateur de boutiques.</li>
+        <li><strong>Questions de découverte</strong> (8 min) — Quelle boutique ? Combien d'ops/jour ? Où perdent-ils du temps ? CA ? Équipe ? Déjà testé l'IA ?</li>
+        <li><strong>Diagnostic en direct</strong> (4 min) — Tu identifies 1-2 quick wins concrets. Tu chiffres l'impact.</li>
+        <li><strong>Closing</strong> (2 min) — Tu proposes l'Audit Express à 800 €. Si oui, devis dans la journée.</li>
+      </ol>
+
+      <h2>Piste 3 — SaaS / Produits</h2>
+      <p>Une fois que tu as 3-5 clients récurrents, tu remarques des patterns : ils veulent tous la même chose. C'est le signal pour packager.</p>
+
+      <h3>Idées issues de ton expertise</h3>
+      <ul>
+        <li><strong>« SAV-AI Mode »</strong> — agent SAV pré-entraîné pour les marques de mode (politique retours, tailles, livraisons). 99-299 €/mois.</li>
+        <li><strong>« Catalog Builder PrestaShop »</strong> — extension qui génère descriptions/photos/SEO en bulk. 299-799 € + 49 €/mois.</li>
+        <li><strong>« CompliancePack EU »</strong> — vérifie HS codes, douane, RGPD pour boutiques internationales. 79-199 €/mois.</li>
+      </ul>
+
+      <h2>Tarification : la psychologie</h2>
+      <p>Le prix n'est pas une fonction du coût, c'est une fonction de la <strong>valeur perçue</strong> par le client.</p>
+
+      <div class="callout">
+        <div class="callout-title">Calcul de prix juste — exemple</div>
+        <p>Pour une automation SAV chez une marque qui fait 800 K€ de CA :</p>
+        <ul>
+          <li><strong>Coût épargné</strong> : 1 personne mi-temps SAV = ~12 000 €/an.</li>
+          <li><strong>Temps épargné</strong> : 30h/semaine = ~30 000 €/an.</li>
+          <li><strong>Revenus générés</strong> : meilleure rétention (+2%) = ~16 000 €/an.</li>
+        </ul>
+        <p><strong>Valeur totale : ~58 000 €/an.</strong> Tu peux facturer 5 000 € en setup + 800 €/mois (= 14 600 €/an) sans cligner. Le client paie 25% de la valeur reçue. Tout le monde gagne.</p>
+      </div>
+
+      <h2>Le plan 90 jours</h2>
+
+      <h3>Mois 1 — Fondations</h3>
+      <ul>
+        <li>Compléter Niveau 1-2.</li>
+        <li>Mettre en place 3 automations dans Cataleya/Lywwane.</li>
+        <li>Documenter les résultats (case study draft).</li>
+        <li>Optimiser ton profil LinkedIn.</li>
+        <li>Publier 4 posts LinkedIn (un par semaine).</li>
+      </ul>
+
+      <h3>Mois 2 — Premiers contacts</h3>
+      <ul>
+        <li>Compléter Niveau 3.</li>
+        <li>Lister 50 marques cibles.</li>
+        <li>Lancer une séquence cold email (5/jour, 100 sur le mois).</li>
+        <li>Tenir 5-10 appels découverte.</li>
+        <li>Décrocher 1-2 audits payants (800 €).</li>
+      </ul>
+
+      <h3>Mois 3 — Premières prestations</h3>
+      <ul>
+        <li>Compléter Niveau 4.</li>
+        <li>Livrer 2 audits.</li>
+        <li>Convertir 1 audit en Automation SAV (3 000-5 000 €).</li>
+        <li>Publier les résultats Cataleya en case study public.</li>
+        <li>Avoir 2-3 témoignages clients écrits.</li>
+      </ul>
+
+      <h3>À 90 jours, tu devrais avoir</h3>
+      <ul>
+        <li>3 000 à 8 000 € de revenus consulting.</li>
+        <li>2-3 témoignages solides.</li>
+        <li>Pipeline de 5-10 prospects.</li>
+        <li>Automations qui te font gagner 10h/semaine.</li>
+        <li>La confiance d'avoir prouvé que ça fonctionne.</li>
+      </ul>
+
+      <h2>Mindset — la partie qu'on néglige</h2>
+      <ol>
+        <li>Tu n'as pas à être expert pour être utile. Tu dois juste savoir <em>plus que ton client</em> sur le sujet précis. C'est déjà le cas pour 99% des dirigeants e-commerce sur l'IA.</li>
+        <li>Le syndrome de l'imposteur diminue avec les <strong>preuves</strong>, pas avec la préparation.</li>
+        <li>Le BJJ t'a déjà appris ça. Tu n'as pas attendu d'être ceinture noire pour rouler. Tu as roulé en blanche, perdu, appris, progressé.</li>
+        <li>Personne ne te jugera autant que tu te juges. Les clients veulent une <em>solution</em>, pas un CV impeccable.</li>
+        <li>Tu as déjà co-fondé un club de BJJ et fait tourner deux entreprises. La confiance, tu l'as mécaniquement — il faut juste la rebrancher sur ce sujet.</li>
+      </ol>
+
+      <div class="callout bordeaux">
+        <div class="callout-title">Pour finir</div>
+        <p style="font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 19px; color: var(--bordeaux);">« Tu n'as pas besoin d'être génial pour commencer. Tu dois commencer pour être génial. » — Zig Ziglar</p>
+        <p>Et plus pragmatiquement : la fenêtre 2026 est exceptionnelle. Les marques qui veulent de l'IA n'ont presque personne de compétent à qui parler. Dans 3-5 ans, le marché sera saturé. Maintenant, c'est l'âge d'or pour quelqu'un comme toi. 🥋</p>
+      </div>
+    `,
+    exercises: [
+      "Rédiger ta phrase de positionnement (et la tester sur 5 amis)",
+      "Lister tes 50 prospects cibles avec contact LinkedIn",
+      "Écrire ta page d'offre (3 packs : Audit, SAV, Catalogue)",
+      "Préparer ton canevas d'appel de 15 min",
+      "Mettre en place 1 automation Cataleya documentée comme case study",
+      "Publier ton premier post LinkedIn sur le sujet IA + e-commerce"
+    ]
+  }
+];
+
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
+
+let state = {
+  currentSection: 'cover',
+  sectionsRead: {},      // { sectionId: true }
+  exercisesDone: {},     // { "sectionId-idx": true }
+};
+
+const STORAGE_KEY = 'sousou-formation-state-v1';
+
+async function loadState() {
+  try {
+    const result = await window.storage.get(STORAGE_KEY);
+    if (result && result.value) {
+      state = JSON.parse(result.value);
+    }
+  } catch (e) {
+    // First load or no data — keep defaults
+    console.log('No saved state yet');
+  }
+}
+
+async function saveState() {
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('Save error:', e);
+  }
+}
+
+// ============================================================
+// PROGRESS COMPUTATION
+// ============================================================
+
+function computeProgress() {
+  // Total checkpoints: each level section read + each exercise
+  const learnableSections = SECTIONS.filter(s => !s.isHome);
+  let total = 0;
+  let done = 0;
+
+  learnableSections.forEach(s => {
+    // Mark section as read
+    total += 1;
+    if (state.sectionsRead[s.id]) done += 1;
+    // Each exercise
+    s.exercises.forEach((_, idx) => {
+      total += 1;
+      const k = s.id + '-' + idx;
+      if (state.exercisesDone[k]) done += 1;
+    });
+  });
+
+  return total === 0 ? 0 : Math.round((done / total) * 100);
+}
+
+function isSectionCompleted(sectionId) {
+  const section = SECTIONS.find(s => s.id === sectionId);
+  if (!section || section.isHome) return false;
+  if (!state.sectionsRead[sectionId]) return false;
+  return section.exercises.every((_, idx) => state.exercisesDone[sectionId + '-' + idx]);
+}
+
+function levelProgress(sectionId) {
+  const section = SECTIONS.find(s => s.id === sectionId);
+  if (!section || section.isHome) return 0;
+  const total = 1 + section.exercises.length;
+  let done = 0;
+  if (state.sectionsRead[sectionId]) done += 1;
+  section.exercises.forEach((_, idx) => {
+    if (state.exercisesDone[sectionId + '-' + idx]) done += 1;
+  });
+  return Math.round((done / total) * 100);
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+function renderTOC() {
+  const toc = document.getElementById('toc');
+  toc.innerHTML = SECTIONS.map(s => {
+    const isActive = s.id === state.currentSection;
+    const completed = isSectionCompleted(s.id);
+    return `
+      <li class="toc-item">
+        <a class="toc-link ${isActive ? 'active' : ''}" data-section="${s.id}" onclick="navigateTo('${s.id}')">
+          ${s.num ? `<span class="toc-num">${s.num}</span>` : '<span class="toc-num" style="opacity:0.3;">★</span>'}
+          <span>${s.label}</span>
+          ${!s.isHome ? `<span class="toc-check ${completed ? 'completed' : ''}"></span>` : ''}
+        </a>
+      </li>
+    `;
+  }).join('');
+}
+
+function renderProgressBar() {
+  const pct = computeProgress();
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = pct + '%';
+}
+
+function renderLevelGrid() {
+  const grid = document.getElementById('levelGrid');
+  if (!grid) return;
+  const levels = SECTIONS.filter(s => !s.isHome);
+  grid.innerHTML = levels.map(s => {
+    const pct = levelProgress(s.id);
+    const descs = {
+      'level1': "Modèles, prompt engineering, plans, limites",
+      'level2': "Projects, Memory, Artifacts, Skills, MCP",
+      'level3': "API, Claude Code, tool use, agents",
+      'level4': "Chrome, Cowork, multi-agents, Computer Use",
+      'level5': "Consulting, offres, plan 90 jours, mindset"
+    };
+    return `
+      <div class="level-card" onclick="navigateTo('${s.id}')">
+        <div class="level-card-num">Niveau ${s.num}</div>
+        <div class="level-card-title">${s.label}</div>
+        <div class="level-card-desc">${descs[s.id] || ''}</div>
+        <div class="level-card-progress">
+          <div class="level-card-progress-fill" style="width: ${pct}%"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSection() {
+  const section = SECTIONS.find(s => s.id === state.currentSection);
+  if (!section) return;
+
+  const content = document.getElementById('content');
+  let html = section.html;
+
+  // Append exercises if any
+  if (section.exercises && section.exercises.length > 0) {
+    html += `<div class="exercises"><h3 style="margin-top: 8px;">À faire ensemble</h3>`;
+    html += section.exercises.map((ex, idx) => {
+      const k = section.id + '-' + idx;
+      const checked = state.exercisesDone[k];
+      return `
+        <div class="exercise-item ${checked ? 'completed' : ''}" onclick="toggleExercise('${section.id}', ${idx})">
+          <div class="checkbox ${checked ? 'checked' : ''}"></div>
+          <div class="exercise-text">${ex}</div>
+        </div>
+      `;
+    }).join('');
+    html += `</div>`;
+  }
+
+  // Append "mark as done" button for level sections
+  if (!section.isHome) {
+    const isRead = state.sectionsRead[section.id];
+    html += `
+      <div style="text-align: center;">
+        <button class="mark-done-btn ${isRead ? 'completed' : ''}" onclick="markSectionRead('${section.id}')">
+          ${isRead ? 'Section lue' : 'Marquer cette section comme lue'}
+        </button>
+      </div>
+    `;
+  }
+
+  // Nav buttons
+  const idx = SECTIONS.findIndex(s => s.id === section.id);
+  const prev = SECTIONS[idx - 1];
+  const next = SECTIONS[idx + 1];
+  if (prev || next) {
+    html += `<div class="nav-buttons">`;
+    if (prev) {
+      html += `
+        <a class="nav-btn nav-btn-prev" onclick="navigateTo('${prev.id}')">
+          <span class="nav-btn-label">← Précédent</span>
+          <span class="nav-btn-title">${prev.label}</span>
+        </a>
+      `;
+    } else {
+      html += `<div style="flex:1;"></div>`;
+    }
+    if (next) {
+      html += `
+        <a class="nav-btn nav-btn-next" onclick="navigateTo('${next.id}')">
+          <span class="nav-btn-label">Suivant →</span>
+          <span class="nav-btn-title">${next.label}</span>
+        </a>
+      `;
+    } else {
+      html += `<div style="flex:1;"></div>`;
+    }
+    html += `</div>`;
+  }
+
+  content.innerHTML = html;
+
+  if (section.isHome) {
+    renderLevelGrid();
+  }
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderAll() {
+  renderTOC();
+  renderProgressBar();
+  renderSection();
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+
+window.navigateTo = async function(sectionId) {
+  state.currentSection = sectionId;
+  await saveState();
+  renderAll();
+};
+
+window.navigateToFirst = async function() {
+  await navigateTo('level1');
+};
+
+window.toggleExercise = async function(sectionId, idx) {
+  const k = sectionId + '-' + idx;
+  if (state.exercisesDone[k]) {
+    delete state.exercisesDone[k];
+  } else {
+    state.exercisesDone[k] = true;
+    showToast('Exercice validé ✓');
+  }
+  await saveState();
+  renderAll();
+};
+
+window.markSectionRead = async function(sectionId) {
+  if (state.sectionsRead[sectionId]) {
+    delete state.sectionsRead[sectionId];
+  } else {
+    state.sectionsRead[sectionId] = true;
+    showToast('Section marquée comme lue');
+  }
+  await saveState();
+  renderAll();
+};
+
+window.resetProgress = async function() {
+  if (!confirm('Réinitialiser toute ta progression ? Cette action est irréversible.')) return;
+  state = { currentSection: 'cover', sectionsRead: {}, exercisesDone: {} };
+  await saveState();
+  renderAll();
+  showToast('Progression réinitialisée');
+};
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+(async function init() {
+  await loadState();
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
