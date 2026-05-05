@@ -6,18 +6,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#6B2737">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <title>Nouveau produit — Cataleya Paris</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23C97D60'/%3E%3Ctext x='50' y='68' font-family='Georgia,serif' font-size='60' font-style='italic' font-weight='500' fill='%23FAF6F0' text-anchor='middle'%3EC%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script type="module">
+  // Firebase v10 modular SDK — Realtime Database
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, set, get, remove, onValue, query as rtQuery, orderByChild, limitToLast, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, set, get, remove, onValue, query as rtQuery, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+  // ⚠️ TA CONFIG FIREBASE USINE-CATALEYA À METTRE ICI
   const firebaseConfig = {
     apiKey: "AIzaSyD0EDX1uK2lhlqPxOzHR8lCGGzs9fJqAtY",
     authDomain: "usine-cataleya.firebaseapp.com",
@@ -31,7 +29,8 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  window._firebase = { db, ref, set, get, remove, onValue, rtQuery, orderByChild, limitToLast, push };
+  // Exposer pour le code non-module
+  window._firebase = { db, ref, set, get, remove, onValue, rtQuery, orderByChild, limitToLast };
   window.dispatchEvent(new Event('firebase-ready'));
 </script>
 <style>
@@ -93,13 +92,6 @@
     z-index: 50;
     box-shadow: 0 2px 12px rgba(74,27,38,0.15);
   }
-  .header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .header-content { flex: 1; min-width: 0; }
   .brand {
     font-size: 10px;
     font-weight: 600;
@@ -121,31 +113,6 @@
     margin-top: 2px;
     font-weight: 400;
   }
-
-  /* Bouton "Mes produits" dans header */
-  .btn-products {
-    flex-shrink: 0;
-    background: rgba(244,235,222,0.12);
-    border: 1px solid rgba(244,235,222,0.25);
-    border-radius: var(--radius-md);
-    padding: 8px 12px;
-    color: var(--cream);
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    min-width: 64px;
-    transition: all 0.15s;
-  }
-  .btn-products:active {
-    background: rgba(244,235,222,0.22);
-    transform: scale(0.96);
-  }
-  .btn-products .icon { font-size: 18px; }
-  .btn-products .label { font-size: 10px; letter-spacing: 0.3px; }
 
   /* ═══════════════════ STEPPER ═══════════════════ */
   .stepper {
@@ -993,283 +960,165 @@
   }
   .btn-new-draft:active { border-color: var(--terracotta); color: var(--terracotta); }
 
-  /* ═══════════════════ VUE MES PRODUITS (overlay plein écran) ═══════════════════ */
-  .products-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: var(--cream);
-    z-index: 250;
-    flex-direction: column;
-    animation: slideUp 0.3s ease;
-  }
-  .products-overlay.active { display: flex; }
-
-  .products-header {
-    background: linear-gradient(180deg, var(--bordeaux) 0%, var(--bordeaux-deep) 100%);
-    color: var(--cream);
-    padding: calc(20px + env(safe-area-inset-top)) 20px 16px;
-    display: flex;
+  /* ═══════════════════ RÉCAP ÉTAPE 7 ═══════════════════ */
+  .recap-row {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 10px;
     align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line-soft);
   }
-  .products-header h2 {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 22px;
-    font-weight: 500;
-    font-style: italic;
-    flex: 1;
-  }
-  .products-back {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: rgba(244,235,222,0.15);
-    border: 1px solid rgba(244,235,222,0.25);
-    color: var(--cream);
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .products-export {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: rgba(244,235,222,0.15);
-    border: 1px solid rgba(244,235,222,0.25);
-    color: var(--cream);
-    font-size: 17px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .products-export:active {
-    background: rgba(244,235,222,0.25);
-    transform: scale(0.95);
-  }
-
-  .products-tabs {
-    display: flex;
-    background: var(--white);
-    border-bottom: 1px solid var(--line);
-    padding: 0 16px;
-    flex-shrink: 0;
-  }
-  .products-tab {
-    flex: 1;
-    background: none;
-    border: none;
-    padding: 14px 8px;
-    font-family: inherit;
-    font-size: 13px;
+  .recap-row:last-child { border-bottom: none; }
+  .recap-label {
+    font-size: 11px;
     font-weight: 600;
     color: var(--ink-muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
   }
-  .products-tab.active {
-    color: var(--bordeaux);
-    border-bottom-color: var(--bordeaux);
-  }
-  .tab-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    background: var(--cream-warm);
-    color: var(--bordeaux);
-    border-radius: 100px;
-    font-size: 10px;
-    font-weight: 700;
-  }
-  .products-tab.active .tab-count {
-    background: var(--terracotta);
-    color: var(--white);
-  }
-
-  .products-search {
-    padding: 12px 16px;
-    background: var(--white);
-    border-bottom: 1px solid var(--line);
-    flex-shrink: 0;
-  }
-  .products-search input {
-    background: var(--cream);
-    font-size: 14px;
-  }
-
-  .products-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom));
-  }
-
-  .product-card {
-    background: var(--white);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    padding: 14px;
-    margin-bottom: 10px;
-    box-shadow: var(--shadow-sm);
-  }
-  .product-card-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  .product-card-info { flex: 1; min-width: 0; }
-  .product-card-name {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 17px;
-    font-style: italic;
-    font-weight: 500;
-    color: var(--bordeaux);
-    line-height: 1.2;
-    margin-bottom: 3px;
+  .recap-value {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.4;
     word-break: break-word;
   }
-  .product-card-meta {
-    font-size: 11px;
-    color: var(--ink-muted);
-    line-height: 1.5;
-  }
-  .product-card-meta strong { color: var(--ink-soft); font-weight: 600; }
-
-  .product-card-status {
-    flex-shrink: 0;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    padding: 4px 8px;
-    border-radius: 100px;
-  }
-  .status-draft { background: var(--cream-warm); color: var(--bordeaux); }
-  .status-finalized { background: rgba(107,127,92,0.15); color: var(--success); }
-
-  .product-card-actions {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .product-action {
-    flex: 1;
-    min-width: 70px;
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 12px;
+  .recap-important {
     font-weight: 600;
-    cursor: pointer;
-    border: 1px solid var(--line);
-    background: var(--cream);
-    color: var(--ink-soft);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-  }
-  .product-action.primary {
-    background: var(--bordeaux);
-    color: var(--white);
-    border-color: var(--bordeaux);
-  }
-  .product-action.danger {
-    flex: 0 0 auto;
-    min-width: 40px;
-    color: var(--danger);
-  }
-  .product-action.danger:active {
-    background: var(--danger);
-    color: var(--white);
-    border-color: var(--danger);
-  }
-
-  .products-empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--ink-muted);
-  }
-  .products-empty-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-    opacity: 0.4;
-  }
-  .products-empty-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 20px;
-    font-style: italic;
     color: var(--bordeaux);
-    margin-bottom: 6px;
   }
-  .products-empty-desc {
-    font-size: 13px;
-    line-height: 1.5;
+  .recap-value-empty {
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-style: italic;
+    opacity: 0.7;
+  }
+  .recap-edit {
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .recap-edit:active {
+    background: var(--terracotta);
+    color: var(--white);
+    border-color: var(--terracotta);
+  }
+  .recap-row-empty .recap-label { color: var(--ink-muted); opacity: 0.6; }
+
+  @media (max-width: 480px) {
+    .recap-row { grid-template-columns: 1fr auto; }
+    .recap-label { grid-column: 1; }
+    .recap-value, .recap-value-empty { grid-column: 1; padding-top: 2px; }
+    .recap-edit { grid-column: 2; grid-row: 1 / span 2; }
   }
 
-  /* Détail produit (overlay 2nd niveau) */
-  .product-detail-overlay {
+  /* ═══════════════════ OVERLAY CONFIRMATION ═══════════════════ */
+  .save-confirm-overlay {
     display: none;
     position: fixed;
     inset: 0;
     background: rgba(42,31,31,0.7);
     backdrop-filter: blur(8px);
-    z-index: 260;
-    align-items: flex-end;
+    z-index: 250;
+    align-items: center;
     justify-content: center;
+    padding: 20px;
   }
-  .product-detail-overlay.active { display: flex; }
-  .product-detail-modal {
-    background: var(--cream);
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  .save-confirm-overlay.active { display: flex; }
+  .save-confirm-card {
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    padding: 28px 22px;
     width: 100%;
-    max-width: 700px;
-    max-height: 90vh;
+    max-width: 380px;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+    animation: scaleIn 0.3s ease;
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .save-confirm-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--success) 0%, #5a6e4d 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+    font-size: 32px;
+    color: var(--white);
+    box-shadow: 0 6px 20px rgba(107,127,92,0.3);
+  }
+  .save-confirm-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--bordeaux);
+    margin-bottom: 6px;
+  }
+  .save-confirm-subtitle {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .save-confirm-detail {
+    background: var(--cream-warm);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-bottom: 22px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    text-align: left;
+  }
+  .save-confirm-question {
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+  .save-confirm-actions {
     display: flex;
     flex-direction: column;
-    animation: slideUp 0.3s ease;
+    gap: 10px;
   }
-  .product-detail-body {
-    padding: 16px 20px;
-    overflow-y: auto;
-    flex: 1;
+  .save-confirm-btn {
+    width: 100%;
+    height: 50px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.1s;
   }
-  .detail-row {
-    padding: 10px 0;
-    border-bottom: 1px dashed var(--line);
-    font-size: 13px;
+  .save-confirm-btn:active { transform: scale(0.98); }
+  .save-confirm-btn-primary {
+    background: linear-gradient(180deg, var(--bordeaux) 0%, var(--bordeaux-deep) 100%);
+    color: var(--cream);
+    border: none;
+    box-shadow: 0 4px 12px rgba(74,27,38,0.2);
   }
-  .detail-row:last-child { border-bottom: none; }
-  .detail-key {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: var(--bordeaux);
-    margin-bottom: 4px;
+  .save-confirm-btn-secondary {
+    background: linear-gradient(180deg, var(--terracotta) 0%, #B26A4F 100%);
+    color: var(--white);
+    border: none;
+    box-shadow: 0 4px 12px rgba(201,125,96,0.2);
   }
-  .detail-value {
-    color: var(--ink);
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .detail-value.muted { color: var(--ink-muted); font-style: italic; }
 
   /* ═══════════════════ DESKTOP ═══════════════════ */
   @media (min-width: 700px) {
@@ -1299,17 +1148,9 @@
 
 <!-- ═══════════════════════ HEADER + STEPPER ═══════════════════════ -->
 <header>
-  <div class="header-top">
-    <div class="header-content">
-      <div class="brand">Cataleya Paris</div>
-      <h1>Nouveau produit</h1>
-      <div class="subtitle">Remplis les 6 étapes — Sousou s'occupe du reste.</div>
-    </div>
-    <button class="btn-products" onclick="openProductsView()" title="Voir tous mes produits">
-      <span class="icon">📦</span>
-      <span class="label">Mes produits</span>
-    </button>
-  </div>
+  <div class="brand">Cataleya Paris</div>
+  <h1>Nouveau produit</h1>
+  <div class="subtitle">Remplis les 6 étapes — Sousou s'occupe du reste.</div>
 
   <div class="stepper" id="stepper">
     <div class="step-pill active" data-step="1">1</div>
@@ -1318,6 +1159,7 @@
     <div class="step-pill" data-step="4">4</div>
     <div class="step-pill" data-step="5">5</div>
     <div class="step-pill" data-step="6">6</div>
+    <div class="step-pill" data-step="7">7</div>
   </div>
 </header>
 
@@ -1336,7 +1178,7 @@
     <button class="btn-new-draft" onclick="newDraft()">+ Commencer un nouveau produit</button>
   </div>
 
-  <!-- COMPTEUR PRODUITS (déprécié — gardé caché pour compat) -->
+  <!-- COMPTEUR PRODUITS -->
   <div id="product-counter" class="product-counter" style="display:none">
     <div class="count" id="counter-count"></div>
     <div id="counter-text"></div>
@@ -1617,6 +1459,7 @@
       <div style="margin-bottom:18px">
         <div style="font-size:11px;font-weight:700;color:var(--bordeaux);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Tissu principal <span class="req">*</span></div>
 
+        <!-- Suggestions auto à partir de la matière étape 4 -->
         <div id="comp-suggestions" style="display:none;margin-bottom:12px">
           <div class="desc-preview-label" style="margin-bottom:6px">✨ Suggestions basées sur la matière saisie</div>
           <div id="comp-suggestions-list"></div>
@@ -1629,6 +1472,7 @@
           </div>
         </div>
 
+        <!-- Composition principale sélectionnée -->
         <div id="composition-selected" style="display:none;background:var(--cream-warm);border:1px solid var(--terracotta-soft);border-radius:var(--radius-md);padding:10px 12px;margin-top:8px">
           <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
             <div>
@@ -1685,32 +1529,33 @@
     </div>
   </div>
 
-  <!-- ═══════════════════ ÉTAPE 6 — NOTES & VALIDATION ═══════════════════ -->
+  <!-- ═══════════════════ ÉTAPE 6 — NOTES ═══════════════════ -->
   <div class="step-content" data-step="6">
     <div class="step-header">
-      <div class="step-meta">Étape 6 sur 6</div>
-      <div class="step-title">Notes & validation</div>
-      <div class="step-desc">Une dernière chose à dire à Sousou ?</div>
+      <div class="step-meta">Étape 6 sur 7</div>
+      <div class="step-title">Notes</div>
+      <div class="step-desc">Une dernière chose à dire à Sousou ? (optionnel)</div>
     </div>
 
     <div class="card">
       <div class="card-title">Notes pour Sousou</div>
       <div class="field">
         <label>Remarques</label>
-        <textarea id="notes" rows="4" placeholder="ex. Disponible mi-mai, priorité campagne…"></textarea>
+        <textarea id="notes" rows="4" placeholder="ex. Disponible mi-mai, priorité campagne, urgent pour shooting du 15…"></textarea>
+        <p class="hint" style="margin-top:6px">Tu peux laisser vide si tu n'as rien de particulier à signaler.</p>
       </div>
     </div>
+  </div>
 
-    <div class="card" style="background:var(--cream-warm);border-color:var(--terracotta-soft)">
-      <div class="card-title">Tu y es presque !</div>
-      <p style="font-size:13.5px;line-height:1.6;color:var(--ink-soft)">
-        Vérifie le résumé en haut. Quand tout est bon, choisis :
-      </p>
-      <ul style="font-size:13px;color:var(--ink-soft);margin-top:10px;padding-left:20px;line-height:1.7">
-        <li><strong style="color:var(--bordeaux)">Enregistrer & ajouter</strong> — pour saisir un autre produit derrière</li>
-        <li><strong style="color:var(--bordeaux)">Terminer & générer le CSV</strong> — pour finaliser le lot</li>
-      </ul>
+  <!-- ═══════════════════ ÉTAPE 7 — RÉCAPITULATIF ═══════════════════ -->
+  <div class="step-content" data-step="7">
+    <div class="step-header">
+      <div class="step-meta">Étape 7 sur 7 — Dernière étape</div>
+      <div class="step-title">Récapitulatif</div>
+      <div class="step-desc">Vérifie que tout est correct avant d'enregistrer.</div>
     </div>
+
+    <div id="recap-product"></div>
   </div>
 
 </div>
@@ -1732,64 +1577,51 @@
       <button class="btn-close" onclick="closeOverlay()">×</button>
     </div>
 
+    <!-- Onglets -->
     <div style="display:flex;gap:0;padding:0 20px;border-bottom:1px solid var(--line);background:var(--cream)">
       <button type="button" class="recap-tab active" id="tab-list" onclick="switchRecapTab('list')" style="flex:1;padding:12px 0;background:none;border:none;border-bottom:2px solid var(--bordeaux);font-size:13px;font-weight:600;color:var(--bordeaux);cursor:pointer">📋 Liste des produits</button>
-      <button type="button" class="recap-tab" id="tab-csv" onclick="switchRecapTab('csv')" style="flex:1;padding:12px 0;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:var(--ink-muted);cursor:pointer">📄 CSV brut</button>
+      <button type="button" class="recap-tab" id="tab-csv" onclick="switchRecapTab('csv')" style="flex:1;padding:12px 0;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:var(--ink-muted);cursor:pointer">📄 Aperçu CSV</button>
     </div>
 
     <div class="modal-body">
+      <!-- Vue Liste -->
       <div id="view-list">
         <p style="font-size:13px;color:var(--ink-muted);margin-bottom:14px">Vérifie tes produits avant de télécharger. Tu peux supprimer une ligne ou un produit complet.</p>
         <div id="recap-list"></div>
       </div>
 
+      <!-- Vue CSV -->
       <div id="view-csv" style="display:none">
-        <p style="font-size:13px;color:var(--ink-muted);margin-bottom:12px">Format CSV brut prêt à importer dans PrestaShop.</p>
-        <div class="csv-content" id="csv-content"></div>
+        <p style="font-size:13px;color:var(--ink-muted);margin-bottom:14px">Aperçu des 2 fichiers CSV à importer dans PrestaShop. <strong>Importe d'abord le CSV Produits</strong>, puis le CSV Combinaisons (PrestaShop fait le matching automatique grâce au nom du produit).</p>
+        <div id="csv-content"></div>
       </div>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-copy" id="btn-copy" onclick="copyCSV()">📋 Copier CSV</button>
-      <button class="btn-download" onclick="downloadCSV()">⬇ Télécharger</button>
+    <div class="modal-actions" style="grid-template-columns: 1fr; gap: 8px;">
+      <button class="btn-download" onclick="downloadCSV('products')" style="background:var(--bordeaux);color:var(--cream)">📦 Télécharger CSV Produits</button>
+      <button class="btn-download" onclick="downloadCSV('combinations')" style="background:var(--terracotta);color:var(--white)">🧵 Télécharger CSV Combinaisons</button>
+      <button class="btn-download" onclick="downloadCSV()" style="background:var(--success);color:var(--white)">⬇ Télécharger les 2</button>
       <button class="btn-reset" onclick="resetAll()">Recommencer un nouveau lot</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════ VUE MES PRODUITS (overlay plein écran) ═══════════════════ -->
-<div class="products-overlay" id="products-overlay">
-  <div class="products-header">
-    <button class="products-back" onclick="closeProductsView()">‹</button>
-    <h2>Mes produits</h2>
-    <button class="products-export" onclick="askExportCSV()" title="Export CSV admin">📄</button>
-  </div>
-
-  <div class="products-tabs">
-    <button class="products-tab active" id="ptab-drafts" onclick="switchProductsTab('drafts')">
-      📁 Brouillons <span class="tab-count" id="ptab-count-drafts">0</span>
-    </button>
-    <button class="products-tab" id="ptab-finalized" onclick="switchProductsTab('finalized')">
-      ✓ Finalisés <span class="tab-count" id="ptab-count-finalized">0</span>
-    </button>
-  </div>
-
-  <div class="products-search">
-    <input type="text" id="products-search-input" placeholder="🔍 Rechercher par nom ou référence…" oninput="renderProductsList()" />
-  </div>
-
-  <div class="products-body" id="products-body"></div>
-</div>
-
-<!-- ═══════════════════ DÉTAIL PRODUIT (overlay 2nd niveau) ═══════════════════ -->
-<div class="product-detail-overlay" id="product-detail-overlay" onclick="closeProductDetail(event)">
-  <div class="product-detail-modal" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h2 id="detail-modal-title">Détail produit</h2>
-      <button class="btn-close" onclick="closeProductDetail()">×</button>
+<!-- ═══════════════════ OVERLAY CONFIRMATION POST-ENREGISTREMENT ═══════════════════ -->
+<div class="save-confirm-overlay" id="save-confirm-overlay">
+  <div class="save-confirm-card">
+    <div class="save-confirm-icon">✓</div>
+    <div class="save-confirm-title">Produit enregistré !</div>
+    <div class="save-confirm-subtitle">Ton produit est ajouté au lot en cours.</div>
+    <div class="save-confirm-detail" id="save-confirm-detail"></div>
+    <div class="save-confirm-question">Que veux-tu faire maintenant ?</div>
+    <div class="save-confirm-actions">
+      <button class="save-confirm-btn save-confirm-btn-primary" onclick="continueAddingProduct()">
+        + Ajouter un autre produit
+      </button>
+      <button class="save-confirm-btn save-confirm-btn-secondary" onclick="finishAndExportCSV()">
+        ✓ Terminer & générer le CSV
+      </button>
     </div>
-    <div class="product-detail-body" id="product-detail-body"></div>
   </div>
 </div>
 
@@ -1801,26 +1633,33 @@
 // NAVIGATION ÉTAPES
 // ═══════════════════════════════════════════════════
 let currentStep = 1;
-const TOTAL_STEPS = 6;
-const stepCompleted = { 1: false, 2: false, 3: false, 4: false, 5: false, 6: false };
+const TOTAL_STEPS = 7;
+const stepCompleted = { 1: false, 2: false, 3: false, 4: false, 5: false, 6: false, 7: false };
 
 function goToStep(n) {
   if (n < 1 || n > TOTAL_STEPS) return;
+  // Masquer ancienne étape
   document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
   document.querySelector(`.step-content[data-step="${n}"]`).classList.add('active');
+  // Update stepper
   document.querySelectorAll('.step-pill').forEach(p => {
     const s = parseInt(p.dataset.step);
     p.classList.remove('active', 'done');
     if (s === n) p.classList.add('active');
     else if (stepCompleted[s]) p.classList.add('done');
   });
+  // Update sticky bar selon l'étape
   const stickyBar = document.getElementById('sticky-bar');
   if (n === TOTAL_STEPS) {
+    // Étape 7 = récap, un seul gros bouton "Enregistrer ce produit"
     stickyBar.innerHTML = `
       <button class="nav-btn" onclick="goToStep(currentStep - 1)">‹</button>
-      <button class="nav-btn-secondary" onclick="saveAndAdd()">+ Nouveau</button>
-      <button class="nav-btn-primary finish" onclick="saveAndFinish()">Enregistrer ✓</button>
+      <button class="nav-btn-primary finish" onclick="saveCurrentProduct()" style="font-size:15px">
+        ✓ Enregistrer ce produit
+      </button>
     `;
+    // Générer le récap visuel
+    renderProductRecap();
   } else {
     stickyBar.innerHTML = `
       <button class="nav-btn" id="btn-prev" onclick="goToStep(currentStep - 1)" ${n===1?'disabled':''}>‹</button>
@@ -1836,6 +1675,7 @@ function nextStep() {
   if (currentStep < TOTAL_STEPS) goToStep(currentStep + 1);
 }
 
+// Click sur stepper
 document.getElementById('stepper').addEventListener('click', (e) => {
   const pill = e.target.closest('.step-pill');
   if (!pill) return;
@@ -1843,7 +1683,7 @@ document.getElementById('stepper').addEventListener('click', (e) => {
 });
 
 // ═══════════════════════════════════════════════════
-// GROUPES PRINCIPAUX
+// GROUPES PRINCIPAUX (Taille / Option / Option2)
 // ═══════════════════════════════════════════════════
 const groupState = { taille: true, option: false, option2: false };
 
@@ -1854,6 +1694,7 @@ function toggleGroup(name) {
   updateSummary();
 }
 
+// Sous-groupes taille
 const subDefs = {
   adulte: ['t-50','t-52','t-54','t-56','t-58','t-60','t-62'],
   morpho: ['t-t1','t-t2','t-t3'],
@@ -1875,6 +1716,9 @@ function toggleSub(name) {
   updateSummary();
 }
 
+// ═══════════════════════════════════════════════════
+// TYPE TOGGLE
+// ═══════════════════════════════════════════════════
 document.querySelectorAll('input[name="type"]').forEach(r => {
   r.addEventListener('change', () => {
     const isDecl = document.getElementById('type-decl').checked;
@@ -1916,10 +1760,9 @@ function removePhoto(btn) {
 }
 
 // ═══════════════════════════════════════════════════
-// COULEURS (Firebase + cache local)
+// COULEURS PERSONNALISÉES (localStorage)
 // ═══════════════════════════════════════════════════
 const COLORS_KEY = 'cataleya_custom_colors';
-const COLORS_PATH = 'product_colors';
 const baseColors = ['Beige','Blanc','Bleu','Bleu marine','Bordeaux','Camel','Crème','Gris','Kaki','Mauve','Noir','Olive','Prune','Rose','Taupe','Terracotta','Vert'];
 
 function loadCustomColors() {
@@ -1927,26 +1770,6 @@ function loadCustomColors() {
 }
 function saveCustomColors(list) {
   localStorage.setItem(COLORS_KEY, JSON.stringify(list));
-  // Sync Firebase
-  if (window._firebase) {
-    const f = window._firebase;
-    f.set(f.ref(f.db, COLORS_PATH), list).catch(e => console.warn('Colors sync failed:', e));
-  }
-}
-
-async function loadColorsFromFirebase() {
-  if (!window._firebase) return;
-  try {
-    const f = window._firebase;
-    const snap = await f.get(f.ref(f.db, COLORS_PATH));
-    if (snap.exists()) {
-      const remote = snap.val();
-      if (Array.isArray(remote)) {
-        localStorage.setItem(COLORS_KEY, JSON.stringify(remote));
-        rebuildColorChips();
-      }
-    }
-  } catch (e) { console.warn('Load colors failed:', e); }
 }
 
 function rebuildColorChips() {
@@ -1965,6 +1788,7 @@ function rebuildColorChips() {
     const isChecked = checked.has(c) ? ' checked' : '';
     return `<span class="chip"><input type="checkbox" id="${id}" value="${c}"${isChecked}><label for="${id}">${c}</label></span>`;
   }).join('');
+  // Re-bind change listeners on new inputs
   container.querySelectorAll('input').forEach(i => i.addEventListener('change', updateSummary));
 }
 
@@ -2043,6 +1867,7 @@ function updateSummary() {
   }
 }
 
+// Bind summary updates sur tous les inputs
 document.querySelectorAll('input, textarea').forEach(el => {
   el.addEventListener('input', updateSummary);
   el.addEventListener('change', updateSummary);
@@ -2087,6 +1912,7 @@ function collectProducts() {
   if (dm) descriptionFR += (descriptionFR ? '\n\n' : '') + 'Matière :\n\n' + dm;
   if (dq) descriptionFR += (descriptionFR ? '\n\n' : '') + 'Pour qui ? :\n\n' + dq;
 
+  // Traduction EN si dispo
   let descriptionEN = '';
   const trad = getCurrentTranslation();
   if (trad) {
@@ -2095,6 +1921,7 @@ function collectProducts() {
     if (trad.pourQui) descriptionEN += (descriptionEN ? '\n\n' : '') + 'Who is it for?:\n\n' + trad.pourQui;
   }
 
+  // Composition : sélectionnée dans le dropdown (2 emplacements)
   let comp = '', hs = '', comp2 = '', hs2 = '';
   if (selectedComposition) {
     comp = selectedComposition.nom + ' — ' + selectedComposition.desc;
@@ -2122,9 +1949,19 @@ function collectProducts() {
 }
 
 function updateCounter() {
-  // Déprécié — plus de notion de "lot" en v13
   const counter = document.getElementById('product-counter');
-  if (counter) counter.style.display = 'none';
+  const count = document.getElementById('counter-count');
+  const text = document.getElementById('counter-text');
+  if (allProducts.length > 0) {
+    counter.style.display = 'block';
+    const n = allProducts.length;
+    count.textContent = `${n} produit${n>1?'s':''} enregistré${n>1?'s':''}`;
+    // Liste unique des noms (sans doublon par couleur)
+    const names = [...new Set(allProducts.map(p => p.nom.replace(/ (beige|blanc|bleu|bleu marine|bordeaux|camel|crème|gris|kaki|mauve|noir|olive|prune|rose|taupe|terracotta|vert).*$/i, '')))];
+    text.textContent = names.join(' · ');
+  } else {
+    counter.style.display = 'none';
+  }
 }
 
 function resetFormSilent() {
@@ -2137,16 +1974,19 @@ function resetFormSilent() {
   document.getElementById('type-decl').checked = true;
   document.getElementById('bloc-declinaisons').style.display = 'block';
 
+  // Reset composition
   selectedComposition = null;
   selectedComposition2 = null;
   document.getElementById('composition-selected').style.display = 'none';
   document.getElementById('composition2-selected').style.display = 'none';
   document.getElementById('comp-suggestions').style.display = 'none';
 
+  // Reset traduction
   translationCache = {};
   document.getElementById('translation-block').style.display = 'none';
   document.getElementById('desc-preview-en').textContent = '';
 
+  // Reset groupes
   Object.keys(groupState).forEach(k => {
     groupState[k] = false;
     document.getElementById('grp-' + k).classList.remove('active');
@@ -2154,6 +1994,7 @@ function resetFormSilent() {
   groupState.taille = true;
   document.getElementById('grp-taille').classList.add('active');
 
+  // Reset sous-groupes
   subState.adulte = true;
   document.getElementById('sb-adulte').classList.add('active');
   document.getElementById('chips-adulte').classList.add('open');
@@ -2168,6 +2009,7 @@ function resetFormSilent() {
   ['o-xs','o-ml','o-xl','o-3xl'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = true; });
   ['o2-jupe','o2-pall'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = true; });
 
+  // Reset stepper
   Object.keys(stepCompleted).forEach(k => stepCompleted[k] = false);
 
   updatePreview();
@@ -2175,93 +2017,398 @@ function resetFormSilent() {
   goToStep(1);
 }
 
+// ═══════════════════════════════════════════════════
+// RÉCAP VISUEL ÉTAPE 7 + ENREGISTREMENT
+// ═══════════════════════════════════════════════════
+function renderProductRecap() {
+  const container = document.getElementById('recap-product');
+  const nom = document.getElementById('nom').value.trim();
+  const sku = document.getElementById('sku').value.trim();
+  const prix = document.getElementById('prix').value.trim();
+  const poids = document.getElementById('poids').value.trim();
+  const cats = [...document.querySelectorAll('#categories-chips input:checked')].map(i => i.value);
+  const isDecl = document.getElementById('type-decl').checked;
+  const colors = [...document.querySelectorAll('#color-chips input:checked')].map(i => i.value);
+
+  let tailles = [], options = [], options2 = [];
+  if (isDecl) {
+    if (groupState.taille) tailles = [...document.querySelectorAll('#grp-taille input[type=checkbox]:checked')].map(i => i.value);
+    if (groupState.option) options = [...document.querySelectorAll('#grp-option input[type=checkbox]:checked')].map(i => i.value);
+    if (groupState.option2) options2 = [...document.querySelectorAll('#grp-option2 input[type=checkbox]:checked')].map(i => i.value);
+  }
+
+  const dp = document.getElementById('desc-principale').value.trim();
+  const dm = document.getElementById('desc-matiere').value.trim();
+  const dq = document.getElementById('desc-pourqui').value.trim();
+  const trad = getCurrentTranslation && getCurrentTranslation();
+  const ent = document.getElementById('entretien').value.trim();
+  const photoLinks = [...document.querySelectorAll('.photo-input')].map(i => i.value.trim()).filter(Boolean);
+  const notes = document.getElementById('notes').value.trim();
+
+  // Champs manquants à signaler
+  const missing = [];
+  if (!nom) missing.push('Nom du produit');
+  if (!prix) missing.push('Prix');
+  if (!cats.length) missing.push('Catégorie');
+
+  // Helpers
+  const row = (label, value, step, important = false) => {
+    if (!value || (Array.isArray(value) && !value.length)) {
+      return `<div class="recap-row recap-row-empty">
+        <span class="recap-label">${label}</span>
+        <span class="recap-value-empty">— vide —</span>
+        <button class="recap-edit" onclick="goToStep(${step})">Modifier</button>
+      </div>`;
+    }
+    const display = Array.isArray(value) ? value.join(', ') : value;
+    return `<div class="recap-row">
+      <span class="recap-label">${label}</span>
+      <span class="recap-value${important ? ' recap-important' : ''}">${display}</span>
+      <button class="recap-edit" onclick="goToStep(${step})">Modifier</button>
+    </div>`;
+  };
+
+  let html = '';
+
+  // Alerte champs manquants
+  if (missing.length) {
+    html += `<div class="card" style="background:#FFF1ED;border-color:var(--danger);margin-bottom:14px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:20px">⚠️</span>
+        <div style="flex:1">
+          <div style="font-weight:600;color:var(--danger);margin-bottom:4px">Champs obligatoires manquants</div>
+          <div style="font-size:13px;color:var(--ink-soft);line-height:1.5">${missing.join(' · ')}</div>
+          <button onclick="goToStep(1)" style="margin-top:10px;background:var(--danger);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Compléter maintenant</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Carte 1 : Identification
+  html += `<div class="card">
+    <div class="card-title">Identification</div>
+    ${row('Nom', nom, 1, true)}
+    ${row('Référence', sku, 1)}
+    ${row('Prix', prix ? prix + ' €' : '', 1, true)}
+    ${row('Poids', poids ? poids + ' kg' : '', 1)}
+    ${row('Catégorie(s)', cats, 1, true)}
+  </div>`;
+
+  // Carte 2 : Type & déclinaisons
+  html += `<div class="card">
+    <div class="card-title">Type & déclinaisons</div>
+    ${row('Type', isDecl ? 'Avec déclinaisons' : 'Produit simple', 2)}
+    ${isDecl ? row('Tailles', tailles, 2) : ''}
+    ${isDecl ? row('Option', options, 2) : ''}
+    ${isDecl ? row('Option2', options2, 2) : ''}
+  </div>`;
+
+  // Carte 3 : Couleurs
+  html += `<div class="card">
+    <div class="card-title">Couleurs</div>
+    ${colors.length ? row('Couleurs', colors, 3) : `<div class="recap-row recap-row-empty">
+      <span class="recap-label">Aucune couleur</span>
+      <span class="recap-value-empty" style="font-style:italic">Le produit sera créé en 1 seule ligne</span>
+      <button class="recap-edit" onclick="goToStep(3)">Ajouter</button>
+    </div>`}
+    ${colors.length > 1 ? `<div style="font-size:11px;color:var(--terracotta);margin-top:6px;padding-left:6px">→ ${colors.length} produits seront créés (1 par couleur)</div>` : ''}
+  </div>`;
+
+  // Carte 4 : Description
+  html += `<div class="card">
+    <div class="card-title">Description</div>
+    ${row('Description', dp, 4)}
+    ${row('Matière', dm, 4)}
+    ${row('Pour qui', dq, 4)}
+    ${trad ? `<div class="recap-row">
+      <span class="recap-label">🇬🇧 Traduction EN</span>
+      <span class="recap-value" style="color:var(--success);font-weight:600">✓ Disponible</span>
+      <button class="recap-edit" onclick="goToStep(4)">Voir</button>
+    </div>` : `<div class="recap-row recap-row-empty">
+      <span class="recap-label">🇬🇧 Traduction EN</span>
+      <span class="recap-value-empty">— non traduit —</span>
+      <button class="recap-edit" onclick="goToStep(4)">Traduire</button>
+    </div>`}
+  </div>`;
+
+  // Carte 5 : Composition & photos
+  const compMain = selectedComposition ? `${selectedComposition.nom} (HS: ${selectedComposition.hs})` : '';
+  const compSec = selectedComposition2 ? `${selectedComposition2.nom} (HS: ${selectedComposition2.hs})` : '';
+  html += `<div class="card">
+    <div class="card-title">Composition & photos</div>
+    ${row('Tissu principal', compMain, 5, true)}
+    ${row('Tissu secondaire', compSec, 5)}
+    ${row('Entretien', ent, 5)}
+    ${row('Photos', photoLinks.length ? `${photoLinks.length} photo${photoLinks.length>1?'s':''}` : '', 5)}
+  </div>`;
+
+  // Carte 6 : Notes
+  if (notes) {
+    html += `<div class="card">
+      <div class="card-title">Notes pour Sousou</div>
+      <div style="font-size:13px;line-height:1.6;color:var(--ink-soft);font-style:italic;padding:6px;background:var(--cream);border-radius:8px">${notes.replace(/</g, '&lt;')}</div>
+      <button onclick="goToStep(6)" style="margin-top:8px;background:transparent;border:1px solid var(--line);color:var(--ink-muted);padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">Modifier</button>
+    </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// Cette fonction remplace l'ancien "saveAndAdd" depuis l'étape 7
+function saveCurrentProduct() {
+  const products = collectProducts();
+  if (!products) return; // collectProducts affiche déjà le toast d'erreur
+
+  // Sauvegarder
+  allProducts.push(...products);
+  updateCounter();
+  acSaveCurrentFields();
+
+  // Supprimer le brouillon Firebase associé
+  const draftIdToDelete = currentDraftId;
+  if (draftIdToDelete && fb) {
+    fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
+    currentDraftId = null;
+  }
+
+  // Afficher l'écran de confirmation
+  showSaveConfirmation(products);
+}
+
+// Alias pour compat avec anciens appels (autocomplétion, etc.)
 function saveAndAdd() {
   const products = collectProducts();
   if (!products) return;
+  allProducts.push(...products);
+  updateCounter();
   acSaveCurrentFields();
-  const nomProduit = document.getElementById('nom').value.trim() || 'Produit';
-  // Sauvegarder en Firebase comme produit finalisé (groupe)
-  saveFinalizedProduct(products);
-  showToast(`✓ ${nomProduit} ajouté · retrouve-le dans 📦 Mes produits`);
-  // Supprimer le brouillon associé
-  const draftIdToDelete = currentDraftId;
-  currentDraftId = null;
-  if (draftIdToDelete && fb) {
-    fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
-    loadDraftsList();
-  }
+  showToast(`✓ ${products.length} ligne${products.length>1?'s':''} enregistrée${products.length>1?'s':''}`);
   resetFormSilent();
 }
-
 function saveAndFinish() {
   const nom = document.getElementById('nom').value.trim();
-  if (!nom) {
-    showToast('⚠ Remplis au moins le nom du produit', 'error');
-    goToStep(1);
+  if (nom) {
+    const products = collectProducts();
+    if (!products) return;
+    allProducts.push(...products);
+    updateCounter();
+  }
+  if (!allProducts.length) {
+    showToast('⚠ Aucun produit enregistré', 'error');
     return;
   }
-  const products = collectProducts();
-  if (!products) return;
-  acSaveCurrentFields();
-  saveFinalizedProduct(products);
-  showToast(`✓ ${nom} ajouté · retrouve-le dans 📦 Mes produits`);
-  // Supprimer le brouillon associé
-  const draftIdToDelete = currentDraftId;
-  currentDraftId = null;
-  if (draftIdToDelete && fb) {
-    fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
-    loadDraftsList();
-  }
+  generateCSV();
+}
+
+function showSaveConfirmation(products) {
+  const overlay = document.getElementById('save-confirm-overlay');
+  const productsList = products.map(p => p.nom).join('<br>');
+  const lineCount = products.length;
+  document.getElementById('save-confirm-detail').innerHTML = `
+    <strong>${lineCount} ligne${lineCount>1?'s':''}</strong> ajoutée${lineCount>1?'s':''} au lot :<br>
+    <em style="color:var(--bordeaux);font-family:'Cormorant Garamond',serif;font-size:16px">${productsList}</em>
+  `;
+  overlay.classList.add('active');
+  loadDraftsList();
+}
+
+function closeSaveConfirmation() {
+  document.getElementById('save-confirm-overlay').classList.remove('active');
+}
+
+function continueAddingProduct() {
+  closeSaveConfirmation();
   resetFormSilent();
+  showToast('Prêt pour le produit suivant');
+}
+
+function finishAndExportCSV() {
+  closeSaveConfirmation();
+  if (!allProducts.length) {
+    showToast('⚠ Aucun produit enregistré', 'error');
+    return;
+  }
+  generateCSV();
 }
 
 // ═══════════════════════════════════════════════════
 // CSV
 // ═══════════════════════════════════════════════════
-let csvString = '';
+let csvProductsString = '';
+let csvCombinationsString = '';
 
-function csvEscape(val) {
-  if (!val) return '';
-  if (val.includes('"') || val.includes(',') || val.includes('\n') || val.includes(';')) {
+function csvEscape(val, sep) {
+  if (val === null || val === undefined) return '';
+  val = String(val);
+  if (val.includes('"') || val.includes(sep) || val.includes('\n')) {
     return '"' + val.replace(/"/g, '""') + '"';
   }
   return val;
 }
 
-function generateCSV() {
-  const headers = ['Nom','Référence','Catégorie(s)','Prix (€)','Poids (kg)','Couleur','Type','Tailles','Option','Option2','Description FR','Description EN','Tissu principal','Code HS principal','Tissu secondaire','Code HS secondaire','Entretien','Photos','Notes'];
-  const rows = allProducts.map(p => [
-    p.nom, p.sku, p.cat, p.prix, p.poids, p.couleur, p.type, p.tailles, p.options, p.options2, p.descriptionFR, p.descriptionEN, p.comp, p.hs, p.comp2 || '', p.hs2 || '', p.ent, p.photos, p.notes
-  ].map(csvEscape).join(','));
+// Génère un slug URL à partir d'un nom (ex. "Ensemble Louny en Lin crème" → "ensemble-louny-en-lin-creme")
+function slugify(str) {
+  return String(str || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retire accents
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')                      // espaces et caractères spéciaux → -
+    .replace(/^-+|-+$/g, '');                          // retire tirets en début/fin
+}
 
-  csvString = headers.join(',') + '\n' + rows.join('\n');
-  document.getElementById('csv-content').textContent = csvString;
+// ───────────────────────────────────────────
+// CSV 1 — PRODUITS (format PrestaShop minimal)
+// Colonnes : Active (0/1) ; Name * ; Categories ; Price tax excluded ; Weight ; Summary ; URL rewritten
+// ───────────────────────────────────────────
+function generateProductsCSV() {
+  const headers = ['Active (0/1)', 'Name *', 'Categories (x,y,z...)', 'Price tax excluded', 'Weight', 'Summary', 'URL rewritten'];
+  const SEP = ';';
+
+  // Dédupliquer : 1 ligne par produit racine (= par couleur)
+  // Le nom porte déjà la couleur, donc chaque ligne unique correspond à 1 produit PrestaShop
+  const seen = new Set();
+  const rows = [];
+
+  allProducts.forEach(p => {
+    if (seen.has(p.nom)) return;
+    seen.add(p.nom);
+
+    // Le summary = description principale uniquement (sans les sections matière/pour qui)
+    const dpMatch = (p.descriptionFR || '').match(/^Description :\n\n([\s\S]*?)(?:\n\nMatière|$)/);
+    const summary = dpMatch ? dpMatch[1].trim() : (p.descriptionFR || '').replace(/Description :\n\n/g, '').trim();
+
+    rows.push([
+      '1',                                    // Active
+      p.nom,                                  // Name
+      p.cat,                                  // Categories (déjà séparées par virgules)
+      p.prix,                                 // Price tax excluded
+      p.poids || '',                          // Weight (peut être vide)
+      summary,                                // Summary
+      slugify(p.nom)                          // URL rewritten
+    ].map(v => csvEscape(v, SEP)).join(SEP));
+  });
+
+  csvProductsString = headers.join(SEP) + '\n' + rows.join('\n');
+  return csvProductsString;
+}
+
+// ───────────────────────────────────────────
+// CSV 2 — COMBINAISONS (déclinaisons PrestaShop)
+// Colonnes : Product ID* ; Attribute (Name:Type:Position)* ; Value (Value:Position)* ; Quantity ; Default
+// Product ID = NOM du produit (PrestaShop fait le matching automatique)
+// ───────────────────────────────────────────
+function generateCombinationsCSV() {
+  const headers = ['Product ID*', 'Attribute (Name:Type:Position)*', 'Value (Value:Position)*', 'Quantity', 'Default (0 = No, 1 = Yes)'];
+  const SEP = ';';
+  const QUANTITY = 30;
+  const rows = [];
+  const seen = new Set();
+
+  allProducts.forEach(p => {
+    if (seen.has(p.nom)) return;
+    seen.add(p.nom);
+    if (p.type !== 'Déclinaisons') return; // pas de combinaisons pour produit simple
+
+    // Construire la liste des attributs actifs avec leurs valeurs
+    const activeAttrs = [];
+    if (p.tailles) activeAttrs.push({ name: 'Taille personnalisée', type: 'select', values: p.tailles.split(' | ').filter(Boolean) });
+    if (p.options) activeAttrs.push({ name: 'Option', type: 'select', values: p.options.split(' | ').filter(Boolean) });
+    if (p.options2) activeAttrs.push({ name: 'Option2', type: 'select', values: p.options2.split(' | ').filter(Boolean) });
+
+    if (!activeAttrs.length) return;
+
+    // Produit cartésien des valeurs (ex. tailles × options × options2)
+    const combinations = cartesianProduct(activeAttrs.map(a => a.values));
+
+    // Header attribut (constant pour ce produit)
+    const attrHeader = activeAttrs.map((a, i) => `${a.name}:${a.type}:${i}`).join(', ');
+
+    let firstCombination = true;
+    combinations.forEach(combo => {
+      const valueStr = combo.map((v, i) => `${v}:${i}`).join(', ');
+      rows.push([
+        p.nom,                                              // Product ID = nom (matching auto)
+        attrHeader,                                         // Attribute name:type:position
+        valueStr,                                           // Value:position
+        QUANTITY,                                           // Quantity = 30
+        firstCombination ? '1' : '0'                        // Première combinaison = par défaut
+      ].map(v => csvEscape(v, SEP)).join(SEP));
+      firstCombination = false;
+    });
+  });
+
+  csvCombinationsString = headers.join(SEP) + '\n' + rows.join('\n');
+  return csvCombinationsString;
+}
+
+// Produit cartésien : [[1,2],[A,B]] → [[1,A],[1,B],[2,A],[2,B]]
+function cartesianProduct(arrays) {
+  return arrays.reduce((acc, curr) => {
+    const result = [];
+    acc.forEach(a => {
+      curr.forEach(b => {
+        result.push([...a, b]);
+      });
+    });
+    return result;
+  }, [[]]);
+}
+
+function generateCSV() {
+  generateProductsCSV();
+  generateCombinationsCSV();
+
+  // Affichage dans le modal : aperçu des 2 CSV
+  const previewHTML = `
+    <div style="margin-bottom:18px">
+      <div style="font-size:12px;font-weight:700;color:var(--bordeaux);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase">📦 CSV 1 — Produits</div>
+      <div class="csv-content" style="max-height:200px;overflow-y:auto">${csvProductsString.replace(/</g, '&lt;')}</div>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--terracotta);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase">🧵 CSV 2 — Combinaisons (tailles & options)</div>
+      <div class="csv-content" style="max-height:200px;overflow-y:auto">${csvCombinationsString ? csvCombinationsString.replace(/</g, '&lt;') : '(aucune combinaison — produits simples uniquement)'}</div>
+    </div>
+  `;
+  document.getElementById('csv-content').innerHTML = previewHTML;
+
   renderRecapList();
   document.getElementById('overlay').classList.add('active');
   switchRecapTab('list');
 }
 
-function downloadCSV() {
-  const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
+function downloadCSV(which) {
+  // which = 'products' ou 'combinations' ou (vide) = les 2
   const date = new Date().toISOString().split('T')[0];
-  a.download = `cataleya_produits_${date}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('✓ CSV téléchargé');
+
+  if (which === 'products' || !which) {
+    const blob = new Blob(['\uFEFF' + csvProductsString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cataleya_produits_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  if ((which === 'combinations' || !which) && csvCombinationsString) {
+    // Petit délai pour pas que les 2 téléchargements se chevauchent
+    setTimeout(() => {
+      const blob = new Blob(['\uFEFF' + csvCombinationsString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cataleya_combinaisons_${date}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 300);
+  }
+
+  showToast(which === 'products' ? '✓ CSV produits téléchargé' : which === 'combinations' ? '✓ CSV combinaisons téléchargé' : '✓ Les 2 CSV téléchargés');
 }
 
-function copyCSV() {
-  navigator.clipboard.writeText(csvString).then(() => {
-    const btn = document.getElementById('btn-copy');
-    btn.textContent = '✓ Copié';
-    btn.classList.add('copied');
-    setTimeout(() => {
-      btn.textContent = '📋 Copier';
-      btn.classList.remove('copied');
-    }, 2500);
+function copyCSV(which) {
+  const txt = which === 'combinations' ? csvCombinationsString : csvProductsString;
+  navigator.clipboard.writeText(txt).then(() => {
+    showToast(`✓ CSV ${which === 'combinations' ? 'combinaisons' : 'produits'} copié`);
   });
 }
 
@@ -2274,38 +2421,43 @@ function closeOverlay(e) {
 function resetAll() {
   if (!confirm('Effacer tous les produits enregistrés et recommencer ?')) return;
   allProducts.length = 0;
-  csvString = '';
+  csvProductsString = '';
+  csvCombinationsString = '';
   updateCounter();
   resetFormSilent();
   document.getElementById('overlay').classList.remove('active');
   showToast('Nouveau lot prêt');
-  if (currentDraftId && fb) {
-    fb.remove(fb.ref(fb.db, 'product_drafts/' + currentDraftId)).catch(()=>{});
-    currentDraftId = null;
-    loadDraftsList();
-  }
 }
 
 // ═══════════════════════════════════════════════════
-// AUTOCOMPLÉTION (Realtime Database)
+// AUTOCOMPLÉTION (Realtime Database — partagé tous appareils)
 // ═══════════════════════════════════════════════════
-const AC_KEY_LOCAL = 'cataleya_autocomplete';
-const AC_PATH = 'product_autocomplete';
+const AC_KEY_LOCAL = 'cataleya_autocomplete'; // fallback si pas de Firebase
+const AC_PATH = 'product_autocomplete'; // nœud Firebase
 
+// Cache en mémoire (chargé une fois, mis à jour à chaque ajout)
 let acCache = {};
 let acCacheLoaded = false;
 
 async function acLoadFromFirebase() {
+  // Toujours charger d'abord le cache local pour avoir des suggestions immédiates
   try { acCache = JSON.parse(localStorage.getItem(AC_KEY_LOCAL)) || {}; } catch { acCache = {}; }
-  if (!fb) { acCacheLoaded = true; return; }
+
+  if (!fb) {
+    acCacheLoaded = true;
+    return;
+  }
   try {
     const snap = await fb.get(fb.ref(fb.db, AC_PATH));
     if (snap.exists()) {
-      acCache = snap.val() || {};
+      const remote = snap.val() || {};
+      // Fusionner : Firebase écrase le local
+      acCache = remote;
+      // Sauver aussi en local pour les futures sessions hors-ligne
       localStorage.setItem(AC_KEY_LOCAL, JSON.stringify(acCache));
     }
   } catch (e) {
-    console.warn('AC load from Firebase failed:', e);
+    console.warn('AC load from Firebase failed, using local cache:', e);
   }
   acCacheLoaded = true;
 }
@@ -2313,13 +2465,18 @@ async function acLoadFromFirebase() {
 async function acAdd(fieldId, value) {
   if (!value || value.length < 2) return;
   if (!acCache[fieldId]) acCache[fieldId] = [];
+  // Dédup case-insensitive
   if (acCache[fieldId].some(v => v.toLowerCase() === value.toLowerCase())) return;
   acCache[fieldId].unshift(value);
   if (acCache[fieldId].length > 30) acCache[fieldId].pop();
+
+  // Sauvegarde locale (instantané)
   localStorage.setItem(AC_KEY_LOCAL, JSON.stringify(acCache));
+
+  // Sauvegarde Firebase (asynchrone, sans bloquer l'UI)
   if (fb) {
     fb.set(fb.ref(fb.db, AC_PATH + '/' + fieldId), acCache[fieldId]).catch(e => {
-      console.warn('AC sync failed:', e);
+      console.warn('AC sync to Firebase failed:', e);
     });
   }
 }
@@ -2331,6 +2488,17 @@ function acGet(fieldId, query) {
   return list.filter(v => v.toLowerCase().includes(q)).slice(0, 8);
 }
 
+const origSaveAndAdd_AC = saveAndAdd;
+saveAndAdd = function() {
+  acSaveCurrentFields();
+  origSaveAndAdd_AC();
+};
+const origSaveAndFinish_AC = saveAndFinish;
+saveAndFinish = function() {
+  acSaveCurrentFields();
+  origSaveAndFinish_AC();
+};
+
 function acSaveCurrentFields() {
   document.querySelectorAll('[data-ac]').forEach(el => {
     const val = el.value.trim();
@@ -2338,6 +2506,7 @@ function acSaveCurrentFields() {
   });
 }
 
+// Charger l'historique d'autocomplétion une fois Firebase prêt
 function loadAutocompleteHistory() {
   acLoadFromFirebase();
 }
@@ -2346,8 +2515,6 @@ function initAutocomplete() {
   const fields = [
     { sel: '#nom', key: 'nom' },
     { sel: '#sku', key: 'sku' },
-    { sel: '#prix', key: 'prix' },
-    { sel: '#poids', key: 'poids' },
     { sel: '#desc-principale', key: 'desc-principale' },
     { sel: '#desc-matiere', key: 'desc-matiere' },
     { sel: '#desc-pourqui', key: 'desc-pourqui' },
@@ -2369,6 +2536,8 @@ function initAutocomplete() {
     list.className = 'ac-list';
     wrapper.appendChild(list);
 
+    let activeIdx = -1;
+
     function showSuggestions() {
       const suggestions = acGet(key, el.value.trim());
       if (!suggestions.length) { list.classList.remove('visible'); return; }
@@ -2376,6 +2545,7 @@ function initAutocomplete() {
         `<div class="ac-item" data-idx="${i}">${s.length > 80 ? s.substring(0, 80) + '…' : s}</div>`
       ).join('');
       list.classList.add('visible');
+      activeIdx = -1;
       list.querySelectorAll('.ac-item').forEach(item => {
         item.addEventListener('mousedown', (e) => {
           e.preventDefault();
@@ -2404,14 +2574,13 @@ function showToast(msg, type = 'success') {
   toast.style.background = type === 'error' ? 'var(--danger)' : 'var(--ink)';
   toast.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
 }
 
 // ═══════════════════════════════════════════════════
-// CATÉGORIES (Firebase + cache local)
+// CATÉGORIES PERSONNALISÉES (localStorage)
 // ═══════════════════════════════════════════════════
 const CAT_KEY = 'cataleya_custom_categories';
-const CAT_PATH = 'product_categories';
 const baseCategories = [
   'Abayas & Robes', 'Sous Abayas', 'Ensembles', 'New Collection', 'Soldes',
   'Hijabs & Accessoires', 'Jupes-Palazzos', 'Manteaux & Trenchs',
@@ -2421,28 +2590,7 @@ const baseCategories = [
 function loadCustomCategories() {
   try { return JSON.parse(localStorage.getItem(CAT_KEY)) || []; } catch { return []; }
 }
-function saveCustomCategories(list) {
-  localStorage.setItem(CAT_KEY, JSON.stringify(list));
-  if (window._firebase) {
-    const f = window._firebase;
-    f.set(f.ref(f.db, CAT_PATH), list).catch(e => console.warn('Cats sync failed:', e));
-  }
-}
-
-async function loadCategoriesFromFirebase() {
-  if (!window._firebase) return;
-  try {
-    const f = window._firebase;
-    const snap = await f.get(f.ref(f.db, CAT_PATH));
-    if (snap.exists()) {
-      const remote = snap.val();
-      if (Array.isArray(remote)) {
-        localStorage.setItem(CAT_KEY, JSON.stringify(remote));
-        rebuildCategoryChips();
-      }
-    }
-  } catch (e) { console.warn('Load cats failed:', e); }
-}
+function saveCustomCategories(list) { localStorage.setItem(CAT_KEY, JSON.stringify(list)); }
 
 function rebuildCategoryChips() {
   const container = document.getElementById('categories-chips');
@@ -2482,7 +2630,7 @@ function addCustomCategory() {
 rebuildCategoryChips();
 
 // ═══════════════════════════════════════════════════
-// COMPOSITIONS
+// COMPOSITIONS (35 tissus avec codes HS)
 // ═══════════════════════════════════════════════════
 const COMPOSITIONS = [
   { id: 25, nom: 'Crêpe de soie coréenne mate', desc: '100% soie tissée', hs: '5007 20 11', keywords: ['crepe','soie','coreenne','mate','silk'] },
@@ -2621,6 +2769,7 @@ function clearComposition2() {
   scheduleAutoSave();
 }
 
+// Searchable dropdown : factorisé pour les 2 emplacements
 function setupCompositionSearch(inputId, listId, selectFn) {
   const input = document.getElementById(inputId);
   const list = document.getElementById(listId);
@@ -2654,8 +2803,9 @@ setupCompositionSearch('composition-search', 'composition-list', 'selectComposit
 setupCompositionSearch('composition2-search', 'composition2-list', 'selectComposition2');
 
 // ═══════════════════════════════════════════════════
-// TRADUCTION FR → EN
+// TRADUCTION FR → EN (via Firebase Cloud Function)
 // ═══════════════════════════════════════════════════
+// IMPORTANT : remplacer cette URL après déploiement de la Cloud Function
 const TRANSLATE_URL = 'https://europe-west1-usine-cataleya.cloudfunctions.net/translateProduct';
 
 let translationCache = {};
@@ -2685,6 +2835,7 @@ async function translateDescription() {
 
   try {
     if (TRANSLATE_URL.includes('YOUR-FUNCTION-URL')) {
+      // Mode dev : pas encore déployé
       throw new Error('CLOUD_FUNCTION_NOT_DEPLOYED');
     }
 
@@ -2702,7 +2853,7 @@ async function translateDescription() {
   } catch (e) {
     console.error('Translation error:', e);
     if (e.message === 'CLOUD_FUNCTION_NOT_DEPLOYED') {
-      showToast('⚠ Cloud Function pas encore déployée', 'error');
+      showToast('⚠ Cloud Function pas encore déployée — voir consignes Sousou', 'error');
     } else {
       showToast('⚠ Erreur de traduction : ' + e.message, 'error');
     }
@@ -2731,7 +2882,7 @@ function getCurrentTranslation() {
 }
 
 // ═══════════════════════════════════════════════════
-// VUE LISTE DANS LE MODAL CSV
+// VUE LISTE DES PRODUITS DANS LE MODAL
 // ═══════════════════════════════════════════════════
 function switchRecapTab(tab) {
   const tabList = document.getElementById('tab-list');
@@ -2767,6 +2918,7 @@ function renderRecapList() {
     return;
   }
 
+  // Grouper par produit "racine" (nom sans la couleur)
   const groups = {};
   allProducts.forEach((p, idx) => {
     const baseName = p.nom.replace(/ (beige|blanc|bleu|bleu marine|bordeaux|camel|crème|gris|kaki|mauve|noir|olive|prune|rose|taupe|terracotta|vert)([^a-z].*)?$/i, '').trim();
@@ -2806,6 +2958,7 @@ function removeProductLine(idx) {
 
 function removeProductGroup(baseName) {
   if (!confirm(`Supprimer toutes les déclinaisons de « ${baseName} » ?`)) return;
+  // Retirer toutes les lignes dont le nom commence par baseName
   for (let i = allProducts.length - 1; i >= 0; i--) {
     const cleanName = allProducts[i].nom.replace(/ (beige|blanc|bleu|bleu marine|bordeaux|camel|crème|gris|kaki|mauve|noir|olive|prune|rose|taupe|terracotta|vert)([^a-z].*)?$/i, '').trim();
     if (cleanName === baseName) allProducts.splice(i, 1);
@@ -2856,9 +3009,6 @@ function onAccessGranted() {
   if (!fb && window._firebase) fb = window._firebase;
   loadDraftsList();
   loadAutocompleteHistory();
-  loadFinalizedList();
-  loadColorsFromFirebase();
-  loadCategoriesFromFirebase();
 }
 
 // ═══════════════════════════════════════════════════
@@ -2870,9 +3020,6 @@ if (!fb) window.addEventListener('firebase-ready', () => {
   if (localStorage.getItem(ACCESS_KEY) === 'yes') {
     loadDraftsList();
     loadAutocompleteHistory();
-    loadFinalizedList();
-    loadColorsFromFirebase();
-    loadCategoriesFromFirebase();
   }
 });
 
@@ -3030,7 +3177,7 @@ async function saveDraft() {
     if (!currentDraftId) currentDraftId = generateDraftId();
     const nom = state.nom.trim() || '(Sans nom)';
     const now = Date.now();
-    const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
+    const expiresAt = now + 30 * 24 * 60 * 60 * 1000; // 30 jours en ms
 
     await fb.set(fb.ref(fb.db, 'product_drafts/' + currentDraftId), {
       id: currentDraftId,
@@ -3057,7 +3204,9 @@ async function loadDraftsList() {
       const data = snap.val();
       Object.keys(data).forEach(key => {
         const d = data[key];
+        // Filtrer ceux expirés (auto-suppression côté client)
         if (d.expiresAt && d.expiresAt < now) {
+          // Supprimer en arrière-plan
           fb.remove(fb.ref(fb.db, 'product_drafts/' + key)).catch(()=>{});
           return;
         }
@@ -3065,14 +3214,14 @@ async function loadDraftsList() {
       });
     }
 
+    // Tri par updatedAt décroissant
     drafts.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    cachedDrafts = drafts;
+    // Limiter à 20
     const visibleDrafts = drafts.slice(0, 20);
 
     const banner = document.getElementById('drafts-banner');
     const countEl = document.getElementById('drafts-count');
     const list = document.getElementById('drafts-list');
-    document.getElementById('ptab-count-drafts').textContent = drafts.length;
 
     if (!visibleDrafts.length) { banner.style.display = 'none'; return; }
 
@@ -3095,11 +3244,6 @@ async function loadDraftsList() {
         </div>
       </div>`;
     }).join('');
-
-    // Si la vue Mes produits est ouverte sur l'onglet brouillons, on rafraîchit
-    if (document.getElementById('products-overlay').classList.contains('active') && currentProductsTab === 'drafts') {
-      renderProductsList();
-    }
   } catch (e) {
     console.error('Load drafts error:', e);
   }
@@ -3136,7 +3280,6 @@ async function loadDraft(id) {
     showToast(`Brouillon « ${data.nom} » chargé`);
     document.getElementById('drafts-list').classList.remove('open');
     document.getElementById('drafts-toggle-icon').style.transform = 'rotate(0)';
-    closeProductsView(); // Fermer la vue Mes produits si ouverte
     loadDraftsList();
   } catch (e) { console.error('Load draft error:', e); showToast('Erreur chargement', 'error'); }
 }
@@ -3147,7 +3290,9 @@ async function viewDraft(id) {
     const snap = await fb.get(fb.ref(fb.db, 'product_drafts/' + id));
     if (!snap.exists()) return;
     const data = snap.val();
-    showProductDetail({ ...data, _kind: 'draft' });
+    const s = data.state;
+    const summary = `📋 ${data.nom}\n\nNom : ${s.nom || '—'}\nSKU : ${s.sku || '—'}\nPrix : ${s.prix || '—'} €\nPoids : ${s.poids || '—'} kg\nCatégories : ${(s.categories || []).join(', ') || '—'}\nCouleurs : ${(s.couleurs || []).join(', ') || '—'}\nTailles : ${(s.tailles || []).join(', ') || '—'}\n\nDescription :\n${s.descPrincipale || '—'}\n\nMatière : ${s.descMatiere || '—'}\n\nPour qui :\n${s.descPourqui || '—'}\n\nEntretien : ${s.entretien || '—'}\nNotes : ${s.notes || '—'}`;
+    alert(summary);
   } catch (e) { showToast('Erreur', 'error'); }
 }
 
@@ -3178,488 +3323,26 @@ document.querySelectorAll('input, textarea').forEach(el => {
   el.addEventListener('change', scheduleAutoSave);
 });
 
-// ═══════════════════════════════════════════════════
-// FIREBASE PRODUITS FINALISÉS
-// ═══════════════════════════════════════════════════
-let cachedDrafts = [];
-let cachedFinalized = [];
-let currentProductsTab = 'drafts';
-
-function generateFinalizedId() { return 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8); }
-
-// On sauvegarde un "groupe" finalisé : la fiche produit telle que saisie (avant explosion par couleur)
-async function saveFinalizedProduct(products) {
-  if (!fb || !products || !products.length) return;
-  try {
-    // On capture aussi le state du formulaire pour pouvoir éditer plus tard
-    const state = captureFormState();
-    const id = generateFinalizedId();
-    const baseName = state.nom.trim() || products[0].nom;
-    await fb.set(fb.ref(fb.db, 'product_finalized/' + id), {
-      id,
-      nom: baseName,
-      state,
-      products,
-      createdAt: Date.now()
-    });
-    loadFinalizedList();
-  } catch (e) {
-    console.error('Save finalized error:', e);
-    showToast('⚠ Sauvegarde Firebase échouée', 'error');
-  }
-}
-
-async function loadFinalizedList() {
-  if (!fb) return;
-  try {
-    const snap = await fb.get(fb.ref(fb.db, 'product_finalized'));
-    const items = [];
-    if (snap.exists()) {
-      const data = snap.val();
-      Object.keys(data).forEach(key => items.push(data[key]));
-    }
-    items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    cachedFinalized = items;
-    document.getElementById('ptab-count-finalized').textContent = items.length;
-
-    if (document.getElementById('products-overlay').classList.contains('active') && currentProductsTab === 'finalized') {
-      renderProductsList();
-    }
-  } catch (e) {
-    console.error('Load finalized error:', e);
-  }
-}
-
-async function deleteFinalized(id) {
-  if (!confirm('Supprimer ce produit finalisé ? Cette action est définitive.')) return;
-  if (!fb) return;
-  try {
-    await fb.remove(fb.ref(fb.db, 'product_finalized/' + id));
-    loadFinalizedList();
-    showToast('Produit supprimé');
-  } catch (e) { showToast('Erreur', 'error'); }
-}
-
-async function editFinalized(id) {
-  if (!fb) return;
-  try {
-    const snap = await fb.get(fb.ref(fb.db, 'product_finalized/' + id));
-    if (!snap.exists()) { showToast('Produit introuvable', 'error'); return; }
-    const data = snap.val();
-    if (!confirm(`Éditer « ${data.nom} » ? Une copie sera créée comme brouillon — l'original reste dans Finalisés.`)) return;
-    // On charge dans le formulaire, mais en créant un NOUVEAU brouillon (pas en modifiant le finalisé)
+const _origSaveAndAdd = saveAndAdd;
+saveAndAdd = function() {
+  const draftIdToDelete = currentDraftId;
+  _origSaveAndAdd();
+  if (draftIdToDelete && fb) {
+    fb.remove(fb.ref(fb.db, 'product_drafts/' + draftIdToDelete)).catch(()=>{});
     currentDraftId = null;
-    restoreFormState(data.state);
-    showToast(`« ${data.nom} » chargé pour édition`);
-    closeProductsView();
-  } catch (e) { showToast('Erreur', 'error'); }
-}
-
-// ═══════════════════════════════════════════════════
-// VUE MES PRODUITS (overlay plein écran)
-// ═══════════════════════════════════════════════════
-function openProductsView() {
-  document.getElementById('products-overlay').classList.add('active');
-  document.body.style.overflow = 'hidden';
-  // Recharger pour avoir les données fraîches
-  loadDraftsList();
-  loadFinalizedList();
-  renderProductsList();
-}
-
-function closeProductsView() {
-  document.getElementById('products-overlay').classList.remove('active');
-  document.body.style.overflow = '';
-}
-
-function switchProductsTab(tab) {
-  currentProductsTab = tab;
-  document.getElementById('ptab-drafts').classList.toggle('active', tab === 'drafts');
-  document.getElementById('ptab-finalized').classList.toggle('active', tab === 'finalized');
-  // Reset recherche
-  document.getElementById('products-search-input').value = '';
-  renderProductsList();
-}
-
-function renderProductsList() {
-  const body = document.getElementById('products-body');
-  const search = document.getElementById('products-search-input').value.trim().toLowerCase();
-  const items = currentProductsTab === 'drafts' ? cachedDrafts : cachedFinalized;
-
-  if (!items.length) {
-    body.innerHTML = `
-      <div class="products-empty">
-        <div class="products-empty-icon">${currentProductsTab === 'drafts' ? '📁' : '✓'}</div>
-        <div class="products-empty-title">Aucun ${currentProductsTab === 'drafts' ? 'brouillon' : 'produit finalisé'}</div>
-        <div class="products-empty-desc">${currentProductsTab === 'drafts' ? 'Les produits que tu commences apparaîtront ici.' : 'Les produits que tu finalises seront stockés ici.'}</div>
-      </div>`;
-    return;
+    loadDraftsList();
   }
+};
 
-  // Filtre recherche (nom + sku)
-  const filtered = items.filter(item => {
-    if (!search) return true;
-    const nom = (item.nom || '').toLowerCase();
-    const sku = (item.state && item.state.sku || '').toLowerCase();
-    return nom.includes(search) || sku.includes(search);
-  });
-
-  if (!filtered.length) {
-    body.innerHTML = `
-      <div class="products-empty">
-        <div class="products-empty-icon">🔍</div>
-        <div class="products-empty-title">Aucun résultat</div>
-        <div class="products-empty-desc">Aucun produit ne correspond à « ${search} ».</div>
-      </div>`;
-    return;
+const _origResetAll = resetAll;
+resetAll = function() {
+  _origResetAll();
+  if (currentDraftId && fb) {
+    fb.remove(fb.ref(fb.db, 'product_drafts/' + currentDraftId)).catch(()=>{});
+    currentDraftId = null;
+    loadDraftsList();
   }
-
-  body.innerHTML = filtered.map(item => {
-    const isDraft = currentProductsTab === 'drafts';
-    const date = new Date(isDraft ? (item.updatedAt || 0) : (item.createdAt || 0));
-    const dateStr = formatRelativeTime(date);
-    const state = item.state || {};
-    const sku = state.sku || '';
-    const prix = state.prix || '';
-    const couleurs = state.couleurs || [];
-    const cats = state.categories || [];
-    const isCurrent = isDraft && item.id === currentDraftId;
-
-    const safeNom = (item.nom || '(Sans nom)').replace(/</g, '&lt;');
-    const safeSku = sku.replace(/</g, '&lt;');
-
-    return `
-      <div class="product-card" ${isCurrent ? 'style="border-color:var(--terracotta);background:var(--cream-warm)"' : ''}>
-        <div class="product-card-head">
-          <div class="product-card-info">
-            <div class="product-card-name">${safeNom}${isCurrent ? ' <span style="font-size:10px;color:var(--terracotta);font-weight:700;font-style:normal">• EN COURS</span>' : ''}</div>
-            <div class="product-card-meta">
-              ${sku ? `<strong>${safeSku}</strong> · ` : ''}${prix ? prix + ' € · ' : ''}${dateStr}
-              ${cats.length ? `<br>${cats.slice(0, 2).join(', ')}${cats.length > 2 ? '…' : ''}` : ''}
-              ${couleurs.length ? `<br>${couleurs.length} couleur${couleurs.length > 1 ? 's' : ''} : ${couleurs.slice(0, 3).join(', ')}${couleurs.length > 3 ? '…' : ''}` : ''}
-            </div>
-          </div>
-          <span class="product-card-status ${isDraft ? 'status-draft' : 'status-finalized'}">${isDraft ? 'Brouillon' : 'Finalisé'}</span>
-        </div>
-        <div class="product-card-actions">
-          <button class="product-action" onclick="${isDraft ? `viewDraft('${item.id}')` : `viewFinalized('${item.id}')`}">👁 Voir</button>
-          <button class="product-action primary" onclick="${isDraft ? `loadDraft('${item.id}')` : `editFinalized('${item.id}')`}">✏️ ${isDraft ? 'Reprendre' : 'Éditer'}</button>
-          <button class="product-action danger" onclick="${isDraft ? `deleteDraft('${item.id}')` : `deleteFinalized('${item.id}')`}" title="Supprimer">🗑</button>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-async function viewFinalized(id) {
-  if (!fb) return;
-  try {
-    const snap = await fb.get(fb.ref(fb.db, 'product_finalized/' + id));
-    if (!snap.exists()) return;
-    const data = snap.val();
-    showProductDetail({ ...data, _kind: 'finalized' });
-  } catch (e) { showToast('Erreur', 'error'); }
-}
-
-function showProductDetail(item) {
-  const s = item.state || {};
-  const isDraft = item._kind === 'draft';
-  const comp = s.compositionId ? COMPOSITIONS.find(c => c.id === s.compositionId) : null;
-  const comp2 = s.composition2Id ? COMPOSITIONS.find(c => c.id === s.composition2Id) : null;
-
-  document.getElementById('detail-modal-title').textContent = item.nom || '(Sans nom)';
-
-  const rows = [];
-  function addRow(key, value, muted = false) {
-    if (!value && value !== 0) return;
-    const val = Array.isArray(value) ? value.join(', ') : String(value);
-    if (!val.trim()) return;
-    rows.push(`<div class="detail-row">
-      <div class="detail-key">${key}</div>
-      <div class="detail-value ${muted ? 'muted' : ''}">${val.replace(/</g, '&lt;')}</div>
-    </div>`);
-  }
-
-  addRow('Statut', isDraft ? 'Brouillon (en cours)' : 'Finalisé ✓');
-  addRow('Référence / SKU', s.sku || '');
-  addRow('Prix', s.prix ? s.prix + ' €' : '');
-  addRow('Poids', s.poids ? s.poids + ' kg' : '');
-  addRow('Catégories', s.categories || []);
-  addRow('Type', s.type === 'simple' ? 'Produit simple' : 'Avec déclinaisons');
-  addRow('Couleurs', s.couleurs || []);
-  if (s.tailles && s.tailles.length) addRow('Tailles', s.tailles);
-  if (s.optionsChecked && s.optionsChecked.length) addRow('Option', s.optionsChecked);
-  if (s.options2Checked && s.options2Checked.length) addRow('Option 2', s.options2Checked);
-  addRow('Description', s.descPrincipale || '');
-  addRow('Matière', s.descMatiere || '');
-  addRow('Pour qui ?', s.descPourqui || '');
-  if (comp) addRow('Tissu principal', `${comp.nom} — ${comp.desc} (HS: ${comp.hs})`);
-  if (comp2) addRow('Tissu secondaire', `${comp2.nom} — ${comp2.desc} (HS: ${comp2.hs})`);
-  addRow('Entretien', s.entretien || '');
-  const photos = (s.photos || []).filter(Boolean);
-  if (photos.length) addRow('Photos', photos);
-  addRow('Notes', s.notes || '');
-  if (item.products && item.products.length) {
-    addRow('Lignes CSV générées', `${item.products.length} ligne${item.products.length>1?'s':''}`);
-  }
-
-  if (!rows.length) rows.push('<div class="detail-row"><div class="detail-value muted">Aucune information</div></div>');
-
-  document.getElementById('product-detail-body').innerHTML = rows.join('');
-  document.getElementById('product-detail-overlay').classList.add('active');
-}
-
-function closeProductDetail(e) {
-  if (!e || e.target === document.getElementById('product-detail-overlay')) {
-    document.getElementById('product-detail-overlay').classList.remove('active');
-  }
-}
-
-// ═══════════════════════════════════════════════════
-// EXPORT CSV ADMIN (Sousou uniquement)
-// ═══════════════════════════════════════════════════
-const ADMIN_EXPORT_CODE = '1234567';
-
-function askExportCSV() {
-  const code = prompt('Code admin pour exporter le CSV :');
-  if (!code) return;
-  if (code !== ADMIN_EXPORT_CODE) {
-    showToast('⚠ Code admin incorrect', 'error');
-    return;
-  }
-  exportAllFinalizedCSV();
-}
-
-function exportAllFinalizedCSV() {
-  if (!cachedFinalized.length) {
-    showToast('Aucun produit finalisé à exporter', 'error');
-    return;
-  }
-
-  // Aplatir tous les products[] de chaque finalisé (1 ligne par couleur)
-  const allLines = [];
-  cachedFinalized.forEach(item => {
-    if (item.products && Array.isArray(item.products)) {
-      allLines.push(...item.products);
-    }
-  });
-
-  if (!allLines.length) {
-    showToast('Aucune ligne à exporter', 'error');
-    return;
-  }
-
-  // Format PrestaShop natif (66 colonnes, séparateur ;)
-  // Toutes les colonnes sont présentes pour respecter le template,
-  // mais on ne remplit QUE celles dont Sousou a besoin.
-  const headers = [
-    'Product ID',
-    'Active (0/1)',
-    'Name *',
-    'Categories (x,y,z...)',
-    'Price tax excluded',
-    'Tax rules ID',
-    'Wholesale price',
-    'On sale (0/1)',
-    'Discount amount',
-    'Discount percent',
-    'Discount from (yyyy-mm-dd)',
-    'Discount to (yyyy-mm-dd)',
-    'Reference #',
-    'Supplier reference #',
-    'Supplier',
-    'Manufacturer',
-    'EAN13',
-    'UPC',
-    'Ecotax',
-    'Width',
-    'Height',
-    'Depth',
-    'Weight',
-    'Delivery time of in-stock products',
-    'Delivery time of out-of-stock products with allowed orders',
-    'Quantity',
-    'Minimal quantity',
-    'Low stock level',
-    'Send me an email when the quantity is under this level',
-    'Visibility',
-    'Additional shipping cost',
-    'Unity',
-    'Unit price',
-    'Summary',
-    'Description',
-    'Tags (x,y,z...)',
-    'Meta title',
-    'Meta keywords',
-    'Meta description',
-    'URL rewritten',
-    'Text when in stock',
-    'Text when backorder allowed',
-    'Available for order (0 = No, 1 = Yes)',
-    'Product available date',
-    'Product creation date',
-    'Show price (0 = No, 1 = Yes)',
-    'Image URLs (x,y,z...)',
-    'Image alt texts (x,y,z...)',
-    'Delete existing images (0 = No, 1 = Yes)',
-    'Feature(Name:Value:Position)',
-    'Available online only (0 = No, 1 = Yes)',
-    'Condition',
-    'Customizable (0 = No, 1 = Yes)',
-    'Uploadable files (0 = No, 1 = Yes)',
-    'Text fields (0 = No, 1 = Yes)',
-    'Out of stock action',
-    'Virtual product',
-    'File URL',
-    'Number of allowed downloads',
-    'Expiration date',
-    'Number of days',
-    'ID / Name of shop',
-    'Advanced stock management',
-    'Depends On Stock',
-    'Warehouse',
-    'Acessories  (x,y,z...)'
-  ];
-
-  // Helper pour échapper les valeurs (séparateur PrestaShop = ;)
-  function psEscape(val) {
-    if (val === null || val === undefined) return '';
-    const s = String(val);
-    if (s.includes('"') || s.includes(';') || s.includes('\n') || s.includes(',')) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    return s;
-  }
-
-  // Helper pour générer une URL slug à partir du nom
-  function slugify(str) {
-    return str.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  }
-
-  // Construire les lignes — uniquement les colonnes utiles, le reste vide
-  const rows = allLines.map(p => {
-    const name = p.nom || '';
-
-    // Récapitulatif = juste la première phrase de la description (sans labels FR/EN)
-    const fullDesc = p.descriptionFR || '';
-    const summary = fullDesc.length > 0
-      ? fullDesc.split('\n').filter(l => l && !l.startsWith('Description') && !l.startsWith('Matière') && !l.startsWith('Pour qui'))[0] || ''
-      : '';
-    const summaryShort = summary.length > 800 ? summary.substring(0, 797) + '...' : summary;
-
-    return [
-      '',                  // 1  Product ID (vide = nouveau)
-      '1',                 // 2  Active
-      name,                // 3  Name *
-      p.cat || '',         // 4  Categories
-      '',                  // 5  Price tax excluded (HT) — vide car prix TTC
-      '',                  // 6  Tax rules ID
-      '',                  // 7  Wholesale price
-      '',                  // 8  On sale
-      '',                  // 9  Discount amount
-      '',                  // 10 Discount percent
-      '',                  // 11 Discount from
-      '',                  // 12 Discount to
-      '',                  // 13 Reference # (vide — PrestaShop la générera après)
-      '',                  // 14 Supplier reference
-      '',                  // 15 Supplier
-      '',                  // 16 Manufacturer
-      '',                  // 17 EAN13
-      '',                  // 18 UPC
-      '',                  // 19 Ecotax
-      '',                  // 20 Width
-      '',                  // 21 Height
-      '',                  // 22 Depth
-      p.poids || '',       // 23 Weight (kg)
-      '',                  // 24 Delivery in-stock
-      '',                  // 25 Delivery out-of-stock
-      '',                  // 26 Quantity
-      '',                  // 27 Minimal quantity
-      '',                  // 28 Low stock level
-      '',                  // 29 Email low stock
-      '',                  // 30 Visibility
-      '',                  // 31 Additional shipping cost
-      '',                  // 32 Unity
-      '',                  // 33 Unit price
-      summaryShort,        // 34 Summary (Récapitulatif)
-      '',                  // 35 Description (vide — Sousou complète si besoin)
-      '',                  // 36 Tags
-      '',                  // 37 Meta title
-      '',                  // 38 Meta keywords
-      '',                  // 39 Meta description
-      slugify(name),       // 40 URL rewritten
-      '',                  // 41 Text when in stock
-      '',                  // 42 Text when backorder
-      '',                  // 43 Available for order
-      '',                  // 44 Product available date
-      '',                  // 45 Product creation date
-      '',                  // 46 Show price
-      '',                  // 47 Image URLs
-      '',                  // 48 Image alt texts
-      '',                  // 49 Delete existing images
-      '',                  // 50 Feature
-      '',                  // 51 Available online only
-      '',                  // 52 Condition
-      '',                  // 53 Customizable
-      '',                  // 54 Uploadable files
-      '',                  // 55 Text fields
-      '',                  // 56 Out of stock action
-      '',                  // 57 Virtual product
-      '',                  // 58 File URL
-      '',                  // 59 Number of allowed downloads
-      '',                  // 60 Expiration date
-      '',                  // 61 Number of days
-      '',                  // 62 ID / Name of shop
-      '',                  // 63 Advanced stock management
-      '',                  // 64 Depends on stock
-      '',                  // 65 Warehouse
-      ''                   // 66 Accessories
-    ].map(psEscape).join(';');
-  });
-
-  // ⚠️ Note importante : PrestaShop a Price tax excluded (HT) MAIS pas Price tax included (TTC)
-  // dans le template natif (template anglais). Le prix TTC va donc dans une colonne PrestaShop
-  // qui peut s'appeler "Prix TTC" en FR. On ajoute une 67e colonne hors template.
-  // En réalité, on vérifie le template FR de Sousou : il a "Prix HT" ET "Prix TTC".
-  // Pour rester compatible, on injecte le prix dans "Price tax excluded" (HT) en attendant
-  // que le user choisisse, ET en ajoute une colonne supplémentaire "Price tax included" si besoin.
-
-  // Pour le moment : prix TTC dans la colonne 5 (Price tax excluded) — Sousou ajustera si besoin
-  // Approche alternative plus propre ci-dessous : on remplit la colonne 5 avec le prix
-  // (PrestaShop appliquera la règle de taxe par défaut)
-
-  // Re-construction avec prix dans colonne 5 :
-  const rowsFinal = allLines.map(p => {
-    const name = p.nom || '';
-    const fullDesc = p.descriptionFR || '';
-    const summary = fullDesc.length > 0
-      ? fullDesc.split('\n').filter(l => l && !l.startsWith('Description') && !l.startsWith('Matière') && !l.startsWith('Pour qui'))[0] || ''
-      : '';
-    const summaryShort = summary.length > 800 ? summary.substring(0, 797) + '...' : summary;
-
-    return [
-      '', '1', name, p.cat || '', p.prix || '', '', '', '', '', '', '', '',
-      '', '', '', '', '', '', '', '', '', '', p.poids || '', '', '',
-      '', '', '', '', '', '', '', '',
-      summaryShort, '', '', '', '', '', slugify(name),
-      '', '', '', '', '', '',
-      '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
-    ].map(psEscape).join(';');
-  });
-
-  const csv = headers.join(';') + '\n' + rowsFinal.join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const date = new Date().toISOString().split('T')[0];
-  a.download = `cataleya_produits_prestashop_FR_${date}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast(`✓ Export ${allLines.length} produit${allLines.length>1?'s':''} pour PrestaShop`);
-}
+};
 
 updateSummary();
 </script>
