@@ -1941,6 +1941,8 @@ function collectProducts() {
     if (trad.matiere) descriptionEN += (descriptionEN ? '\n\n' : '') + 'Material:\n\n' + trad.matiere;
     if (trad.pourQui) descriptionEN += (descriptionEN ? '\n\n' : '') + 'Who is it for?:\n\n' + trad.pourQui;
   }
+  // On stocke la trad complète dans l'objet produit (pour survie après reset du cache)
+  const tradEN = trad ? { description: trad.description || '', matiere: trad.matiere || '', pourQui: trad.pourQui || '' } : null;
 
   // Composition : sélectionnée dans le dropdown (2 emplacements)
   let comp = '', hs = '', comp2 = '', hs2 = '';
@@ -1958,14 +1960,14 @@ function collectProducts() {
   const notes = document.getElementById('notes').value.trim();
 
   if (!colors.length) {
-    return [{ nom, sku, cat, prix, poids, couleur: '', type: isDecl ? 'Déclinaisons' : 'Simple', tailles, options, options2, descriptionFR, descriptionEN, descPrincipale: dp, descMatiere: dm, descPourqui: dq, comp, hs, comp2, hs2, ent, photos, notes }];
+    return [{ nom, sku, cat, prix, poids, couleur: '', type: isDecl ? 'Déclinaisons' : 'Simple', tailles, options, options2, descriptionFR, descriptionEN, tradEN, descPrincipale: dp, descMatiere: dm, descPourqui: dq, comp, hs, comp2, hs2, ent, photos, notes }];
   }
   return colors.map(couleur => ({
     nom: nom + ' ' + couleur.toLowerCase(),
     sku: sku ? sku + '-' + couleur.toLowerCase().replace(/\s+/g, '') : '',
     cat, prix, poids, couleur,
     type: isDecl ? 'Déclinaisons' : 'Simple',
-    tailles, options, options2, descriptionFR, descriptionEN,
+    tailles, options, options2, descriptionFR, descriptionEN, tradEN,
     descPrincipale: dp, descMatiere: dm, descPourqui: dq,
     comp, hs, comp2, hs2, ent, photos, notes
   }));
@@ -2346,10 +2348,13 @@ function generateProductsENCSV() {
     const psId = psIds[p.nom];
     if (!psId) return; // skip si pas d'ID
 
-    // Récupérer la traduction EN depuis le cache
-    // (la trad EN est stockée dans translationCache au moment où on clique "Traduire")
-    const cacheKey = (p.descPrincipale||'') + '|' + (p.descMatiere||'') + '|' + (p.descPourqui||'');
-    const trad = translationCache[cacheKey];
+    // Récupérer la traduction EN : d'abord depuis l'objet produit (figé au moment de l'enregistrement),
+    // sinon fallback sur le cache (au cas où la trad a été ajoutée APRÈS enregistrement)
+    let trad = p.tradEN;
+    if (!trad) {
+      const cacheKey = (p.descPrincipale||'') + '|' + (p.descMatiere||'') + '|' + (p.descPourqui||'');
+      trad = translationCache[cacheKey];
+    }
     if (!trad) return; // pas de trad disponible pour ce produit, on saute
 
     // Construire le Summary EN au même format HTML que le FR
@@ -2448,8 +2453,12 @@ function generateCSV() {
     if (seenForEn.has(p.nom)) return;
     seenForEn.add(p.nom);
     totalProducts++;
-    const cacheKey = (p.descPrincipale||'') + '|' + (p.descMatiere||'') + '|' + (p.descPourqui||'');
-    if (translationCache[cacheKey]) translatedCount++;
+    if (p.tradEN && (p.tradEN.description || p.tradEN.matiere || p.tradEN.pourQui)) {
+      translatedCount++;
+    } else {
+      const cacheKey = (p.descPrincipale||'') + '|' + (p.descMatiere||'') + '|' + (p.descPourqui||'');
+      if (translationCache[cacheKey]) translatedCount++;
+    }
   });
 
   // Affichage dans le modal : aperçu des 3 CSV
@@ -3123,10 +3132,25 @@ function renderIdsList() {
   // Charger les IDs déjà saisis
   const savedIds = loadPsIds();
 
-  container.innerHTML = uniqueNames.map(nom => {
+  // Bouton upload capture en tête
+  const uploadButton = `
+    <div style="background:linear-gradient(180deg,var(--bordeaux) 0%,var(--bordeaux-deep) 100%);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:14px;color:var(--cream)">
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px;letter-spacing:0.5px">📸 Auto-remplissage par capture d'écran</div>
+      <p style="font-size:12px;opacity:0.9;line-height:1.5;margin-bottom:10px">Uploade une ou plusieurs captures de la liste produits PrestaShop. Claude lira les noms + IDs et remplira les champs automatiquement.</p>
+      <label style="display:block">
+        <input type="file" accept="image/*" multiple onchange="handleIdsCaptureUpload(this)" style="display:none" id="ids-capture-input" />
+        <span class="btn-upload-capture" style="display:inline-flex;align-items:center;gap:6px;background:var(--cream);color:var(--bordeaux);padding:9px 16px;border-radius:100px;font-size:12.5px;font-weight:700;cursor:pointer;border:none">📸 Choisir des captures</span>
+      </label>
+      <div id="ids-capture-status" style="margin-top:10px;font-size:12px;display:none"></div>
+    </div>
+    <div id="ids-capture-results" style="margin-bottom:14px"></div>
+  `;
+
+  const fields = uniqueNames.map(nom => {
     const safeName = nom.replace(/'/g, "\\'");
+    const safeNameAttr = nom.replace(/"/g, '&quot;');
     const savedId = savedIds[nom] || '';
-    return `<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    return `<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap" data-row-name="${safeNameAttr}">
       <div style="flex:1;min-width:180px">
         <div style="font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:500;color:var(--bordeaux);font-style:italic;line-height:1.3">${nom}</div>
       </div>
@@ -3137,7 +3161,197 @@ function renderIdsList() {
     </div>`;
   }).join('');
 
+  container.innerHTML = uploadButton + fields;
+
   updateCombinationsButtonState();
+}
+
+// ═══════════════════════════════════════════════════
+// EXTRACTION IDs DEPUIS CAPTURES D'ÉCRAN (Claude Vision)
+// ═══════════════════════════════════════════════════
+const EXTRACT_IDS_URL = 'https://europe-west1-usine-cataleya.cloudfunctions.net/extractProductIds';
+
+// Normalise un nom pour matching tolérant (accents, casse, espaces)
+function normalizeForMatch(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retire accents
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')                       // espaces et caractères spéciaux → espace
+    .trim();
+}
+
+// Distance de Levenshtein simple pour matching flou
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  const dp = Array.from({length: m+1}, () => new Array(n+1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j-1], dp[i][j-1], dp[i-1][j]);
+    }
+  }
+  return dp[m][n];
+}
+
+// Trouve le meilleur match parmi expectedNames pour un nom extrait
+function findBestMatch(extractedName, expectedNames) {
+  const normExtracted = normalizeForMatch(extractedName);
+  let best = { name: null, score: Infinity };
+  expectedNames.forEach(n => {
+    const norm = normalizeForMatch(n);
+    if (norm === normExtracted) {
+      best = { name: n, score: 0 };
+    } else if (best.score > 0) {
+      const d = levenshtein(norm, normExtracted);
+      // Tolérance : max 15% de différence ou 3 caractères
+      const tol = Math.max(3, Math.floor(norm.length * 0.15));
+      if (d <= tol && d < best.score) {
+        best = { name: n, score: d };
+      }
+    }
+  });
+  return best.name;
+}
+
+// Convertit un fichier en base64 (sans le préfixe data:)
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      const base64 = result.split(',')[1];
+      resolve({ base64, mediaType: file.type || 'image/png' });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleIdsCaptureUpload(inputEl) {
+  const files = Array.from(inputEl.files || []);
+  if (!files.length) return;
+
+  const statusEl = document.getElementById('ids-capture-status');
+  const resultsEl = document.getElementById('ids-capture-results');
+  const button = document.querySelector('.btn-upload-capture');
+
+  // Liste des produits attendus
+  const expectedNames = [];
+  const seen = new Set();
+  allProducts.forEach(p => {
+    if (!seen.has(p.nom)) { seen.add(p.nom); expectedNames.push(p.nom); }
+  });
+
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = `⏳ Analyse de ${files.length} capture${files.length>1?'s':''}…`;
+  if (button) button.style.opacity = '0.5';
+  resultsEl.innerHTML = '';
+
+  let allExtracted = [];
+  let errors = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    statusEl.innerHTML = `⏳ Analyse capture ${i+1}/${files.length} (${file.name})…`;
+    try {
+      const { base64, mediaType } = await fileToBase64(file);
+      const resp = await fetch(EXTRACT_IDS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mediaType, expectedNames })
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        errors.push(`Capture ${i+1} : erreur ${resp.status}`);
+        console.warn('extractProductIds error:', errText);
+        continue;
+      }
+      const data = await resp.json();
+      if (Array.isArray(data.extracted)) {
+        allExtracted = allExtracted.concat(data.extracted);
+      }
+    } catch (err) {
+      errors.push(`Capture ${i+1} : ${err.message}`);
+      console.warn(err);
+    }
+  }
+
+  // Reset l'input
+  inputEl.value = '';
+  if (button) button.style.opacity = '1';
+
+  // Matching et auto-remplissage
+  const psIds = loadPsIds();
+  const matched = [];      // {expected, id}
+  const ambiguous = [];    // extracted qui matche aucun produit
+  const expectedFound = new Set();
+
+  allExtracted.forEach(({ name, id }) => {
+    const matchedName = findBestMatch(name, expectedNames);
+    if (matchedName) {
+      // Si déjà rempli avec un autre ID, on met à jour
+      psIds[matchedName] = id;
+      expectedFound.add(matchedName);
+      matched.push({ expected: matchedName, extracted: name, id });
+    } else {
+      ambiguous.push({ name, id });
+    }
+  });
+
+  // Sauvegarde
+  savePsIds(psIds);
+
+  // Re-render les inputs avec les nouvelles valeurs
+  renderIdsList();
+
+  // Récap visuel
+  const notFound = expectedNames.filter(n => !expectedFound.has(n) && !psIds[n]);
+
+  let resultsHTML = '';
+
+  if (matched.length) {
+    resultsHTML += `<div style="background:#E8F0DD;border:1px solid #639922;border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px">
+      <div style="font-weight:700;color:#3B6D11;font-size:13px;margin-bottom:6px">✅ ${matched.length} produit${matched.length>1?'s':''} trouvé${matched.length>1?'s':''} et rempli${matched.length>1?'s':''}</div>
+      <div style="font-size:11.5px;color:var(--ink-soft);line-height:1.5;max-height:80px;overflow-y:auto">${matched.slice(0,8).map(m => `• ${m.expected} → <strong>ID ${m.id}</strong>`).join('<br>')}${matched.length > 8 ? `<br><em>… et ${matched.length-8} autres</em>` : ''}</div>
+    </div>`;
+  }
+
+  if (notFound.length) {
+    resultsHTML += `<div style="background:#FFF1ED;border:1px solid var(--terracotta);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px">
+      <div style="font-weight:700;color:var(--terracotta);font-size:13px;margin-bottom:6px">⚠️ ${notFound.length} produit${notFound.length>1?'s':''} non trouvé${notFound.length>1?'s':''} dans la capture</div>
+      <p style="font-size:11.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:6px">Tu peux uploader d'autres captures, ou saisir l'ID à la main pour ces produits :</p>
+      <div style="font-size:11.5px;color:var(--ink-soft);line-height:1.5;max-height:80px;overflow-y:auto">${notFound.slice(0,8).map(n => `• ${n}`).join('<br>')}${notFound.length > 8 ? `<br><em>… et ${notFound.length-8} autres</em>` : ''}</div>
+    </div>`;
+  }
+
+  if (ambiguous.length) {
+    resultsHTML += `<div style="background:var(--cream-warm);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px">
+      <div style="font-weight:700;color:var(--ink-soft);font-size:13px;margin-bottom:6px">🤔 ${ambiguous.length} ligne${ambiguous.length>1?'s':''} extraite${ambiguous.length>1?'s':''} sans correspondance</div>
+      <p style="font-size:11.5px;color:var(--ink-muted);line-height:1.5">Ces produits étaient dans la capture mais ne correspondent à aucun produit du lot actuel. Probablement des produits déjà existants dans PrestaShop avant ton import.</p>
+    </div>`;
+  }
+
+  if (errors.length) {
+    resultsHTML += `<div style="background:#FFE5E5;border:1px solid var(--danger);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px">
+      <div style="font-weight:700;color:var(--danger);font-size:13px;margin-bottom:6px">❌ ${errors.length} erreur${errors.length>1?'s':''}</div>
+      <div style="font-size:11.5px;color:var(--ink-soft);line-height:1.5">${errors.join('<br>')}</div>
+    </div>`;
+  }
+
+  resultsEl.innerHTML = resultsHTML;
+  statusEl.style.display = 'none';
+
+  if (matched.length) {
+    showToast(`✓ ${matched.length} ID${matched.length>1?'s':''} renseigné${matched.length>1?'s':''}`);
+  } else if (!errors.length) {
+    showToast('⚠ Aucun produit trouvé dans la capture', 'error');
+  }
 }
 
 function updatePsId(inputEl) {
@@ -3177,14 +3391,18 @@ function updateCombinationsButtonState() {
   // Bouton CSV EN — actif seulement si IDs remplis ET au moins une trad disponible
   const btnEN = document.getElementById('btn-download-en');
   if (btnEN) {
-    // Compter les produits qui ont une trad
+    // Compter les produits qui ont une trad (figée dans l'objet OU dans le cache)
     let translatedCount = 0;
     const seenForEn = new Set();
     allProducts.forEach(p => {
       if (seenForEn.has(p.nom)) return;
       seenForEn.add(p.nom);
-      const cacheKey = (p.descPrincipale||'') + '|' + (p.descMatiere||'') + '|' + (p.descPourqui||'');
-      if (translationCache[cacheKey]) translatedCount++;
+      if (p.tradEN && (p.tradEN.description || p.tradEN.matiere || p.tradEN.pourQui)) {
+        translatedCount++;
+      } else {
+        const cacheKey = (p.descPrincipale||'') + '|' + (p.descMatiere||'') + '|' + (p.descPourqui||'');
+        if (translationCache[cacheKey]) translatedCount++;
+      }
     });
     const enReady = allFilled && translatedCount > 0;
     btnEN.disabled = !enReady;
