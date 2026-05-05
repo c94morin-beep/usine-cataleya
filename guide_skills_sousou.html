@@ -1,0 +1,2070 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide Skills — Sousou</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bordeaux: #6b1e2e;
+  --bordeaux-deep: #4a1320;
+  --terracotta: #c75b12;
+  --terracotta-soft: #e08654;
+  --cream: #f5f1e8;
+  --cream-warm: #ede5d3;
+  --paper: #fbf8f1;
+  --ink: #2a1f1a;
+  --ink-soft: #5a4a42;
+  --gold: #b8924a;
+  --line: #d4c8b5;
+  --green-success: #5a7d3f;
+  --green-soft: #e8efd9;
+  --code-bg: #1f1816;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.7;
+  background-image:
+    radial-gradient(at 20% 10%, rgba(199, 91, 18, 0.04) 0%, transparent 40%),
+    radial-gradient(at 80% 80%, rgba(107, 30, 46, 0.04) 0%, transparent 40%);
+  min-height: 100vh;
+}
+
+/* ===== TOP BAR ===== */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(251, 248, 241, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--bordeaux);
+  font-style: italic;
+}
+
+.logo .amp { color: var(--terracotta); font-weight: 400; }
+
+.progress-shell {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 480px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 6px;
+  background: var(--cream-warm);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--bordeaux) 0%, var(--terracotta) 100%);
+  border-radius: 100px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 0%;
+}
+
+.progress-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--bordeaux);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== LAYOUT ===== */
+.layout {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 32px 80px;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 56px;
+}
+
+.sidebar {
+  position: sticky;
+  top: 96px;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--line); border-radius: 100px; }
+
+.toc-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.toc { list-style: none; }
+.toc-item { margin-bottom: 4px; }
+
+.toc-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toc-link:hover {
+  background: var(--cream);
+  color: var(--bordeaux);
+}
+
+.toc-link.active {
+  background: var(--bordeaux);
+  color: var(--paper);
+}
+
+.toc-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--terracotta);
+  font-weight: 600;
+  min-width: 20px;
+}
+
+.toc-link.active .toc-num { color: var(--terracotta-soft); }
+
+.toc-check {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.toc-check.completed {
+  background: var(--green-success);
+  border-color: var(--green-success);
+}
+
+.toc-check.completed::after {
+  content: '✓';
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* ===== CONTENT ===== */
+.content { max-width: 800px; min-width: 0; }
+
+.section {
+  display: none;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.section.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-eyebrow {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  font-size: 15px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-eyebrow::before {
+  content: '';
+  width: 32px;
+  height: 1px;
+  background: var(--terracotta);
+}
+
+h1.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 52px;
+  font-weight: 500;
+  line-height: 1.05;
+  color: var(--bordeaux-deep);
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+h1.section-title em {
+  font-style: italic;
+  color: var(--terracotta);
+  font-weight: 400;
+}
+
+.section-lead {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin-bottom: 40px;
+  font-weight: 300;
+  max-width: 680px;
+}
+
+h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--bordeaux);
+  margin: 48px 0 16px;
+  line-height: 1.2;
+}
+
+h2::before {
+  content: '§';
+  color: var(--terracotta);
+  font-style: italic;
+  font-weight: 400;
+  margin-right: 12px;
+  opacity: 0.6;
+}
+
+h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 32px 0 10px;
+}
+
+h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--terracotta);
+  margin: 24px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+p { margin-bottom: 14px; }
+
+p.lead {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 19px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+strong { color: var(--bordeaux); font-weight: 600; }
+em { color: var(--terracotta); font-style: italic; }
+
+ul, ol { margin: 14px 0 22px; padding-left: 0; list-style: none; }
+
+ul li {
+  position: relative;
+  padding-left: 26px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 8px;
+  height: 1px;
+  background: var(--terracotta);
+}
+
+ol { counter-reset: ord; }
+ol li {
+  position: relative;
+  padding-left: 32px;
+  margin-bottom: 12px;
+  line-height: 1.6;
+  counter-increment: ord;
+}
+ol li::before {
+  content: counter(ord);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+/* ===== STEP CARD ===== */
+.step {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px 32px;
+  margin: 20px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.step-number {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 80px;
+  color: var(--cream-warm);
+  font-weight: 700;
+  line-height: 1;
+  z-index: 0;
+}
+
+.step-content { position: relative; z-index: 1; }
+
+.step h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: var(--bordeaux);
+}
+
+.step p:last-child { margin-bottom: 0; }
+
+/* ===== CALLOUT ===== */
+.callout {
+  background: linear-gradient(135deg, var(--cream) 0%, var(--cream-warm) 100%);
+  border-left: 3px solid var(--terracotta);
+  padding: 22px 26px;
+  margin: 28px 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.callout.bordeaux { border-left-color: var(--bordeaux); }
+
+.callout-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--bordeaux);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.callout-title::before {
+  content: '◆';
+  color: var(--terracotta);
+  font-size: 13px;
+}
+
+.callout p:last-child { margin-bottom: 0; }
+.callout ul:last-child { margin-bottom: 0; }
+
+/* ===== TABLE ===== */
+.table-wrap {
+  margin: 28px 0;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--paper);
+  font-size: 14px;
+}
+
+th {
+  background: var(--bordeaux);
+  color: var(--paper);
+  text-align: left;
+  padding: 12px 16px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+td {
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+tr:nth-child(even) td {
+  background: rgba(245, 241, 232, 0.5);
+}
+
+td strong { color: var(--bordeaux); }
+
+/* ===== CODE ===== */
+code.inline {
+  background: var(--cream);
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: var(--bordeaux);
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1px solid var(--line);
+}
+
+.code-block {
+  position: relative;
+  background: var(--code-bg);
+  color: #e8d9c8;
+  padding: 22px 26px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 20px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  border-left: 3px solid var(--terracotta);
+}
+
+.code-block .code-label {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--terracotta-soft);
+  margin-bottom: 10px;
+}
+
+.code-block .code-content {
+  white-space: pre;
+  display: block;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #c5b39e;
+  padding: 5px 11px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.copy-btn:hover {
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+  color: white;
+}
+
+.copy-btn.copied {
+  background: var(--green-success);
+  border-color: var(--green-success);
+  color: white;
+}
+
+.code-block .kw { color: #e08654; }
+.code-block .str { color: #b8c97a; }
+.code-block .com { color: #7a6a5e; font-style: italic; }
+.code-block .fn { color: #d4a05a; }
+.code-block .var { color: #9ec5d8; }
+
+/* ===== SKILL CARD ===== */
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+
+.skill-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px 20px;
+  transition: all 0.2s;
+}
+
+.skill-card:hover {
+  border-color: var(--terracotta);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+}
+
+.skill-card-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--bordeaux);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.skill-card-desc {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+/* ===== COMPARISON BOX ===== */
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+@media (max-width: 768px) {
+  .comparison-grid { grid-template-columns: 1fr; }
+}
+
+.compare-box {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 20px;
+  position: relative;
+}
+
+.compare-box.skills {
+  border-top: 3px solid var(--terracotta);
+}
+
+.compare-box.mcp {
+  border-top: 3px solid var(--bordeaux);
+}
+
+.compare-box.projects {
+  border-top: 3px solid var(--gold);
+}
+
+.compare-box h4 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--bordeaux);
+}
+
+.compare-box.skills h4 { color: var(--terracotta); }
+.compare-box.mcp h4 { color: var(--bordeaux); }
+.compare-box.projects h4 { color: var(--gold); }
+
+.compare-box .compare-tag {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.compare-box ul {
+  margin: 12px 0 0;
+}
+
+.compare-box ul li {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+/* ===== EXERCISES ===== */
+.exercises {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 26px 30px;
+  margin: 36px 0;
+  position: relative;
+}
+
+.exercises::before {
+  content: 'À cocher';
+  position: absolute;
+  top: -10px;
+  left: 24px;
+  background: var(--bordeaux);
+  color: var(--paper);
+  padding: 4px 12px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.exercise-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cream-warm);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.exercise-item:last-child { border-bottom: none; }
+
+.exercise-item:hover {
+  background: var(--cream);
+  margin: 0 -16px;
+  padding: 10px 16px;
+  border-radius: 4px;
+  border-bottom-color: transparent;
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--line);
+  border-radius: 5px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.exercise-item:hover .checkbox { border-color: var(--terracotta); }
+
+.checkbox.checked {
+  background: var(--green-success);
+  border-color: var(--green-success);
+}
+
+.checkbox.checked::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.exercise-text { flex: 1; line-height: 1.55; font-size: 14.5px; }
+.exercise-item.completed .exercise-text {
+  text-decoration: line-through;
+  color: var(--ink-soft);
+}
+
+/* ===== NAV ===== */
+.nav-buttons {
+  display: flex;
+  gap: 14px;
+  margin-top: 64px;
+  padding-top: 36px;
+  border-top: 1px solid var(--line);
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 16px 20px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: all 0.2s;
+}
+
+.nav-btn:hover {
+  border-color: var(--terracotta);
+  background: var(--cream);
+  transform: translateY(-1px);
+}
+
+.nav-btn-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.nav-btn-title { font-weight: 500; color: var(--bordeaux); }
+.nav-btn.next { text-align: right; }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: var(--bordeaux);
+  color: var(--paper);
+  padding: 12px 22px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 200;
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* ===== ORNAMENT ===== */
+.ornament {
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--terracotta);
+  margin: 36px 0;
+  letter-spacing: 0.4em;
+  opacity: 0.5;
+  font-size: 16px;
+}
+
+/* ===== KEY/COMMAND ===== */
+kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-bottom: 2px solid var(--ink-soft);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--bordeaux);
+  font-weight: 500;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 968px) {
+  .layout { grid-template-columns: 1fr; gap: 24px; }
+  .sidebar {
+    position: static;
+    height: auto;
+    max-height: 50vh;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  h1.section-title { font-size: 36px; }
+  .step-number { font-size: 60px; top: 12px; right: 18px; }
+}
+
+@media (max-width: 640px) {
+  .layout { padding: 24px 18px 60px; }
+  .topbar-inner { padding: 12px 16px; gap: 12px; }
+  .logo { font-size: 17px; }
+  .progress-label { font-size: 14px; }
+  h2 { font-size: 26px; }
+  h3 { font-size: 20px; }
+  .step { padding: 22px; }
+  .nav-buttons { flex-direction: column; }
+  .code-block { padding: 16px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">Skills <span class="amp">&</span> Cie</div>
+    <div class="progress-shell">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">0%</div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="toc-title">Sommaire</div>
+    <ul class="toc" id="toc"></ul>
+  </aside>
+
+  <main class="content" id="content"></main>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SECTIONS = [
+
+// ============================================================
+// 0. INTRO
+// ============================================================
+{
+  id: 'intro',
+  num: '',
+  label: "Vue d'ensemble",
+  html: `
+    <div class="section-eyebrow">Guide complet · Calibré desktop</div>
+    <h1 class="section-title">Skills, MCP <em>et</em> compagnie</h1>
+    <p class="section-lead">Sousou, voici ton guide complet pour activer, utiliser et créer tes propres Skills dans Claude Desktop. À la fin, tu sauras non seulement comment ça marche, mais aussi comment t'en servir pour Cataleya, Lywwane, et tes prestations consulting.</p>
+
+    <h2>Ce que tu vas apprendre</h2>
+    <ol>
+      <li><strong>Comprendre</strong> ce qu'est un Skill, et la différence avec MCP et Projects (les 3 outils sont souvent confondus)</li>
+      <li><strong>Activer</strong> les Skills dans Claude Desktop, étape par étape</li>
+      <li><strong>Utiliser</strong> les Skills officiels d'Anthropic (docx, xlsx, pptx, pdf…)</li>
+      <li><strong>Créer</strong> tes premiers Skills custom — on attaquera "SAV Cataleya" et "Fiche produit FR/EN"</li>
+      <li><strong>Distribuer</strong> tes Skills à ton équipe ou à des clients (axe de monétisation)</li>
+    </ol>
+
+    <div class="callout">
+      <div class="callout-title">Important — Plan requis</div>
+      <p>Les Skills sont disponibles sur <strong>Free, Pro, Max, Team et Enterprise</strong>, mais ils nécessitent que <strong>Code Execution and File Creation</strong> soit activé. Si tu es sur Pro (ce que je te recommande), tout est dispo. Sur Free, ça marche aussi mais avec moins de messages disponibles.</p>
+    </div>
+
+    <h2>Les 3 concepts qu'on va éclairer ensemble</h2>
+    <p>Avant d'attaquer, prends 30 secondes pour comprendre la différence entre ces 3 outils. C'est la confusion #1 que je vois chez les gens qui découvrent Claude.</p>
+
+    <div class="comparison-grid">
+      <div class="compare-box skills">
+        <div class="compare-tag">Compétence</div>
+        <h4>Skills</h4>
+        <p style="font-size: 13px; color: var(--ink-soft); margin-bottom: 8px;">Une <em>compétence</em> que tu donnes à Claude pour exécuter une tâche structurée.</p>
+        <ul>
+          <li>« Sache faire un .docx »</li>
+          <li>« Sache rédiger un email SAV Cataleya »</li>
+          <li>S'active automatiquement quand pertinent</li>
+        </ul>
+      </div>
+      <div class="compare-box mcp">
+        <div class="compare-tag">Connexion</div>
+        <h4>MCP</h4>
+        <p style="font-size: 13px; color: var(--ink-soft); margin-bottom: 8px;">Une <em>connexion</em> à un service externe pour lire/écrire des données.</p>
+        <ul>
+          <li>« Connecte-toi à Gmail »</li>
+          <li>« Lis ma DB PrestaShop »</li>
+          <li>Donne accès à des actions et données</li>
+        </ul>
+      </div>
+      <div class="compare-box projects">
+        <div class="compare-tag">Contexte</div>
+        <h4>Projects</h4>
+        <p style="font-size: 13px; color: var(--ink-soft); margin-bottom: 8px;">Un <em>workspace</em> avec contexte partagé entre plusieurs conversations.</p>
+        <ul>
+          <li>Documents de référence</li>
+          <li>Custom instructions persistantes</li>
+          <li>Mémoire scopée au projet</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout bordeaux">
+      <div class="callout-title">L'analogie qui rend ça simple</div>
+      <p>Pense à Claude comme à un nouveau collaborateur :</p>
+      <ul>
+        <li><strong>Projects</strong> = son <em>bureau</em> avec les classeurs et la doc projet posés à portée de main</li>
+        <li><strong>MCP</strong> = ses <em>identifiants</em> pour accéder aux outils maison (Gmail, Drive, ta DB)</li>
+        <li><strong>Skills</strong> = ses <em>compétences professionnelles</em> (savoir faire un Word, savoir rédiger un email SAV à ta façon)</li>
+      </ul>
+      <p>Les trois se complètent. Un bon workflow utilise les trois en même temps.</p>
+    </div>
+
+    <p>On commence par activer les Skills dans ton Claude Desktop. Étape suivante.</p>
+  `,
+  exercises: []
+},
+
+// ============================================================
+// 1. ACTIVATION
+// ============================================================
+{
+  id: 'activation',
+  num: 'I',
+  label: 'Activation',
+  html: `
+    <div class="section-eyebrow">Étape Première</div>
+    <h1 class="section-title">Activer les <em>Skills</em></h1>
+    <p class="section-lead">Suis ces 4 étapes dans l'ordre. Si tu utilises l'app Claude Desktop, l'interface est exactement la même que sur le web — tu retrouveras les mêmes menus.</p>
+
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h3>Vérifier ton plan</h3>
+        <p>Clique sur ton avatar/initiales en bas à gauche de Claude Desktop. Regarde quel plan est affiché.</p>
+        <ul>
+          <li><strong>Free</strong> : ça marche, mais limité en messages. Suffit pour tester.</li>
+          <li><strong>Pro / Max / Team / Enterprise</strong> : tout dispo, foncez.</li>
+        </ul>
+        <p>Si tu es sur Free et que tu commences vraiment à utiliser Claude au quotidien, passe à <strong>Pro (~20 $/mois)</strong>. C'est le meilleur ratio investissement/temps gagné de tout ton stack.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h3>Ouvrir les Settings</h3>
+        <p>Trois façons d'y accéder :</p>
+        <ul>
+          <li>Raccourci clavier : <kbd>Ctrl</kbd> + <kbd>,</kbd> (Windows) ou <kbd>Cmd</kbd> + <kbd>,</kbd> (Mac)</li>
+          <li>Clique sur ton avatar en bas à gauche → <strong>Settings</strong></li>
+          <li>Menu de l'app : <strong>Claude → Settings</strong> (Mac) ou icône engrenage (Windows)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h3>Activer Code Execution</h3>
+        <p>Dans Settings, navigue vers <strong>Capabilities</strong> (parfois "Capacités" en français).</p>
+        <p>Tu verras une option <strong>Code execution and file creation</strong>. Active-la (toggle sur ON).</p>
+        <p>C'est cette feature qui donne à Claude un sandbox Linux où il peut exécuter du code Python/Node, créer des fichiers, et utiliser les Skills. Sans ça, rien ne fonctionne.</p>
+
+        <div class="callout">
+          <div class="callout-title">Tu peux le tester immédiatement</div>
+          <p>Une fois activé, ouvre une nouvelle conversation et tape :</p>
+          <p style="font-style: italic; color: var(--bordeaux); padding-left: 16px; border-left: 2px solid var(--terracotta);">"Crée-moi un fichier Excel avec 3 colonnes : Date, Produit, Quantité, et 5 lignes d'exemple."</p>
+          <p>Si Claude te génère un vrai .xlsx téléchargeable → ça marche ✓</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <h3>Aller dans Customize → Skills</h3>
+        <p>Toujours dans Settings, cherche <strong>Customize</strong> (ou "Personnaliser") puis <strong>Skills</strong>.</p>
+        <p>Tu vas voir la liste des Skills officiels d'Anthropic, chacun avec un toggle. Active ceux qui t'intéressent (au minimum : <code class="inline">docx</code>, <code class="inline">xlsx</code>, <code class="inline">pptx</code>, <code class="inline">pdf</code>).</p>
+        <p>Une fois activés, Claude les utilisera <strong>automatiquement</strong> quand pertinent — tu n'as pas à les invoquer manuellement à chaque fois.</p>
+      </div>
+    </div>
+
+    <div class="ornament">· · ·</div>
+
+    <h2>Vérification rapide</h2>
+    <p>Pour t'assurer que tout est bien activé, fais ce mini test dans une nouvelle conversation :</p>
+
+    <div class="code-block">
+      <span class="code-label">Test à coller dans Claude</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content">Pour vérifier que mes Skills sont bien activés, fais-moi 3 choses :
+
+1. Crée un petit document Word avec un titre "Test Sousou" et un paragraphe "Ça marche !"
+2. Crée un petit Excel avec une feuille contenant 3 lignes de données factices
+3. Liste les Skills auxquels tu as accès dans cette conversation</span>
+    </div>
+
+    <p>Si Claude te génère les 2 fichiers téléchargeables et te liste les Skills disponibles, <strong>tout est OK</strong>. Sinon, retourne dans les Settings et vérifie le toggle Code Execution.</p>
+
+    <div class="callout">
+      <div class="callout-title">Si ça ne marche toujours pas</div>
+      <ul>
+        <li><strong>App pas à jour</strong> : Help → Check for Updates dans le menu</li>
+        <li><strong>Skills grisés</strong> : tu es probablement sur un plan Team/Enterprise et l'admin ne les a pas activés au niveau organisation</li>
+        <li><strong>Toggle absent</strong> : ton compte est peut-être ancien, déconnecte-toi puis reconnecte-toi pour rafraîchir les permissions</li>
+      </ul>
+    </div>
+  `,
+  exercises: [
+    "Vérifier ton plan dans Settings",
+    "Activer Code Execution and File Creation dans Capabilities",
+    "Aller dans Customize → Skills et activer docx, xlsx, pptx, pdf",
+    "Faire le test de vérification (Word + Excel + liste Skills)"
+  ]
+},
+
+// ============================================================
+// 2. SKILLS OFFICIELS
+// ============================================================
+{
+  id: 'officiels',
+  num: 'II',
+  label: 'Skills officiels',
+  html: `
+    <div class="section-eyebrow">Étape Deuxième</div>
+    <h1 class="section-title">Les Skills <em>officiels</em></h1>
+    <p class="section-lead">Anthropic fournit une bibliothèque de Skills prêts à l'emploi pour toutes les tâches courantes. Tu n'as rien à faire pour les utiliser — une fois activés, Claude les déclenche automatiquement quand pertinent.</p>
+
+    <h2>La bibliothèque essentielle</h2>
+    <p>Voici les Skills officiels que je te recommande d'activer en premier. Ils couvrent 80% des cas d'usage business.</p>
+
+    <div class="skills-grid">
+      <div class="skill-card">
+        <div class="skill-card-name">docx</div>
+        <div class="skill-card-desc">Création et édition de documents Word avec mise en page pro, tables des matières, headers/footers.</div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-card-name">xlsx</div>
+        <div class="skill-card-desc">Spreadsheets Excel avec formules, formatage conditionnel, charts, plusieurs feuilles.</div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-card-name">pptx</div>
+        <div class="skill-card-desc">Présentations PowerPoint avec layouts, images, animations.</div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-card-name">pdf</div>
+        <div class="skill-card-desc">Création, lecture, fusion, extraction de PDFs. Remplissage de formulaires.</div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-card-name">frontend-design</div>
+        <div class="skill-card-desc">Composants React et HTML avec design soigné (le skill que j'ai utilisé pour ce guide).</div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-card-name">file-reading</div>
+        <div class="skill-card-desc">Lecture intelligente de fichiers uploadés (PDFs, Word, Excel, images, code).</div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-card-name">skill-creator</div>
+        <div class="skill-card-desc">Le meta-skill qui aide Claude à créer d'autres Skills custom (on l'utilisera étape III).</div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-card-name">product-self-knowledge</div>
+        <div class="skill-card-desc">Données à jour sur les produits Anthropic (utile quand tu poses des questions sur Claude).</div>
+      </div>
+    </div>
+
+    <h2>Comment Claude choisit le bon Skill</h2>
+    <p>Quand tu fais une demande, Claude lit la <strong>description</strong> de chaque Skill activé et décide automatiquement lequel (ou lesquels) utiliser. Tu n'as pas à dire "utilise le skill xlsx" — il le sait.</p>
+
+    <p>Mais tu <em>peux</em> être explicite si tu veux forcer un comportement précis :</p>
+
+    <div class="code-block">
+      <span class="code-label">Exemples de demandes — Claude active automatiquement le bon Skill</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content">→ "Crée-moi un rapport mensuel pour Cataleya avec nos chiffres de janvier"
+   (Claude active automatiquement docx ou xlsx selon le format pertinent)
+
+→ "Génère une présentation pour mon RDV client de jeudi"
+   (Claude active pptx)
+
+→ "Lis ce PDF et fais-moi un résumé en 5 points"
+   (Claude active file-reading + pdf)
+
+→ "Fais-moi un dashboard interactif avec ces données"
+   (Claude active frontend-design pour générer du React)</span>
+    </div>
+
+    <div class="ornament">· · ·</div>
+
+    <h2>Cas d'usage Cataleya / Lywwane</h2>
+    <p>Voici 5 prompts concrets que tu peux utiliser dès cette semaine, qui exploitent les Skills officiels.</p>
+
+    <h3>1. Rapport mensuel automatique</h3>
+    <div class="code-block">
+      <span class="code-label">À adapter avec tes vraies données</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content">Voici nos données de ventes pour le mois dernier (CSV ci-joint).
+Crée-moi un rapport Word complet avec :
+- Page de garde (Cataleya Paris, mois, année)
+- Synthèse en 1 paragraphe
+- Tableau récap : CA, nombre de commandes, panier moyen, top 3 produits
+- Section "À noter" avec 3 observations stratégiques
+- Charte graphique : bordeaux et crème
+
+Mise en page pro, à envoyer à AbdAllah pour la compta.</span>
+    </div>
+
+    <h3>2. Excel de suivi production</h3>
+    <div class="code-block">
+      <span class="code-label">Pour ton équipe atelier</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content">Crée-moi un Excel de suivi production avec :
+- Feuille 1 : "Couturiers" (9 actifs, colonnes : nom, type modèles, prix unitaire)
+- Feuille 2 : "Commandes en cours" (référence, modèle, couturier, date début, date prévue)
+- Feuille 3 : "Stats" avec graphique en bâtons des productions par couturier sur le mois
+
+Formules pour calculer automatiquement :
+- Total productions par couturier (SUMIF)
+- Retards (différence date prévue / aujourd'hui)
+- Taux de complétion par modèle
+
+Mise en couleur pro avec ma palette.</span>
+    </div>
+
+    <h3>3. Pitch deck consulting</h3>
+    <div class="code-block">
+      <span class="code-label">Pour tes premiers RDV consulting</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content">Crée-moi une présentation PowerPoint pour pitcher mon offre de consulting IA :
+
+Cible : marques de mode/lifestyle qui font 200K-3M€ de CA
+Mon angle : "opérateur lui-même, pas consultant théorique"
+Mes 3 offres : Audit Express (800€), Automation SAV (3-6K€), Pack Catalogue (4-8K€)
+
+Slides demandées :
+1. Couverture : "Automatiser votre boutique avec l'IA"
+2. Le problème (3 stats sur le SAV qui mange du temps)
+3. Mon parcours (Cataleya + Lywwane = preuve)
+4. Les 3 leviers IA pour la mode (SAV, catalogue, ops)
+5. Mes offres avec prix
+6. Cas Cataleya en chiffres
+7. Témoignages (laisse vide, je remplirai)
+8. Prochaine étape : Audit Express
+
+Style : sobre, élégant, palette bordeaux/crème, typographie sérif pour les titres.</span>
+    </div>
+
+    <h3>4. Audit PDF d'une boutique prospect</h3>
+    <div class="code-block">
+      <span class="code-label">Avant un appel client</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content">J'ai un appel jeudi avec [Nom marque] (URL : [...]).
+Je viens de leur naviguer dans le site et de capturer 5 screenshots de leurs fiches produit.
+
+Génère-moi un mini-audit PDF de 4 pages :
+- Page 1 : couverture + résumé exécutif
+- Page 2 : 3 forces de leur boutique
+- Page 3 : 3 axes d'amélioration concrets (avec impact chiffré)
+- Page 4 : ma proposition de prochaine étape
+
+Ton : factuel, professionnel, jamais condescendant. C'est un teaser que je leur enverrai après l'appel.</span>
+    </div>
+
+    <h3>5. Dashboard React pour ton équipe</h3>
+    <div class="code-block">
+      <span class="code-label">Mini-app interne</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content">Génère-moi un dashboard React standalone (1 fichier HTML) pour Sara :
+
+Affichage : tableau des envois en cours
+Données factices : 15 lignes avec colonnes
+- N° commande, transporteur, statut, date envoi, jours en cours
+
+Fonctionnalités :
+- Filtres par transporteur (Mondial Relay, Packlink, UPS, Chronopost)
+- Recherche par n° commande
+- Code couleur selon ancienneté (vert <3j, orange 3-7j, rouge >7j)
+- Export CSV en un clic
+
+Style : palette bordeaux/terracotta/crème, fonts Cormorant + Inter,
+cohérent avec mon app facturation-cataleya.</span>
+    </div>
+
+    <div class="callout bordeaux">
+      <div class="callout-title">Le réflexe à prendre</div>
+      <p>Avant de faire manuellement <em>n'importe quelle</em> tâche bureautique récurrente — rapport, présentation, tableur, PDF — demande-toi : <em>"Et si je laissais Claude le faire avec son Skill correspondant ?"</em></p>
+      <p>Tu vas réaliser que 30 à 40% de ton temps administratif disparaît littéralement. C'est le premier gain visible des Skills officiels.</p>
+    </div>
+  `,
+  exercises: [
+    "Lancer le prompt Rapport mensuel sur tes vraies données",
+    "Lancer le prompt Excel suivi production",
+    "Générer ton premier pitch deck consulting (étape clé pour ton activité freelance)",
+    "Tester le dashboard React et le déployer sur GitHub Pages"
+  ]
+},
+
+// ============================================================
+// 3. CRÉER SES SKILLS
+// ============================================================
+{
+  id: 'creer',
+  num: 'III',
+  label: 'Créer tes Skills',
+  html: `
+    <div class="section-eyebrow">Étape Troisième · Le vrai pouvoir</div>
+    <h1 class="section-title">Créer tes <em>propres</em> Skills</h1>
+    <p class="section-lead">C'est ici que ça devient intéressant pour toi. Un Skill custom, c'est une compétence métier que tu codifies une fois et que Claude utilise à perpétuité, parfaitement à ta façon. C'est aussi un actif vendable.</p>
+
+    <h2>Anatomie d'un Skill</h2>
+    <p>Techniquement, un Skill est juste un dossier qui contient <em>au minimum</em> un fichier <code class="inline">SKILL.md</code> avec une entête YAML et des instructions en Markdown. Optionnellement, il peut contenir des scripts (Python, Node), des templates, des assets.</p>
+
+    <div class="code-block">
+      <span class="code-label">Structure minimale d'un Skill</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content"><span class="var">mon-skill/</span>
+├── <span class="kw">SKILL.md</span>           ← obligatoire (instructions + métadonnées)
+├── templates/         ← optionnel (modèles d'emails, de documents)
+├── scripts/           ← optionnel (Python, Node helpers)
+└── assets/            ← optionnel (images, exemples)</span>
+    </div>
+
+    <h2>Le fichier SKILL.md</h2>
+    <p>C'est le cœur du Skill. Il commence par une <strong>entête YAML</strong> qui dit à Claude <em>quand</em> activer ce Skill, suivi des <strong>instructions</strong> en Markdown qui disent <em>comment</em> faire la tâche.</p>
+
+    <div class="code-block">
+      <span class="code-label">Template minimal SKILL.md</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content"><span class="com">---</span>
+<span class="kw">name</span>: nom-du-skill
+<span class="kw">description</span>: Use this skill when the user wants to [DESCRIPTION CLAIRE
+  DE QUAND L'UTILISER]. Triggers include [LISTE DES MOTS/SITUATIONS QUI
+  DÉCLENCHENT CE SKILL].
+<span class="com">---</span>
+
+<span class="com"># Titre du Skill</span>
+
+<span class="com">## Quand l'utiliser</span>
+
+[Explique les situations exactes où Claude doit utiliser ce skill]
+
+<span class="com">## Comment procéder</span>
+
+1. [Étape 1]
+2. [Étape 2]
+3. [Étape 3]
+
+<span class="com">## Règles strictes</span>
+
+- [Règle non-négociable 1]
+- [Règle non-négociable 2]
+
+<span class="com">## Exemples</span>
+
+[Donne 2-3 exemples concrets pour calibrer le comportement]</span>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">La règle d'or du <code class="inline">description</code></div>
+      <p>Le champ <code class="inline">description</code> est <strong>critique</strong>. C'est ce que Claude lit pour décider d'activer (ou non) ton Skill. Si la description est vague, le Skill ne sera presque jamais déclenché. Si elle est précise et liste les triggers, le Skill se lance pile au bon moment.</p>
+      <p>Bon : <em>"Use when user wants to write a Cataleya customer service email response. Triggers: SAV, customer email, retour client, réclamation."</em></p>
+      <p>Mauvais : <em>"Helps with emails."</em></p>
+    </div>
+
+    <div class="ornament">· · ·</div>
+
+    <h2>Skill #1 — SAV Cataleya</h2>
+    <p>Construisons ensemble ton premier Skill réel. Objectif : Claude répond aux emails clients exactement dans le ton et la politique de Cataleya, sans que tu aies à ré-expliquer à chaque fois.</p>
+
+    <h3>Le SKILL.md complet</h3>
+
+    <div class="code-block">
+      <span class="code-label">cataleya-sav/SKILL.md · à copier dans un fichier</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content"><span class="com">---</span>
+<span class="kw">name</span>: cataleya-sav
+<span class="kw">description</span>: Use this skill when the user wants to draft a customer service
+  reply for Cataleya Paris (modest fashion brand based in France, shipping
+  internationally). Triggers include any mention of "SAV", "réponse client",
+  "email client", "retour", "réclamation", "tracking demand", or pasting an
+  inbound customer email asking for help, status, refund, or exchange.
+<span class="com">---</span>
+
+<span class="com"># SAV Cataleya Paris — Réponse type</span>
+
+<span class="com">## Contexte de la marque</span>
+
+Cataleya Paris est une marque de mode modeste française basée à Alfortville (FR).
+Nous expédions en France et à l'international via Mondial Relay, Packlink, UPS,
+FedEx, et Chronopost. Délais standards : 3-5 jours en France métropolitaine,
+7-15 jours pour l'international.
+
+Politique retours : 14 jours pour retour, frais retour à la charge du client
+sauf si produit défectueux ou erreur de notre part.
+
+<span class="com">## Ton et style</span>
+
+- Chaleureux, professionnel, jamais sur la défensive
+- Toujours signer "L'équipe Cataleya Paris" (pas un prénom individuel)
+- Ne jamais commencer par "Je suis désolé" — préférer "Je comprends votre [situation]"
+- Émojis : seulement 🙏 et ❤ en fin de message, jamais ailleurs
+- Phrases courtes, paragraphes aérés (3-4 lignes max)
+
+<span class="com">## Langues</span>
+
+Toujours répondre dans la langue du client :
+- Français : registre vouvoyé, sauf si le client tutoie en premier
+- Anglais : registre courtois standard ("Hello [Name]", "Best regards")
+- Arabe : registre respectueux classique (السلام عليكم en ouverture optionnel)
+
+<span class="com">## Structure standard d'une réponse</span>
+
+1. **Reconnaissance** (1 phrase) : "Je comprends votre [problème]…"
+2. **Solution claire** (2-4 phrases) avec étapes numérotées si pertinent
+3. **Lien tracking ou contact direct** si applicable
+4. **Formule de clôture chaleureuse** signée "L'équipe Cataleya Paris"
+
+<span class="com">## Règles strictes</span>
+
+- NE JAMAIS promettre un remboursement avant validation interne
+- NE JAMAIS donner d'estimation de délai si on n'a pas le tracking actif
+- TOUJOURS demander la référence de commande si elle n'est pas dans l'email
+- TOUJOURS proposer un échange avant un remboursement quand c'est applicable
+- NE JAMAIS critiquer un transporteur dans la réponse client
+
+<span class="com">## Format de sortie</span>
+
+Toujours produire deux blocs séparés :
+
+**Objet :** [objet email court et clair, en français même si le mail est en EN]
+
+**Corps :**
+[Le corps de l'email]
+
+<span class="com">## Exemples</span>
+
+<span class="com">### Cas 1 : Demande de tracking simple</span>
+
+Email entrant :
+"Bonjour, j'ai commandé il y a 5 jours et je n'ai toujours rien reçu. Commande
+n°12345. Merci."
+
+Réponse :
+**Objet :** Suivi de votre commande n°12345
+
+**Corps :**
+Bonjour,
+
+Je comprends votre impatience — 5 jours sans nouvelles, c'est normal de
+s'inquiéter. Je viens de regarder votre commande n°12345.
+
+Votre colis a été expédié via Mondial Relay le [date]. Voici votre lien
+de suivi direct : [LIEN]
+
+Délai standard sur cette destination : 3-5 jours ouvrés. Si rien n'a bougé
+d'ici 48h, n'hésitez pas à me ré-écrire, je prendrai contact avec le
+transporteur de mon côté.
+
+Merci pour votre patience 🙏
+
+L'équipe Cataleya Paris
+
+<span class="com">### Cas 2 : Demande de retour</span>
+
+[Ajouter ici un autre exemple détaillé...]</span>
+    </div>
+
+    <h3>Comment l'installer dans Claude Desktop</h3>
+    <ol>
+      <li>Crée un dossier <code class="inline">cataleya-sav</code> sur ton ordinateur</li>
+      <li>Crée un fichier <code class="inline">SKILL.md</code> dedans avec le contenu ci-dessus</li>
+      <li>Compresse le dossier en <code class="inline">.zip</code></li>
+      <li>Dans Claude Desktop : <strong>Settings → Customize → Skills → Upload Skill</strong></li>
+      <li>Sélectionne le .zip, valide, active le toggle</li>
+    </ol>
+
+    <p>À partir de maintenant, dès que tu colles un email client dans une conversation Claude, le Skill SAV Cataleya s'active automatiquement et drafte une réponse parfaitement calibrée.</p>
+
+    <div class="ornament">· · ·</div>
+
+    <h2>Skill #2 — Fiche produit FR/EN</h2>
+    <p>Deuxième Skill ultra utile pour toi : générer automatiquement les fiches produit dans tes deux langues, avec HS code, composition, et SEO.</p>
+
+    <div class="code-block">
+      <span class="code-label">cataleya-fiche-produit/SKILL.md</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content"><span class="com">---</span>
+<span class="kw">name</span>: cataleya-fiche-produit
+<span class="kw">description</span>: Use this skill when the user wants to create a product description
+  for Cataleya or Lywwane (modest fashion brand). Triggers include "fiche produit",
+  "description produit", "nouveau produit", "rédiger pour le shop", or pasting raw
+  product info (name, fabric, photos) without a specific format.
+<span class="com">---</span>
+
+<span class="com"># Fiche produit Cataleya / Lywwane</span>
+
+<span class="com">## Objectif</span>
+
+Générer une fiche produit complète, vendeuse et conforme aux exigences douanières,
+en français et en anglais, en partant des infos brutes fournies par la designer.
+
+<span class="com">## Format de sortie attendu</span>
+
+Toujours produire un bloc structuré avec :
+
+1. **Titre FR** (60 caractères max, mot-clé SEO en début)
+2. **Titre EN** (60 caractères max)
+3. **Description courte FR** (155 caractères max, optimisée meta-description)
+4. **Description courte EN**
+5. **Description longue FR** (3 paragraphes : style, matière, occasion de port)
+6. **Description longue EN** (idem)
+7. **Composition** : ex "70% viscose, 30% polyester"
+8. **HS Code** : code douanier 6 chiffres (voir tableau ci-dessous)
+9. **Mots-clés SEO** (5 max, FR et EN séparés)
+
+<span class="com">## Tableau HS Codes (extrait)</span>
+
+| Type produit | HS Code |
+|---|---|
+| Robe femme tissée | 620443 |
+| Robe femme tricotée | 610443 |
+| Abaya / kaftan tissé | 620449 |
+| Hijab / écharpe tissé | 621410 |
+| Hijab / écharpe maille | 621420 |
+| Pantalon femme | 620462 |
+| Veste femme | 620433 |
+| Ensemble (top + jupe ou pantalon) | 620423 |
+
+Si le produit ne correspond à aucun, demander confirmation avant de proposer
+un code par défaut.
+
+<span class="com">## Style éditorial</span>
+
+- **Cataleya** : élégance, raffinement, modernité — public 25-45 ans urbain
+- **Lywwane** : sobriété, intemporel, lifestyle — public plus large
+
+<span class="com">## Règles strictes</span>
+
+- TOUJOURS produire FR ET EN, jamais juste une langue
+- NE JAMAIS inventer une composition non fournie — demander si manquant
+- TOUJOURS proposer le HS code en se basant sur le tableau ci-dessus
+- Pour le SEO, utiliser des termes que les clientes cherchent réellement
+  (abaya pas caftan si Maroc, modest dress pas sober dress en EN, etc.)
+- NE JAMAIS utiliser de superlatifs creux ("magnifique", "splendide") —
+  privilégier des descriptions concrètes (matière, coupe, occasion)
+
+<span class="com">## Exemple de sortie</span>
+
+Input : "Nouvelle robe Sahar, tissu lourd noir et doré, longue, manches
+larges, doublée. 80% poly 20% viscose. Pour mariages."
+
+Output :
+
+**Titre FR :** Robe Sahar — Longue, Noir & Doré pour Cérémonie
+**Titre EN :** Sahar Dress — Long Black & Gold Ceremony Gown
+
+**Description courte FR :** Robe longue Sahar en tissu lourd noir et doré.
+Coupe ample, manches larges, doublée. Idéale cérémonie ou mariage.
+
+**Description courte EN :** Sahar long dress in heavy black and gold fabric.
+Loose cut, wide sleeves, fully lined. Perfect for ceremonies and weddings.
+
+**Description longue FR :**
+[3 paragraphes structurés...]
+
+**Description longue EN :**
+[3 paragraphes structurés...]
+
+**Composition :** 80% polyester, 20% viscose
+**HS Code :** 620443 (robe femme tissée)
+**Mots-clés FR :** robe longue cérémonie, robe mariage modeste, robe orientale, abaya soirée, robe noir doré
+**Keywords EN :** long ceremony dress, modest wedding dress, oriental gown, evening abaya, black gold dress</span>
+    </div>
+
+    <div class="ornament">· · ·</div>
+
+    <h2>Skill #3 — Réponse fournisseur</h2>
+    <p>Pour standardiser tes communications avec tes fournisseurs (atelier, transporteurs, douane). Beaucoup plus court mais redoutablement utile au quotidien.</p>
+
+    <div class="code-block">
+      <span class="code-label">cataleya-fournisseur/SKILL.md</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content"><span class="com">---</span>
+<span class="kw">name</span>: cataleya-fournisseur
+<span class="kw">description</span>: Use this skill when the user needs to draft a professional
+  message to a supplier, contractor, or logistics partner for Cataleya/Lywwane.
+  Triggers include "message fournisseur", "écrire à l'atelier", "réclamation
+  transporteur", "demande devis", "relance facture", "Mondial Relay support",
+  "Packlink", or pasting a supplier email asking for action.
+<span class="com">---</span>
+
+<span class="com"># Communication fournisseur Cataleya / Lywwane</span>
+
+<span class="com">## Posture</span>
+
+- Toujours ferme et professionnel, jamais agressif
+- Direct au but : pas de small talk, pas de "j'espère que vous allez bien"
+- Préciser systématiquement : qui je suis, ma référence, ce que je veux,
+  délai attendu
+
+<span class="com">## Structure standard</span>
+
+1. Bonjour [Nom],
+2. Référence : [n° commande / n° facture / sujet précis]
+3. Demande claire en 1-2 phrases
+4. Date butoir attendue ou proposition de RDV
+5. Cordialement, Sousou Morin — Cataleya Paris / Lywwane
+
+<span class="com">## Règles strictes</span>
+
+- TOUJOURS donner une référence claire dès la 2e ligne
+- TOUJOURS proposer une deadline ou un créneau (pas "dès que possible")
+- NE JAMAIS menacer ou hausser le ton, même en relance
+- Pour les réclamations : décrire le fait, l'impact business, la solution attendue
+- Pour les devis : préciser quantité, délai souhaité, contraintes</span>
+    </div>
+
+    <h2>La structure recommandée pour tes Skills custom</h2>
+    <p>Si tu veux organiser proprement, voici comment je recommande de gérer ta bibliothèque de Skills personnels :</p>
+
+    <div class="code-block">
+      <span class="code-label">Bibliothèque Sousou — Skills personnels</span>
+      <button class="copy-btn" onclick="copyText(this)">Copier</button>
+      <span class="code-content"><span class="var">~/Documents/Claude-Skills/</span>
+├── <span class="kw">cataleya/</span>
+│   ├── cataleya-sav/SKILL.md
+│   ├── cataleya-fiche-produit/SKILL.md
+│   ├── cataleya-fournisseur/SKILL.md
+│   └── cataleya-rapport-mensuel/SKILL.md
+├── <span class="kw">lywwane/</span>
+│   ├── lywwane-fiche-produit/SKILL.md
+│   └── lywwane-newsletter/SKILL.md
+├── <span class="kw">consulting/</span>
+│   ├── audit-prospect/SKILL.md
+│   ├── devis-prestation/SKILL.md
+│   └── case-study-formatter/SKILL.md
+└── <span class="kw">uft/</span>
+    └── communication-membres/SKILL.md</span>
+    </div>
+
+    <div class="callout bordeaux">
+      <div class="callout-title">Le pattern à retenir</div>
+      <p>Chaque fois que tu te dis "j'ai déjà ré-expliqué ça à Claude pour la 3e fois cette semaine"… c'est un signal. C'est qu'il faut transformer cette répétition en Skill.</p>
+      <p>Une bonne approche : tiens un fichier "Skills à créer" pendant 1-2 semaines, où tu notes chaque tâche répétitive. Puis le samedi matin, tu en transformes 3-4 en Skills. Au bout d'un mois, tu as une bibliothèque qui te fait gagner 5h/semaine.</p>
+    </div>
+  `,
+  exercises: [
+    "Créer le Skill cataleya-sav et l'uploader dans Claude Desktop",
+    "Créer le Skill cataleya-fiche-produit en adaptant à tes vrais HS codes",
+    "Créer le Skill cataleya-fournisseur",
+    "Tester un email SAV réel pour valider le ton",
+    "Mettre en place ta bibliothèque ~/Documents/Claude-Skills/"
+  ]
+},
+
+// ============================================================
+// 4. SKILLS VS MCP VS PROJECTS
+// ============================================================
+{
+  id: 'comparaison',
+  num: 'IV',
+  label: 'Skills vs MCP vs Projects',
+  html: `
+    <div class="section-eyebrow">Étape Quatrième</div>
+    <h1 class="section-title">Skills, MCP, Projects : <em>quand</em> utiliser quoi</h1>
+    <p class="section-lead">C'est la question la plus posée. Les trois outils se complètent — ils ne sont pas concurrents. Voici comment décider lequel utiliser pour une situation donnée.</p>
+
+    <h2>L'arbre de décision</h2>
+    <p>Pose-toi ces 3 questions dans l'ordre :</p>
+
+    <ol>
+      <li><strong>Est-ce que j'ai besoin que Claude lise/écrive dans un service externe ?</strong> (Gmail, Drive, GitHub, ma DB, mon CRM…) → C'est <strong>MCP</strong>.</li>
+      <li><strong>Est-ce que j'ai besoin que Claude maîtrise une compétence métier précise ?</strong> (un format de document, une procédure, un ton de réponse) → C'est <strong>Skill</strong>.</li>
+      <li><strong>Est-ce que j'ai besoin de garder du contexte stable entre plusieurs conversations sur un même sujet ?</strong> (docs de référence, instructions standing) → C'est <strong>Project</strong>.</li>
+    </ol>
+
+    <p>Souvent, la réponse est <strong>"oui aux trois"</strong> — c'est normal et c'est même le pattern optimal.</p>
+
+    <h2>Tableau comparatif détaillé</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Skills</th>
+            <th>MCP</th>
+            <th>Projects</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Nature</strong></td>
+            <td>Compétence procédurale</td>
+            <td>Connexion à un service</td>
+            <td>Workspace contextuel</td>
+          </tr>
+          <tr>
+            <td><strong>Activation</strong></td>
+            <td>Auto, basée sur la description</td>
+            <td>Manuelle (tu dis "regarde mon Gmail")</td>
+            <td>Auto (tu es dans le project)</td>
+          </tr>
+          <tr>
+            <td><strong>Portée</strong></td>
+            <td>Globale (toutes conversations)</td>
+            <td>Globale ou par conversation</td>
+            <td>Limitée au project</td>
+          </tr>
+          <tr>
+            <td><strong>Mémoire</strong></td>
+            <td>Aucune (instructions seulement)</td>
+            <td>Lit en temps réel</td>
+            <td>Knowledge base + memory scopée</td>
+          </tr>
+          <tr>
+            <td><strong>Cas typique</strong></td>
+            <td>"Sais répondre à un SAV à ma façon"</td>
+            <td>"Lis mes 5 derniers emails"</td>
+            <td>"On bosse sur Cataleya, voici les docs"</td>
+          </tr>
+          <tr>
+            <td><strong>Création</strong></td>
+            <td>Tu écris un SKILL.md</td>
+            <td>Tu installes un connecteur</td>
+            <td>Tu uploads des docs</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Le pattern combiné optimal</h2>
+    <p>Voici comment un setup pro ressemble pour Cataleya :</p>
+
+    <div class="step">
+      <div class="step-number">A</div>
+      <div class="step-content">
+        <h3>Project "Cataleya Paris — Opérations"</h3>
+        <p>Contient : doc des procédures internes, contacts fournisseurs, schéma DB PrestaShop, charte graphique. Custom instructions : "Tu es l'assistant d'ops Cataleya, tu connais X Y Z."</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">B</div>
+      <div class="step-content">
+        <h3>MCPs connectés au Project</h3>
+        <p>Gmail (lecture seule des emails clients), Google Drive (accès aux factures), GitHub (lecture du repo facturation-cataleya).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">C</div>
+      <div class="step-content">
+        <h3>Skills actifs</h3>
+        <p>cataleya-sav (drafting réponses), cataleya-fiche-produit (génération catalogue), cataleya-rapport-mensuel (Word formaté), + les Skills officiels (docx, xlsx, pdf).</p>
+      </div>
+    </div>
+
+    <p>Quand tu ouvres une conversation dans ce project et que tu colles un email client :</p>
+    <ol>
+      <li>Le <strong>Project</strong> donne le contexte général à Claude (qui tu es, comment tu bosses)</li>
+      <li>Le <strong>Skill cataleya-sav</strong> s'active automatiquement parce qu'il détecte un email client</li>
+      <li>Le <strong>MCP Gmail</strong> peut être appelé pour vérifier l'historique d'échanges avec ce client</li>
+      <li>Le <strong>Skill docx</strong> s'active si tu demandes "fais-en aussi un mémo Word à archiver"</li>
+    </ol>
+
+    <p>Quatre outils, une seule expérience fluide pour toi.</p>
+
+    <div class="ornament">· · ·</div>
+
+    <h2>Erreurs typiques à éviter</h2>
+
+    <h3>Erreur n°1 : Tout mettre dans le Project</h3>
+    <p>Beaucoup de gens uploadent leurs procédures SAV en Markdown dans la knowledge base du Project. Ça marche, mais tu ne peux pas réutiliser ces procédures hors du Project. <strong>Si la connaissance est procédurale et réutilisable</strong>, c'est un Skill, pas un document de Project.</p>
+
+    <h3>Erreur n°2 : Faire des Skills trop larges</h3>
+    <p>Un Skill "tout-ce-qui-concerne-Cataleya" ne se déclenchera jamais correctement parce que sa description sera vague. Préfère 5 Skills précis (sav, fiche-produit, fournisseur, rapport, devis) qu'un seul mastodonte.</p>
+
+    <h3>Erreur n°3 : Donner trop de pouvoir aux MCP</h3>
+    <p>Un MCP Gmail en lecture+écriture peut envoyer des emails en ton nom. Pour le SAV, je te recommande <strong>lecture seule</strong> + Claude drafte → toi tu envoies depuis Zoho. Tu gardes le contrôle final, ce qui est conforme à ta posture commerciale honnête.</p>
+
+    <div class="callout bordeaux">
+      <div class="callout-title">Le réflexe à intégrer</div>
+      <p>Avant de mettre en place une nouvelle automation Claude, fais le tour des 3 questions :</p>
+      <ul>
+        <li><em>Qu'est-ce qu'il doit savoir ?</em> → Project (contexte) + Skill (procédure)</li>
+        <li><em>À quoi il doit accéder ?</em> → MCP (services externes)</li>
+        <li><em>Qu'est-ce qu'il doit produire ?</em> → Skills officiels (docx, xlsx, pdf)</li>
+      </ul>
+      <p>Ces 3 questions structurent ton architecture en 2 minutes.</p>
+    </div>
+  `,
+  exercises: [
+    "Mapper tes 6 Projects existants : pour chacun, quels Skills custom seraient utiles",
+    "Identifier 3 MCP à connecter en priorité (Gmail, Drive, GitHub semblent évidents)",
+    "Faire le test du pattern combiné sur une vraie tâche quotidienne"
+  ]
+},
+
+// ============================================================
+// 5. DISTRIBUER & VENDRE
+// ============================================================
+{
+  id: 'distribuer',
+  num: 'V',
+  label: 'Distribuer & vendre',
+  html: `
+    <div class="section-eyebrow">Étape Cinquième · Monétisation</div>
+    <h1 class="section-title">Distribuer <em>et</em> vendre tes Skills</h1>
+    <p class="section-lead">C'est le levier que personne ne voit encore en mai 2026. Tes Skills custom ne sont pas seulement des outils internes — ils sont des actifs vendables, packageables, livrables à des clients. Voici comment.</p>
+
+    <h2>Trois façons de distribuer un Skill</h2>
+
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h3>Distribution interne (équipe)</h3>
+        <p>Tu envoies le dossier .zip à AbdAllah, Sara, Achraf. Ils l'uploadent dans leur Claude Desktop. Tout le monde travaille avec exactement les mêmes standards.</p>
+        <p><strong>Cas d'usage Cataleya :</strong> tu déploies "cataleya-sav" à toute l'équipe SAV, tout le monde drafte des réponses dans le même ton, plus jamais de mail bizarre qui passe en prod.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h3>Distribution client (consulting)</h3>
+        <p>Tu livres un Skill custom à un client comme livrable d'une prestation. Il l'installe chez lui, ses équipes l'utilisent. Tu factures la création + un suivi.</p>
+        <p><strong>Cas d'usage type :</strong> client = marque qui fait 1M€ de CA mode. Tu lui livres :</p>
+        <ul>
+          <li>Un Skill "[ClientName]-sav" calibré sur SA politique</li>
+          <li>Un Skill "[ClientName]-fiche-produit" calibré sur SES catégories et HS codes</li>
+          <li>Une formation 2h pour son équipe</li>
+          <li>3 mois de suivi/ajustements</li>
+        </ul>
+        <p>Prestation type : <strong>3 500-7 000 €</strong> + maintenance 300-500 €/mois.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h3>Distribution produit (marketplace)</h3>
+        <p>Il existe maintenant des marketplaces de Skills (getclaudeskills.com et autres). Tu peux y publier tes Skills sectoriels en mode "produit standardisé" et générer du revenu passif.</p>
+        <p><strong>Tes Skills à packager comme produits :</strong></p>
+        <ul>
+          <li><em>"Mode Modeste — Pack SAV"</em> : Skill + templates + glossaire FR/EN/AR · 79 €</li>
+          <li><em>"PrestaShop Mode — Catalogue Builder"</em> : Skill fiche produit + 50 HS codes · 149 €</li>
+          <li><em>"Boutique e-commerce — Comm fournisseur"</em> : Skill + 30 templates · 49 €</li>
+        </ul>
+        <p>Revenu passif espéré la 1<sup>ère</sup> année : <strong>2 000-8 000 €</strong> selon visibilité. C'est petit, mais c'est <em>passif</em> — tu encaisses pendant que tu fais autre chose.</p>
+      </div>
+    </div>
+
+    <div class="ornament">· · ·</div>
+
+    <h2>L'angle consulting unique que tu peux jouer</h2>
+    <p>Voici une stratégie différenciante qui marche très bien en mai 2026, et que tu peux exploiter avec ton positionnement "opérateur de boutiques" :</p>
+
+    <div class="callout">
+      <div class="callout-title">L'offre "Skills Pack" sur mesure</div>
+      <p>Au lieu de vendre une "automation IA" abstraite, tu vends un <strong>pack de 3 à 5 Skills custom calibrés sur le métier exact du client</strong>, livrés clés en main, avec formation incluse.</p>
+      <p>C'est concret, c'est livrable, c'est mesurable. Tu peux montrer chaque Skill à l'œuvre. Tu peux dire "voici les 5 compétences que vos collaborateurs vont avoir en plus à partir de demain."</p>
+      <p>Les dirigeants comprennent immédiatement la valeur. Ce n'est plus "l'IA va aider votre équipe" (vague) — c'est "votre équipe sait maintenant faire X, Y, Z avec Claude" (précis).</p>
+    </div>
+
+    <h3>Structure d'une mission "Skills Pack"</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Étape</th><th>Durée</th><th>Livrable</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1. Audit Express</strong></td><td>1 jour</td><td>Identification des 5 Skills à plus haut ROI</td></tr>
+          <tr><td><strong>2. Conception</strong></td><td>2-3 jours</td><td>Rédaction des 5 SKILL.md + scripts associés</td></tr>
+          <tr><td><strong>3. Installation</strong></td><td>0,5 jour</td><td>Déploiement chez le client + tests</td></tr>
+          <tr><td><strong>4. Formation</strong></td><td>0,5 jour</td><td>Session équipe + doc d'usage</td></tr>
+          <tr><td><strong>5. Suivi</strong></td><td>3 mois</td><td>Ajustements mensuels + nouveau Skill /trim.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><strong>Tarification recommandée :</strong> 4 500-7 000 € en setup + 400 €/mois en suivi. Marge confortable, livrable concret, client content.</p>
+
+    <div class="ornament">· · ·</div>
+
+    <h2>Considérations sécurité (à savoir avant de partager)</h2>
+    <p>Quand tu distribues un Skill, tu confies à quelqu'un un fichier que Claude va exécuter dans son sandbox. Sécurité oblige :</p>
+
+    <ul>
+      <li><strong>N'inclus jamais</strong> de credentials, clés API, mots de passe dans un Skill</li>
+      <li><strong>Si tu intègres des scripts</strong>, vérifie qu'ils ne tirent pas de ressources externes non maîtrisées</li>
+      <li><strong>Documente les permissions requises</strong> dans le SKILL.md (ex : "ce skill nécessite l'accès Gmail en lecture seule")</li>
+      <li><strong>Pour un client</strong>, donne-lui le code source du Skill, pas une boîte noire — la transparence rassure et est exigée par les RSSI sérieux</li>
+    </ul>
+
+    <div class="callout bordeaux">
+      <div class="callout-title">L'opportunité fenêtre 2026</div>
+      <p>Sousou, je veux insister là-dessus : nous sommes en mai 2026. Les Skills sont sortis publiquement il y a 6-8 mois. <strong>Quasiment personne ne les vend encore comme produits.</strong> Les agences digitales ne savent même pas que ça existe. Les freelances "consultants IA" font surtout du prompting basique.</p>
+      <p>Tu as une fenêtre de 12-18 mois où être "le mec qui livre des Skills custom pour les marques de mode" te place dans un quasi-monopole sur ta niche. Profite-en. Dans 2 ans, tout le monde le fera.</p>
+    </div>
+
+    <h2>Le mot de la fin — ton plan d'action</h2>
+
+    <ol>
+      <li><strong>Cette semaine</strong> : active Code Execution + crée tes 3 premiers Skills personnels (cataleya-sav, fiche-produit, fournisseur)</li>
+      <li><strong>Semaines 2-3</strong> : déploie auprès de ton équipe Cataleya. Documente le gain de temps réel.</li>
+      <li><strong>Mois 2</strong> : intègre la création de Skills dans ton offre consulting. Ajoute un slide "Skills Pack" à ta présentation.</li>
+      <li><strong>Mois 3-6</strong> : livre 2 packs Skills à 2 premiers clients (à 4 500-7 000 € chacun). Documente les cas en case studies publics.</li>
+      <li><strong>Mois 6-12</strong> : si tu vois des Skills très demandés, package-les en produits sur les marketplaces. Première source de revenu passif.</li>
+    </ol>
+
+    <p class="lead" style="margin-top: 32px;">Les Skills sont l'angle que tu vas exploiter au maximum. C'est concret, c'est livrable, c'est calibré pile sur ton profil d'opérateur. Et personne ne le fait encore vraiment.</p>
+
+    <p>Allez, va activer Code Execution et fais ton premier test. On en reparle quand tu veux. 🥋</p>
+  `,
+  exercises: [
+    "Lister 5 Skills que tu pourrais créer pour Cataleya/Lywwane",
+    "Identifier 1 client/prospect potentiel pour un Skills Pack",
+    "Estimer ton premier devis Skills Pack (setup + maintenance)",
+    "Rédiger un slide \"Skills Pack\" pour ta présentation consulting"
+  ]
+}
+
+];
+
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
+
+let state = {
+  currentSection: 'intro',
+  sectionsRead: {},
+  exercisesDone: {}
+};
+
+const STORAGE_KEY = 'sousou-skills-guide-v1';
+
+async function loadState() {
+  try {
+    const result = await window.storage.get(STORAGE_KEY);
+    if (result && result.value) {
+      state = JSON.parse(result.value);
+    }
+  } catch (e) {
+    console.log('No saved state yet');
+  }
+}
+
+async function saveState() {
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('Save error:', e);
+  }
+}
+
+function computeProgress() {
+  const learnable = SECTIONS.filter(s => s.id !== 'intro');
+  let total = 0, done = 0;
+  learnable.forEach(s => {
+    total += 1;
+    if (state.sectionsRead[s.id]) done += 1;
+    s.exercises.forEach((_, idx) => {
+      total += 1;
+      if (state.exercisesDone[s.id + '-' + idx]) done += 1;
+    });
+  });
+  return total === 0 ? 0 : Math.round((done / total) * 100);
+}
+
+function isSectionCompleted(sectionId) {
+  const section = SECTIONS.find(s => s.id === sectionId);
+  if (!section || section.id === 'intro') return false;
+  if (!state.sectionsRead[sectionId]) return false;
+  return section.exercises.every((_, idx) => state.exercisesDone[sectionId + '-' + idx]);
+}
+
+function renderTOC() {
+  const toc = document.getElementById('toc');
+  toc.innerHTML = SECTIONS.map(s => {
+    const isActive = s.id === state.currentSection;
+    const completed = isSectionCompleted(s.id);
+    return `
+      <li class="toc-item">
+        <a class="toc-link ${isActive ? 'active' : ''}" onclick="navigateTo('${s.id}')">
+          <span class="toc-num">${s.num || '★'}</span>
+          <span>${s.label}</span>
+          ${s.id !== 'intro' ? `<span class="toc-check ${completed ? 'completed' : ''}"></span>` : ''}
+        </a>
+      </li>
+    `;
+  }).join('');
+}
+
+function renderProgress() {
+  const pct = computeProgress();
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = pct + '%';
+}
+
+function renderSection() {
+  const section = SECTIONS.find(s => s.id === state.currentSection);
+  if (!section) return;
+
+  let html = section.html;
+
+  if (section.exercises && section.exercises.length > 0) {
+    html += `<div class="exercises"><h3 style="margin-top: 8px;">À cocher au fur et à mesure</h3>`;
+    html += section.exercises.map((ex, idx) => {
+      const k = section.id + '-' + idx;
+      const checked = state.exercisesDone[k];
+      return `
+        <div class="exercise-item ${checked ? 'completed' : ''}" onclick="toggleExercise('${section.id}', ${idx})">
+          <div class="checkbox ${checked ? 'checked' : ''}"></div>
+          <div class="exercise-text">${ex}</div>
+        </div>
+      `;
+    }).join('');
+    html += `</div>`;
+  }
+
+  if (section.id !== 'intro') {
+    const isRead = state.sectionsRead[section.id];
+    html += `
+      <div style="text-align: center; margin-top: 32px;">
+        <button onclick="markRead('${section.id}')" style="
+          background: ${isRead ? 'var(--green-success)' : 'var(--bordeaux)'};
+          color: var(--paper);
+          border: none;
+          padding: 13px 28px;
+          border-radius: 100px;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          letter-spacing: 0.04em;
+        ">${isRead ? 'Section lue ✓' : 'Marquer cette section comme lue'}</button>
+      </div>
+    `;
+  }
+
+  // Nav
+  const idx = SECTIONS.findIndex(s => s.id === section.id);
+  const prev = SECTIONS[idx - 1];
+  const next = SECTIONS[idx + 1];
+
+  html += `<div class="nav-buttons">`;
+  if (prev) {
+    html += `
+      <a class="nav-btn" onclick="navigateTo('${prev.id}')">
+        <span class="nav-btn-label">← Précédent</span>
+        <span class="nav-btn-title">${prev.label}</span>
+      </a>
+    `;
+  } else {
+    html += `<div style="flex:1;"></div>`;
+  }
+  if (next) {
+    html += `
+      <a class="nav-btn next" onclick="navigateTo('${next.id}')">
+        <span class="nav-btn-label">Suivant →</span>
+        <span class="nav-btn-title">${next.label}</span>
+      </a>
+    `;
+  } else {
+    html += `<div style="flex:1;"></div>`;
+  }
+  html += `</div>`;
+
+  document.getElementById('content').innerHTML = `<div class="section active">${html}</div>`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderAll() {
+  renderTOC();
+  renderProgress();
+  renderSection();
+}
+
+window.navigateTo = async function(id) {
+  state.currentSection = id;
+  await saveState();
+  renderAll();
+};
+
+window.toggleExercise = async function(sectionId, idx) {
+  const k = sectionId + '-' + idx;
+  if (state.exercisesDone[k]) {
+    delete state.exercisesDone[k];
+  } else {
+    state.exercisesDone[k] = true;
+    showToast('Exercice validé ✓');
+  }
+  await saveState();
+  renderAll();
+};
+
+window.markRead = async function(sectionId) {
+  if (state.sectionsRead[sectionId]) {
+    delete state.sectionsRead[sectionId];
+  } else {
+    state.sectionsRead[sectionId] = true;
+    showToast('Section marquée comme lue');
+  }
+  await saveState();
+  renderAll();
+};
+
+window.copyText = function(button) {
+  const block = button.closest('.code-block');
+  const content = block.querySelector('.code-content');
+  const text = content.innerText || content.textContent;
+
+  navigator.clipboard.writeText(text).then(() => {
+    button.textContent = 'Copié ✓';
+    button.classList.add('copied');
+    showToast('Copié dans le presse-papiers');
+    setTimeout(() => {
+      button.textContent = 'Copier';
+      button.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    button.textContent = 'Copié ✓';
+    button.classList.add('copied');
+    showToast('Copié');
+    setTimeout(() => {
+      button.textContent = 'Copier';
+      button.classList.remove('copied');
+    }, 2000);
+  });
+};
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+(async function init() {
+  await loadState();
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
