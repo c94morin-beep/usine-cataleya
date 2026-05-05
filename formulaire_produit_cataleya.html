@@ -1937,14 +1937,16 @@ function collectProducts() {
   const notes = document.getElementById('notes').value.trim();
 
   if (!colors.length) {
-    return [{ nom, sku, cat, prix, poids, couleur: '', type: isDecl ? 'Déclinaisons' : 'Simple', tailles, options, options2, descriptionFR, descriptionEN, comp, hs, comp2, hs2, ent, photos, notes }];
+    return [{ nom, sku, cat, prix, poids, couleur: '', type: isDecl ? 'Déclinaisons' : 'Simple', tailles, options, options2, descriptionFR, descriptionEN, descPrincipale: dp, descMatiere: dm, descPourqui: dq, comp, hs, comp2, hs2, ent, photos, notes }];
   }
   return colors.map(couleur => ({
     nom: nom + ' ' + couleur.toLowerCase(),
     sku: sku ? sku + '-' + couleur.toLowerCase().replace(/\s+/g, '') : '',
     cat, prix, poids, couleur,
     type: isDecl ? 'Déclinaisons' : 'Simple',
-    tailles, options, options2, descriptionFR, descriptionEN, comp, hs, comp2, hs2, ent, photos, notes
+    tailles, options, options2, descriptionFR, descriptionEN,
+    descPrincipale: dp, descMatiere: dm, descPourqui: dq,
+    comp, hs, comp2, hs2, ent, photos, notes
   }));
 }
 
@@ -2272,9 +2274,12 @@ function generateProductsCSV() {
     if (seen.has(p.nom)) return;
     seen.add(p.nom);
 
-    // Le summary = description principale uniquement (sans les sections matière/pour qui)
-    const dpMatch = (p.descriptionFR || '').match(/^Description :\n\n([\s\S]*?)(?:\n\nMatière|$)/);
-    const summary = dpMatch ? dpMatch[1].trim() : (p.descriptionFR || '').replace(/Description :\n\n/g, '').trim();
+    // Summary = description complète : Description + Matière + Pour qui
+    // Format identique à l'aperçu (sections séparées par sauts de ligne)
+    let summary = '';
+    if (p.descPrincipale) summary += 'Description\n\n' + p.descPrincipale;
+    if (p.descMatiere)    summary += (summary ? '\n\n\n' : '') + 'Matière\n\n' + p.descMatiere;
+    if (p.descPourqui)    summary += (summary ? '\n\n\n' : '') + 'Pour qui ?\n\n' + p.descPourqui;
 
     rows.push([
       '1',                                    // Active
