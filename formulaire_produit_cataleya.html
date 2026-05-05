@@ -1619,8 +1619,9 @@
     </div>
 
     <div class="modal-actions" style="grid-template-columns: 1fr; gap: 8px;">
-      <button class="btn-download" onclick="downloadCSV('products')" style="background:var(--bordeaux);color:var(--cream)">📦 1. Télécharger CSV Produits</button>
+      <button class="btn-download" onclick="downloadCSV('products')" style="background:var(--bordeaux);color:var(--cream)">📦 1. Télécharger CSV Produits FR</button>
       <button class="btn-download" id="btn-download-combinations" onclick="downloadCSV('combinations')" style="background:var(--terracotta);color:var(--white);opacity:0.45;cursor:not-allowed" disabled>🧵 2. Télécharger CSV Combinaisons</button>
+      <button class="btn-download" id="btn-download-en" onclick="downloadCSV('products_en')" style="background:#3B6D11;color:var(--white);opacity:0.45;cursor:not-allowed" disabled>🇬🇧 3. Télécharger CSV Produits EN</button>
       <button class="btn-reset" onclick="resetAll()">Recommencer un nouveau lot</button>
     </div>
   </div>
@@ -2257,6 +2258,7 @@ function finishAndExportCSV() {
 // CSV
 // ═══════════════════════════════════════════════════
 let csvProductsString = '';
+let csvProductsENString = '';
 let csvCombinationsString = '';
 
 function csvEscape(val, sep) {
@@ -2323,6 +2325,48 @@ function generateProductsCSV() {
 
   csvProductsString = headers.join(SEP) + '\n' + rows.join('\n');
   return csvProductsString;
+}
+
+// ───────────────────────────────────────────
+// CSV 1bis — PRODUITS EN (mise à jour des champs anglais)
+// Colonnes : Product ID ; Name * ; Summary
+// Product ID = ID numérique PrestaShop saisi par l'utilisateur (utilisé en mode "Update" avec ID Lang = 2)
+// ───────────────────────────────────────────
+function generateProductsENCSV() {
+  const headers = ['Product ID', 'Name *', 'Summary'];
+  const SEP = ';';
+  const psIds = loadPsIds();
+  const seen = new Set();
+  const rows = [];
+
+  allProducts.forEach(p => {
+    if (seen.has(p.nom)) return;
+    seen.add(p.nom);
+
+    const psId = psIds[p.nom];
+    if (!psId) return; // skip si pas d'ID
+
+    // Récupérer la traduction EN depuis le cache
+    // (la trad EN est stockée dans translationCache au moment où on clique "Traduire")
+    const cacheKey = (p.descPrincipale||'') + '|' + (p.descMatiere||'') + '|' + (p.descPourqui||'');
+    const trad = translationCache[cacheKey];
+    if (!trad) return; // pas de trad disponible pour ce produit, on saute
+
+    // Construire le Summary EN au même format HTML que le FR
+    let summaryEN = '';
+    if (trad.description) summaryEN += '<p><strong>Description</strong></p><p>' + trad.description.replace(/\n/g, '<br>') + '</p>';
+    if (trad.matiere)     summaryEN += '<p><strong>Material</strong></p><p>' + trad.matiere.replace(/\n/g, '<br>') + '</p>';
+    if (trad.pourQui)     summaryEN += '<p><strong>Who is it for?</strong></p><p>' + trad.pourQui.replace(/\n/g, '<br>') + '</p>';
+
+    rows.push([
+      psId,
+      p.nom,           // Nom identique au FR (l'utilisateur a choisi de ne pas traduire)
+      summaryEN
+    ].map(v => csvEscape(v, SEP)).join(SEP));
+  });
+
+  csvProductsENString = rows.length ? (headers.join(SEP) + '\n' + rows.join('\n')) : '';
+  return csvProductsENString;
 }
 
 // ───────────────────────────────────────────
@@ -2394,17 +2438,33 @@ function cartesianProduct(arrays) {
 
 function generateCSV() {
   generateProductsCSV();
+  generateProductsENCSV();
   generateCombinationsCSV();
 
-  // Affichage dans le modal : aperçu des 2 CSV
+  // Compter combien de produits ont une traduction EN
+  const seenForEn = new Set();
+  let translatedCount = 0, totalProducts = 0;
+  allProducts.forEach(p => {
+    if (seenForEn.has(p.nom)) return;
+    seenForEn.add(p.nom);
+    totalProducts++;
+    const cacheKey = (p.descPrincipale||'') + '|' + (p.descMatiere||'') + '|' + (p.descPourqui||'');
+    if (translationCache[cacheKey]) translatedCount++;
+  });
+
+  // Affichage dans le modal : aperçu des 3 CSV
   const previewHTML = `
     <div style="margin-bottom:18px">
-      <div style="font-size:12px;font-weight:700;color:var(--bordeaux);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase">📦 CSV 1 — Produits</div>
-      <div class="csv-content" style="max-height:200px;overflow-y:auto">${csvProductsString.replace(/</g, '&lt;')}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--bordeaux);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase">📦 CSV 1 — Produits FR</div>
+      <div class="csv-content" style="max-height:160px;overflow-y:auto">${csvProductsString.replace(/</g, '&lt;')}</div>
+    </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:12px;font-weight:700;color:#3B6D11;margin-bottom:6px;letter-spacing:1px;text-transform:uppercase">🇬🇧 CSV 1bis — Produits EN (${translatedCount}/${totalProducts} traduits)</div>
+      <div class="csv-content" style="max-height:160px;overflow-y:auto">${csvProductsENString ? csvProductsENString.replace(/</g, '&lt;') : '(aucune traduction EN disponible — clique sur 🌐 Traduire en anglais à l\\'étape 4 pour chaque produit avant l\\'export)'}</div>
     </div>
     <div>
       <div style="font-size:12px;font-weight:700;color:var(--terracotta);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase">🧵 CSV 2 — Combinaisons (tailles & options)</div>
-      <div class="csv-content" style="max-height:200px;overflow-y:auto">${csvCombinationsString ? csvCombinationsString.replace(/</g, '&lt;') : '(aucune combinaison — produits simples uniquement)'}</div>
+      <div class="csv-content" style="max-height:160px;overflow-y:auto">${csvCombinationsString ? csvCombinationsString.replace(/</g, '&lt;') : '(aucune combinaison — produits simples uniquement)'}</div>
     </div>
   `;
   document.getElementById('csv-content').innerHTML = previewHTML;
@@ -2422,30 +2482,48 @@ function downloadCSV(which) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cataleya_produits_${date}.csv`;
+    a.download = `cataleya_produits_FR_${date}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    showToast('✓ CSV produits FR téléchargé');
+    return;
   }
 
-  if (which === 'combinations' || !which) {
+  if (which === 'products_en') {
+    // Régénérer pour utiliser les IDs PrestaShop fraîchement saisis
+    generateProductsENCSV();
+    if (!csvProductsENString) {
+      showToast('⚠ Aucun produit traduit (clique sur 🌐 Traduire en anglais à l\'étape 4)', 'error');
+      return;
+    }
+    const blob = new Blob(['\uFEFF' + csvProductsENString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cataleya_produits_EN_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✓ CSV produits EN téléchargé');
+    return;
+  }
+
+  if (which === 'combinations') {
     // Régénérer à la volée pour utiliser les IDs PrestaShop fraîchement saisis
     generateCombinationsCSV();
     if (!csvCombinationsString || csvCombinationsString.split('\n').length < 2) {
       showToast('⚠ Aucune combinaison à exporter', 'error');
       return;
     }
-    setTimeout(() => {
-      const blob = new Blob(['\uFEFF' + csvCombinationsString], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `cataleya_combinaisons_${date}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }, 300);
+    const blob = new Blob(['\uFEFF' + csvCombinationsString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cataleya_combinaisons_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✓ CSV combinaisons téléchargé');
+    return;
   }
-
-  showToast(which === 'products' ? '✓ CSV produits téléchargé' : which === 'combinations' ? '✓ CSV combinaisons téléchargé' : '✓ Les 2 CSV téléchargés');
 }
 
 function copyCSV(which) {
@@ -2465,6 +2543,7 @@ function resetAll() {
   if (!confirm('Effacer tous les produits enregistrés et recommencer ?')) return;
   allProducts.length = 0;
   csvProductsString = '';
+  csvProductsENString = '';
   csvCombinationsString = '';
   // Vider aussi les IDs PrestaShop saisis (lot terminé)
   localStorage.removeItem(PS_IDS_KEY);
@@ -3080,6 +3159,8 @@ function updateCombinationsButtonState() {
     if (!seen.has(p.nom)) { seen.add(p.nom); uniqueNames.push(p.nom); }
   });
   const allFilled = uniqueNames.every(n => map[n] && /^\d+$/.test(map[n]));
+
+  // Bouton combinaisons
   const btn = document.getElementById('btn-download-combinations');
   if (btn) {
     btn.disabled = !allFilled;
@@ -3087,9 +3168,34 @@ function updateCombinationsButtonState() {
     btn.style.cursor = allFilled ? 'pointer' : 'not-allowed';
     if (!allFilled) {
       const filled = uniqueNames.filter(n => map[n]).length;
-      btn.textContent = `🧵 CSV Combinaisons (${filled}/${uniqueNames.length} IDs remplis)`;
+      btn.textContent = `🧵 2. CSV Combinaisons (${filled}/${uniqueNames.length} IDs)`;
     } else {
-      btn.textContent = '🧵 Télécharger CSV Combinaisons';
+      btn.textContent = '🧵 2. Télécharger CSV Combinaisons';
+    }
+  }
+
+  // Bouton CSV EN — actif seulement si IDs remplis ET au moins une trad disponible
+  const btnEN = document.getElementById('btn-download-en');
+  if (btnEN) {
+    // Compter les produits qui ont une trad
+    let translatedCount = 0;
+    const seenForEn = new Set();
+    allProducts.forEach(p => {
+      if (seenForEn.has(p.nom)) return;
+      seenForEn.add(p.nom);
+      const cacheKey = (p.descPrincipale||'') + '|' + (p.descMatiere||'') + '|' + (p.descPourqui||'');
+      if (translationCache[cacheKey]) translatedCount++;
+    });
+    const enReady = allFilled && translatedCount > 0;
+    btnEN.disabled = !enReady;
+    btnEN.style.opacity = enReady ? '1' : '0.45';
+    btnEN.style.cursor = enReady ? 'pointer' : 'not-allowed';
+    if (!allFilled) {
+      btnEN.textContent = `🇬🇧 3. CSV Produits EN (remplis les IDs d'abord)`;
+    } else if (translatedCount === 0) {
+      btnEN.textContent = `🇬🇧 3. CSV Produits EN (0 traductions disponibles)`;
+    } else {
+      btnEN.textContent = `🇬🇧 3. Télécharger CSV Produits EN (${translatedCount} traduits)`;
     }
   }
 }
