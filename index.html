@@ -1532,7 +1532,7 @@
                         ) : (
                             <>
                                 {activeTab === 'dashboard' && (
-                                    <Dashboard stats={stats} orders={activeOrders} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} getCasierNum={getCasierNum} isSara={isSara} isCommentaires={isCommentaires} isAdmin={isAdmin} isOperateur={isOperateur} isLecteur={isLecteur} setActiveTab={setActiveTab} updateStatus={updateStatus} canEditStatus={canEditStatus} validations={validations} toggleValidation={toggleValidation} />
+                                    <Dashboard stats={stats} orders={activeOrders} lists={lists} listName={activeListId === 'global' ? 'GLOBAL' : lists.find(l => l.id === activeListId)?.name} openOrderRecap={openGlobalOrderRecap} getCasierNum={getCasierNum} isSara={isSara} isCommentaires={isCommentaires} isAdmin={isAdmin} isOperateur={isOperateur} isLecteur={isLecteur} setActiveTab={setActiveTab} updateStatus={updateStatus} canEditStatus={canEditStatus} validations={validations} toggleValidation={toggleValidation} />
                                 )}
                                 {activeTab === 'production' && (
                                     <ProductionTab
@@ -1843,7 +1843,7 @@
         }
 
         // Dashboard
-        function Dashboard({ stats, orders, listName, openOrderRecap, getCasierNum, isSara, isCommentaires, isAdmin, isOperateur, isLecteur, setActiveTab, updateStatus, canEditStatus, validations, toggleValidation }) {
+        function Dashboard({ stats, orders, lists, listName, openOrderRecap, getCasierNum, isSara, isCommentaires, isAdmin, isOperateur, isLecteur, setActiveTab, updateStatus, canEditStatus, validations, toggleValidation }) {
             const [showSAVModal, setShowSAVModal] = useState(false);
             const [globalSearch, setGlobalSearch] = useState('');
             const [searchResults, setSearchResults] = useState([]);
@@ -1853,10 +1853,12 @@
                 setGlobalSearch(q);
                 if (!q.trim()) { setSearchResults([]); return; }
                 const query = q.toLowerCase().trim();
-                const allRefs = [...new Set(orders.map(o => o.reference))];
+                const allListsOrders = (lists || []).filter(l => !l.archived).flatMap(list => (list.orders || []).map(o => ({ ...o, _listName: list.name })));
+                const sourceOrders = allListsOrders.length > 0 ? allListsOrders : orders;
+                const allRefs = [...new Set(sourceOrders.map(o => o.reference))];
                 const results = [];
                 allRefs.forEach(ref => {
-                    const items = orders.filter(o => o.reference === ref);
+                    const items = sourceOrders.filter(o => o.reference === ref);
                     const first = items[0];
                     // Si la query est numérique, chercher uniquement dans le numéro de commande
                     const isNumeric = /^\d+$/.test(query);
@@ -1869,7 +1871,6 @@
                           (first.adresse_livraison || '').toLowerCase().includes(query);
                     if (!match) return;
                     const allDone = items.every(o => o.status === STATUTS.RANGE);
-                    const allRange = items.every(o => o.status === STATUTS.RANGE);
                     const enAttente = items.filter(o => o.status === STATUTS.EN_ATTENTE).length;
                     const ranges = items.filter(o => o.status === STATUTS.RANGE).length;
                     let statut, statutColor;
@@ -1877,7 +1878,8 @@
                     else if (allDone) { statut = '✅ Terminée'; statutColor = 'text-green-600'; }
                     else if (ranges > 0) { statut = `📦 ${ranges}/${items.length} rangés`; statutColor = 'text-teal-600'; }
                     else { statut = `⏳ En attente (${enAttente}/${items.length})`; statutColor = 'text-yellow-600'; }
-                    results.push({ ref, client: first.client, email: first.email, transporteur: first.transporteur, adresse: first.adresse_livraison, total: items.length, statut, statutColor });
+                    const listNames = [...new Set(items.map(o => o._listName).filter(Boolean))];
+                    results.push({ ref, client: first.client, email: first.email, transporteur: first.transporteur, adresse: first.adresse_livraison, total: items.length, statut, statutColor, listNames });
                 });
                 setSearchResults(results.slice(0, 10));
             };
@@ -2013,6 +2015,13 @@
                                                         {r.client && <p className="text-sm text-gray-700 mt-0.5">👤 {r.client}</p>}
                                                         {r.email && <p className="text-xs text-gray-400">{r.email}</p>}
                                                         {r.transporteur && <p className="text-xs text-gray-500 mt-0.5">🚚 {r.transporteur}</p>}
+                                                        {r.listNames && r.listNames.length > 0 && (
+                                                            <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                                                {r.listNames.map(ln => (
+                                                                    <span key={ln} className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">📋 {ln}</span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                                             {(() => {
                                                 const PAYS_UE_C = ['france','allemagne','belgique','espagne','italie','pays-bas','netherlands','portugal','autriche','suède','sweden','danemark','denmark','finlande','finland','irlande','ireland','grèce','greece','pologne','poland','tchéquie','czech','hongrie','hungary','roumanie','romania','bulgarie','bulgaria','croatie','croatia','slovaquie','slovakia','slovénie','slovenia','lituanie','lithuania','lettonie','latvia','estonie','estonia','luxembourg','malte','malta','chypre','cyprus','maroc','morocco'];
