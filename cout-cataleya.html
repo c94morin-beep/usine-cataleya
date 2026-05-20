@@ -230,9 +230,9 @@ const COULEURS = new Set([
   'glace','intense','profond','deep','dark','light','bright','soft','baby','dusty',
   'pale','vivid','lime','mint','sky','forest','ocean','denim','electric','neon',
   'fluo','pastel','naturel','naturelle','multicolore'
-].map(c => c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+].map(c => c.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')));
 
-const norm = (w) => (w||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+const norm = (w) => (w||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
 const isCouleur = (w) => COULEURS.has(norm(w));
 const cleanName = (raw) => (raw || '').replace(/\s*\(.*?\)/g, '').trim();
 const getModele = (raw) => {
@@ -257,7 +257,7 @@ const modeleKey = (modele) => {
   return (modele || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[.#$\[\]\/]/g, '_')
     .replace(/\s+/g, '_')
     .replace(/[^a-z0-9_]/g, '_')
@@ -272,7 +272,6 @@ function ToastProvider({ children }) {
   const show = useCallback((msg, type) => {
     const t = type || 'success';
     setToast({ msg, type: t, id: Date.now() });
-    // Erreurs : 6s pour avoir le temps de lire. Sinon : 2.5s.
     const duration = t === 'error' ? 6000 : 2500;
     setTimeout(() => setToast(null), duration);
   }, []);
@@ -385,7 +384,7 @@ function ImportModal({ existingModeles, onImport, onClose }) {
   const [loading, setLoading] = useState(true);
   const [candidates, setCandidates] = useState([]);
   const [selected, setSelected] = useState({});
-  const [mode, setMode] = useState('new'); // 'new' = nouveaux, 'all' = mise à jour des qtés
+  const [mode, setMode] = useState('new');
   const [debugInfo, setDebugInfo] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
 
@@ -540,7 +539,6 @@ function ImportModal({ existingModeles, onImport, onClose }) {
           </div>
         )}
 
-        {/* Tabs : Nouveaux / Tous */}
         {!loading && candidates.length > 0 && (
           <div className="px-5 pt-3 border-b border-creme-warm flex gap-1">
             <button
@@ -694,7 +692,7 @@ function ConfirmModal({ title, message, confirmLabel, danger, onConfirm, onClose
       <div className="bg-white rounded-2xl card-shadow-lg w-full max-w-md fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="p-5">
           <h3 className="font-display text-xl text-bordeaux mb-2">{title}</h3>
-          <p className="text-sm text-ink-soft">{message}</p>
+          <p className="text-sm text-ink-soft" style={{ whiteSpace: 'pre-line' }}>{message}</p>
         </div>
         <div className="p-5 border-t border-creme-warm flex items-center justify-end gap-2 bg-creme-warm">
           <button onClick={onClose} className="btn-ghost">Annuler</button>
@@ -888,14 +886,13 @@ function App() {
   const [showAdd, setShowAdd] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmResync, setConfirmResync] = useState(false);
   const [savedFlash, setSavedFlash] = useState({});
   const [sortBy, setSortBy] = useState('nom');
   const [sortDir, setSortDir] = useState('asc');
   const showToast = useToast();
   const menuRef = useRef(null);
 
-  // Fermer le menu quand on clique ailleurs
   useEffect(() => {
     if (!showMenu) return;
     const handler = (e) => {
@@ -971,7 +968,7 @@ function App() {
   const handleImport = async (items) => {
     let createdCount = 0;
     let updatedCount = 0;
-    const failures = []; // [{nom, error}]
+    const failures = [];
     try {
       for (const item of items) {
         const { modele: nom, quantite, alreadyExists } = item;
@@ -1026,7 +1023,6 @@ function App() {
         msg += `${updatedCount} mis à jour`;
       }
       if (failures.length > 0) {
-        // Affiche les échecs sous forme d'alerte non auto-fermante
         const failNames = failures.map(f => `• ${f.nom} : ${f.error}`).join('\n');
         alert(`${failures.length} modèle(s) n'ont pas pu être sauvegardés :\n\n${failNames}`);
       }
@@ -1041,9 +1037,16 @@ function App() {
     }
   };
 
-  const handleResetAll = async () => {
+  // Resynchronisation depuis usine-cataleya :
+  // - met à jour les quantités depuis les commandes
+  // - PRÉSERVE les prix saisis (prixMetre, metresModele, coutSupp) pour les modèles existants
+  // - ajoute les nouveaux modèles avec prix vides
+  // - retire les modèles qui ne sont plus dans les commandes
+  const handleResync = async () => {
     try {
-      // 1. Lire les commandes depuis usine-cataleya
+      const currentSnap = await window.firebaseGet(window.firebaseRef(window.db, 'coutCataleya/modeles'));
+      const currentModeles = currentSnap.val() || {};
+
       const snap = await window.firebaseGet(window.firebaseRef(window.db, 'lists'));
       const lists = snap.val() || {};
       const modeleCount = {};
@@ -1062,11 +1065,13 @@ function App() {
         });
       });
 
-      // 2. Construire l'objet complet en mémoire (clé → modèle)
       const now = Date.now();
       const userEmail = (authState.user && authState.user.email) || 'admin';
       const newModeles = {};
       const failures = [];
+      let preservedCount = 0;
+      let newCount = 0;
+
       Object.entries(modeleCount).forEach(([nom, quantite]) => {
         const key = modeleKey(nom);
         if (!key) {
@@ -1074,80 +1079,75 @@ function App() {
           return;
         }
         if (newModeles[key]) {
-          // Collision de clés : deux noms différents génèrent la même clé Firebase
           failures.push({
             nom,
             error: `collision avec "${newModeles[key].nom}" (même clé : ${key})`
           });
-          // On additionne quand même les quantités pour ne pas les perdre
           newModeles[key].quantite += quantite;
           return;
         }
-        newModeles[key] = {
-          nom,
-          prixMetre: null,
-          metresModele: null,
-          coutSupp: null,
-          quantite,
-          createdAt: now,
-          updatedAt: now,
-          updatedBy: userEmail,
-          lastImportAt: now,
-          source: 'import'
-        };
+        const existing = currentModeles[key];
+        if (existing) {
+          newModeles[key] = {
+            ...existing,
+            nom,
+            quantite,
+            updatedAt: now,
+            updatedBy: userEmail,
+            lastImportAt: now
+          };
+          preservedCount++;
+        } else {
+          newModeles[key] = {
+            nom,
+            prixMetre: null,
+            metresModele: null,
+            coutSupp: null,
+            quantite,
+            createdAt: now,
+            updatedAt: now,
+            updatedBy: userEmail,
+            lastImportAt: now,
+            source: 'import'
+          };
+          newCount++;
+        }
       });
 
-      // 3. Écriture atomique : un seul firebaseSet pour TOUT remplacer d'un coup
-      // Cela évite les états intermédiaires et garantit la cohérence
       await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/modeles'), newModeles);
       await window.firebaseSet(window.firebaseRef(window.db, 'coutCataleya/meta/lastImportAt'), now);
 
-      // 3.5 VÉRIFICATION POST-ÉCRITURE : relire ce qu'on a vraiment écrit
       const verifySnap = await window.firebaseGet(window.firebaseRef(window.db, 'coutCataleya/modeles'));
       const verifyData = verifySnap.val() || {};
       const verifyKeys = Object.keys(verifyData);
       const verifyUnits = Object.values(verifyData).reduce((s, m) => s + (parseInt(m.quantite) || 0), 0);
 
-      // Identifier les modèles "perdus" (envoyés mais absents après lecture)
-      const sentKeys = new Set(Object.keys(newModeles));
-      const receivedKeys = new Set(verifyKeys);
-      const lostKeys = [...sentKeys].filter(k => !receivedKeys.has(k));
-      const lostModeles = lostKeys.map(k => ({
-        key: k,
-        nom: newModeles[k].nom,
-        quantite: newModeles[k].quantite
-      }));
+      const previousKeys = new Set(Object.keys(currentModeles));
+      const currentKeysAfter = new Set(Object.keys(newModeles));
+      const removedModeles = [...previousKeys]
+        .filter(k => !currentKeysAfter.has(k))
+        .map(k => ({ key: k, nom: currentModeles[k].nom || k }));
 
-      // 4. Récap basé sur ce qu'on a EFFECTIVEMENT écrit (pas sur l'intention)
-      const importedKeys = Object.keys(newModeles);
-      const importedUnits = Object.values(newModeles).reduce((s, m) => s + (m.quantite || 0), 0);
-      const totalLus = Object.values(modeleCount).reduce((s, n) => s + n, 0);
-
-      let recap = `Réinitialisation terminée\n\n`;
-      recap += `Modèles trouvés dans usine-cataleya : ${Object.keys(modeleCount).length}\n`;
-      recap += `Modèles envoyés à Firebase : ${importedKeys.length}\n`;
-      recap += `Modèles présents en base après écriture : ${verifyKeys.length}\n`;
-      recap += `Total unités lues : ${totalLus}\n`;
-      recap += `Total unités envoyées : ${importedUnits}\n`;
-      recap += `Total unités présentes en base : ${verifyUnits}\n`;
-      if (totalLus !== verifyUnits) {
-        recap += `\n⚠ ÉCART : ${totalLus - verifyUnits} unités perdues`;
-      }
-      if (lostModeles.length > 0) {
-        recap += `\n\n🔴 ${lostModeles.length} modèles ENVOYÉS mais ABSENTS de Firebase :\n`;
-        recap += lostModeles.map(m => `• "${m.nom}" (clé: ${m.key}) — ${m.quantite} unités`).join('\n');
-        recap += `\n\nFirebase a probablement rejeté ces clés silencieusement.`;
+      let recap = `Resynchronisation terminée\n\n`;
+      recap += `📦 Modèles dans les commandes : ${Object.keys(modeleCount).length}\n`;
+      recap += `✅ Prix préservés : ${preservedCount}\n`;
+      recap += `🆕 Nouveaux modèles ajoutés : ${newCount}\n`;
+      recap += `📊 Total unités en base : ${verifyUnits}\n`;
+      recap += `🗂 Modèles en base après sync : ${verifyKeys.length}`;
+      if (removedModeles.length > 0) {
+        recap += `\n\n⚠ ${removedModeles.length} modèle(s) n'apparaissent plus dans les commandes et ont été retirés :\n`;
+        recap += removedModeles.map(m => `• ${m.nom}`).join('\n');
       }
       if (failures.length > 0) {
-        recap += `\n\nProblèmes de génération de clés (${failures.length}) :\n` + failures.map(f => `• ${f.nom} : ${f.error}`).join('\n');
+        recap += `\n\nProblèmes (${failures.length}) :\n` + failures.map(f => `• ${f.nom} : ${f.error}`).join('\n');
       }
       alert(recap);
-      showToast(`Reset · ${verifyKeys.length} modèles · ${verifyUnits} unités`);
+      showToast(`Sync · ${preservedCount} préservés · ${newCount} nouveaux`);
     } catch (err) {
-      console.error('Reset error:', err);
+      console.error('Resync error:', err);
       const msg = err.code || err.message || 'inconnue';
-      alert('Erreur lors du reset : ' + msg);
-      showToast('Erreur reset : ' + msg, 'error');
+      alert('Erreur lors de la resynchronisation : ' + msg);
+      showToast('Erreur sync : ' + msg, 'error');
     }
   };
 
@@ -1182,6 +1182,29 @@ function App() {
       console.error('Delete error:', err);
       const msg = err.code || err.message || 'inconnue';
       showToast('Erreur suppression : ' + msg, 'error');
+    }
+  };
+
+  const exportBackup = () => {
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        modeles
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const date = new Date().toISOString().slice(0, 10);
+      a.download = `cataleya-couts-backup-${date}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Sauvegarde exportée');
+    } catch (err) {
+      console.error('Backup error:', err);
+      showToast('Erreur sauvegarde', 'error');
     }
   };
 
@@ -1358,16 +1381,21 @@ function App() {
                 title="Options avancées"
               >⋯</button>
               {showMenu && (
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg card-shadow-lg border border-creme-warm py-1 z-20 min-w-[240px]">
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg card-shadow-lg border border-creme-warm py-1 z-20 min-w-[260px]">
                   <button
                     onClick={() => { setShowAdd(true); setShowMenu(false); }}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-creme-warm text-ink transition"
                   >+ Nouveau modèle (manuel)</button>
+                  <button
+                    onClick={() => { exportBackup(); setShowMenu(false); }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-creme-warm text-ink transition"
+                    disabled={modeleList.length === 0}
+                  >💾 Sauvegarder (JSON)</button>
                   <div className="border-t border-creme-warm my-1"></div>
                   <button
-                    onClick={() => { setConfirmReset(true); setShowMenu(false); }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-700 transition"
-                  >⟲ Tout réinitialiser & ré-importer</button>
+                    onClick={() => { setConfirmResync(true); setShowMenu(false); }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-creme-warm text-bordeaux transition"
+                  >🔄 Resynchroniser depuis les commandes</button>
                 </div>
               )}
             </div>
@@ -1484,14 +1512,13 @@ function App() {
           onClose={() => setConfirmDelete(null)}
         />
       )}
-      {confirmReset && (
+      {confirmResync && (
         <ConfirmModal
-          title="Tout réinitialiser ?"
-          message="ATTENTION : tous les modèles et tous les prix saisis (prix/m, mètres, coût supp.) seront DÉFINITIVEMENT supprimés. Ensuite tous les modèles seront ré-importés depuis usine-cataleya avec leurs quantités. Action irréversible."
-          confirmLabel="Tout supprimer & ré-importer"
-          danger
-          onConfirm={handleResetAll}
-          onClose={() => setConfirmReset(false)}
+          title="Resynchroniser depuis les commandes ?"
+          message={`Les quantités seront mises à jour depuis usine-cataleya.\n\n✅ Les prix saisis (prix/m, mètres, coût supp.) seront CONSERVÉS pour tous les modèles existants.\n\n🆕 Les nouveaux modèles trouvés dans les commandes seront ajoutés (sans prix).\n\n⚠ Les modèles qui ne sont plus dans les commandes seront retirés de la liste.`}
+          confirmLabel="Resynchroniser"
+          onConfirm={handleResync}
+          onClose={() => setConfirmResync(false)}
         />
       )}
     </div>
