@@ -789,7 +789,7 @@
             }, []);
 
             const openGlobalOrderRecap = async (reference) => {
-                const orderItems = activeOrders.filter(o => o.reference === reference);
+                const orderItems = getAllOrders().filter(o => o.reference === reference);
                 if (orderItems.length === 0) return;
                 setGlobalSelectedOrder({
                     reference,
@@ -5715,12 +5715,10 @@
             const [formHeader, setFormHeader] = React.useState({ cliente: '', reference: '' });
             const [formArticles, setFormArticles] = React.useState([{ produit: '', couleurTaille: '', description: '', photoUrl: '', status: 'En attente' }]);
 
-            const SAV_STATUTS = ['En attente', 'Reçu', 'Rangé', 'Expédié'];
+            const SAV_STATUTS = ['En attente', 'Rangé'];
             const STATUS_COLORS = {
                 'En attente': { bg: 'bg-orange-100', text: 'text-orange-700', dot: 'bg-orange-400' },
-                'Reçu':       { bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-400' },
                 'Rangé':      { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500' },
-                'Expédié':    { bg: 'bg-emerald-100', text: 'text-emerald-800', dot: 'bg-emerald-600' },
             };
 
             // Permissions
@@ -5913,14 +5911,22 @@
                         <div className="grid grid-cols-1 gap-4">
                             {filtered.map(sav => {
                                 const allValidated = sav.articles.length > 0 && sav.articles.every(a => a.status === 'Rangé' && a.validatedAt);
+                                const dominantStatus = ['En attente', 'Rangé'].find(s => sav.articles.some(a => a.status === s)) || 'En attente';
+                                const CARD_COLORS = {
+                                    'En attente': { card: 'border-orange-200 bg-orange-50', header: 'bg-orange-100 border-orange-200', text: 'text-orange-800', sub: 'text-orange-600', count: 'text-orange-400' },
+                                    'Rangé':      { card: 'border-green-200 bg-green-50',   header: 'bg-green-100 border-green-200',   text: 'text-green-800',  sub: 'text-green-600',  count: 'text-green-400' },
+                                };
+                                const cc = allValidated
+                                    ? { card: 'border-emerald-300 bg-emerald-50/30', header: 'bg-emerald-50 border-emerald-100', text: 'text-emerald-800', sub: 'text-emerald-600', count: 'text-emerald-400' }
+                                    : CARD_COLORS[dominantStatus];
                                 return (
-                                <div key={sav.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${allValidated ? 'border-emerald-300 bg-emerald-50/30' : 'border-gray-200'}`}>
+                                <div key={sav.id} className={`rounded-xl border shadow-sm overflow-hidden ${cc.card}`}>
                                     {/* En-tête commande */}
-                                    <div className={`border-b px-4 py-2 flex items-center justify-between gap-2 flex-wrap ${allValidated ? 'bg-emerald-50 border-emerald-100' : 'bg-orange-50 border-orange-100'}`}>
+                                    <div className={`border-b px-4 py-2 flex items-center justify-between gap-2 flex-wrap ${cc.header}`}>
                                         <div className="flex items-center gap-3">
-                                            {sav.reference && <span className={`font-bold text-sm ${allValidated ? 'text-emerald-800' : 'text-orange-800'}`}>📦 Réf. {sav.reference}</span>}
-                                            {sav.cliente && <span className={`text-xs ${allValidated ? 'text-emerald-600' : 'text-orange-600'}`}>👤 {sav.cliente}</span>}
-                                            <span className={`text-xs ${allValidated ? 'text-emerald-400' : 'text-orange-400'}`}>{sav.articles.length} article{sav.articles.length > 1 ? 's' : ''}</span>
+                                            {sav.reference && <span className={`font-bold text-sm ${cc.text}`}>📦 Réf. {sav.reference}</span>}
+                                            {sav.cliente && <span className={`text-xs ${cc.sub}`}>👤 {sav.cliente}</span>}
+                                            <span className={`text-xs ${cc.count}`}>{sav.articles.length} article{sav.articles.length > 1 ? 's' : ''}</span>
                                             {allValidated && <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-600 text-white">✅ Terminé</span>}
                                         </div>
                                         <div className="flex gap-2">
