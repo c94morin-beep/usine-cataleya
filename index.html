@@ -220,6 +220,9 @@
                 setOrderNotesData(prev => ({ ...prev, [ref]: val.trim() ? { text: val.trim(), author: 'Admin', updatedAt: Date.now() } : null }));
             };
             const [showImportModal, setShowImportModal] = useState(false);
+            const [showAddOrderModal, setShowAddOrderModal] = useState(false);
+            const [showDeleteOrderModal, setShowDeleteOrderModal] = useState(false);
+            const [orderToDelete, setOrderToDelete] = useState(null);
             const [showMoveOrdersModal, setShowMoveOrdersModal] = useState(false);
             const [completionAlert, setCompletionAlert] = useState(null); // {reference, client, autresCommandes[]}
             const [casierAlert, setCasierAlert] = useState(null); // {casierNum, reference}
@@ -510,6 +513,162 @@
                     }
                 };
                 reader.readAsText(file, 'UTF-8');
+            };
+
+            // Ajouter des commandes manuellement à une liste existante
+            const handleAddOrdersToList = async (newOrders, coupeListId) => {
+                if (activeListId === 'global') {
+                    alert('Sélectionnez une liste spécifique pour ajouter des commandes.');
+                    return;
+                }
+                // 1. Sauvegarde dans la liste Réception
+                const updatedLists = lists.map(l => {
+                    if (l.id === activeListId) {
+                        return { ...l, orders: [...l.orders, ...newOrders] };
+                    }
+                    return l;
+                });
+                saveLists(updatedLists);
+                setShowAddOrderModal(false);
+
+                // 2. Synchro optionnelle avec la liste de Coupe
+                if (coupeListId) {
+                    try {
+                        // Grouper les articles par (nomProduit, taille) et compter les occurrences
+                        const countMap = {};
+                        newOrders.forEach(order => {
+                            const words = (order.name || '').trim().split(/\s+/);
+                            const size = words.length >= 2 ? words[words.length - 1] : '';
+                            const baseName = words.length >= 2 ? words.slice(0, -1).join(' ') : order.name.trim();
+                            const key = baseName + '|||' + size;
+                            countMap[key] = (countMap[key] || 0) + 1;
+                        });
+
+                        // Lire les lignes de la liste coupe
+                        const snap = await window.firebaseGet(window.firebaseRef(window.db, 'listescoupe/' + coupeListId + '/lignes'));
+                        const rows = snap.val() || {};
+                        const updates = {};
+
+                        for (const [key, count] of Object.entries(countMap)) {
+                            const sepIdx = key.indexOf('|||');
+                            const baseName = key.slice(0, sepIdx);
+                            const size = key.slice(sepIdx + 3);
+                            let found = false;
+
+                            // Chercher une ligne existante dont le produit (cells[0]) correspond
+                            const fullNameLower = (size ? baseName + ' ' + size : baseName).toLowerCase();
+                            for (const [rowKey, row] of Object.entries(rows)) {
+                                const cells = (row.c || '').split('||');
+                                const headers = (row.h || '').split('||');
+                                const rowName = (cells[0] || '').trim().toLowerCase();
+
+                                let colIdx = -1;
+
+                                if (rowName === baseName.toLowerCase()) {
+                                    if (size) {
+                                        // Ligne produit avec colonnes de tailles
+                                        colIdx = headers.findIndex((h, i) => i >= 2 && h.trim().toLowerCase() === size.toLowerCase());
+                                    }
+                                    // Fallback Qté si pas de colonne taille
+                                    if (colIdx === -1) colIdx = headers.findIndex((h, i) => i >= 2 && /qt[eé]/i.test(h.trim()));
+                                } else if (rowName === fullNameLower) {
+                                    // Ligne auto-créée "Sans déclinaison" (nom complet dans cells[0])
+                                    colIdx = headers.findIndex((h, i) => i >= 2 && /qt[eé]/i.test(h.trim()));
+                                }
+
+                                if (colIdx >= 0) {
+                                    const cur = parseInt(cells[colIdx]) || 0;
+                                    cells[colIdx] = String(cur + count);
+                                    updates['listescoupe/' + coupeListId + '/lignes/' + rowKey + '/c'] = cells.join('||');
+                                    found = true;
+                                    break;
+                                }
+                            }
+
+                            // Aucune ligne trouvée → créer une nouvelle entrée dans "Sans déclinaison"
+                            if (!found) {
+                                const newKey = 'r_manual_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+                                const fullName = size ? baseName + ' ' + size : baseName;
+                                updates['listescoupe/' + coupeListId + '/lignes/' + newKey] = {
+                                    section: 'Sans déclinaison',
+                                    h: 'Produit||Image||Qté||Commentaires',
+                                    c: fullName + '||||' + count + '||',
+                                    done: false,
+                                    comment: '',
+                                    by: '',
+                                    at: 0
+                                };
+                            }
+                        }
+
+                        if (Object.keys(updates).length > 0) {
+                            await window.firebaseUpdate(window.firebaseRef(window.db, '/'), updates);
+                        }
+                        alert(`✅ ${newOrders.length} commande(s) ajoutée(s) et liste de coupe mise à jour !`);
+                    } catch (e) {
+                        console.error('Erreur sync coupe:', e);
+                        alert(`✅ ${newOrders.length} commande(s) ajoutée(s).\n⚠️ Erreur synchro Coupe : ` + e.message);
+                    }
+                } else {
+                    alert(`✅ ${newOrders.length} commande(s) ajoutée(s) à la liste !`);
+                }
+            };
+
+            // Supprimer un article individuel d'une liste
+            const handleDeleteOrder = async (order, coupeListId) => {
+                const updatedLists = lists.map(l =>
+                    l.orders.some(o => o.id === order.id)
+                        ? { ...l, orders: l.orders.filter(o => o.id !== order.id) }
+                        : l
+                );
+                saveLists(updatedLists);
+                setShowDeleteOrderModal(false);
+                setOrderToDelete(null);
+
+                if (coupeListId) {
+                    try {
+                        const words = (order.name || '').trim().split(/\s+/);
+                        const size = words.length >= 2 ? words[words.length - 1] : '';
+                        const baseName = words.length >= 2 ? words.slice(0, -1).join(' ') : order.name.trim();
+
+                        const snap = await window.firebaseGet(window.firebaseRef(window.db, 'listescoupe/' + coupeListId + '/lignes'));
+                        const rows = snap.val() || {};
+                        const updates = {};
+
+                        const fullName = (order.name || '').trim().toLowerCase();
+                        for (const [rowKey, row] of Object.entries(rows)) {
+                            const cells = (row.c || '').split('||');
+                            const headers = (row.h || '').split('||');
+                            const rowName = (cells[0] || '').trim().toLowerCase();
+
+                            let colIdx = -1;
+
+                            if (rowName === baseName.toLowerCase()) {
+                                // Ligne produit normale : chercher la colonne taille
+                                if (size) colIdx = headers.findIndex((h, i) => i >= 2 && h.trim().toLowerCase() === size.toLowerCase());
+                                // Si pas de colonne taille trouvée, essayer Qté
+                                if (colIdx === -1) colIdx = headers.findIndex((h, i) => i >= 2 && /qt[eé]/i.test(h.trim()));
+                            } else if (rowName === fullName) {
+                                // Ligne auto-créée "Sans déclinaison" : nom complet dans cells[0], chercher Qté
+                                colIdx = headers.findIndex((h, i) => i >= 2 && /qt[eé]/i.test(h.trim()));
+                            }
+
+                            if (colIdx >= 0) {
+                                const cur = parseInt(cells[colIdx]) || 0;
+                                if (cur > 0) {
+                                    cells[colIdx] = String(cur - 1);
+                                    updates['listescoupe/' + coupeListId + '/lignes/' + rowKey + '/c'] = cells.join('||');
+                                }
+                                break;
+                            }
+                        }
+                        if (Object.keys(updates).length > 0) {
+                            await window.firebaseUpdate(window.firebaseRef(window.db, '/'), updates);
+                        }
+                    } catch (e) {
+                        console.error('Erreur synchro coupe (suppression):', e);
+                    }
+                }
             };
 
             // Supprimer une liste
@@ -806,8 +965,8 @@
                 try {
                     // Chercher Mondial Relay ET Packlink en parallèle
                     const [relayRes, packlinkRes] = await Promise.all([
-                        fetch(`https://cataleyaparis.com/get_relay_token.php?id_order=${reference}`).then(r => r.json()).catch(() => null),
-                        fetch(`https://cataleyaparis.com/get_packlink_label.php?id_order=${reference}`).then(r => r.json()).catch(() => null)
+                        fetch(`https://cataleyaparis.com/get_relay_token.php?key=cataleya2026relay_a8f3k2&id_order=${reference}`).then(r => r.json()).catch(() => null),
+                        fetch(`https://cataleyaparis.com/get_packlink_label.php?key=cataleya2026relay_a8f3k2&id_order=${reference}`).then(r => r.json()).catch(() => null)
                     ]);
                     setGlobalSelectedOrder(prev => prev ? {
                         ...prev,
@@ -1363,6 +1522,7 @@
                                 })}
 
                                 {isAdmin && <button onClick={() => setShowImportModal(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition whitespace-nowrap">➕ Nouvelle liste</button>}
+                                {isAdmin && activeListId !== 'global' && <button onClick={() => setShowAddOrderModal(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition whitespace-nowrap">✏️ Ajouter commandes</button>}
                                 {isAdmin && <button onClick={exportBackup} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition whitespace-nowrap" title="Sauvegarder toutes les données">💾 Sauvegarder</button>}
                                 {isAdmin && lists.filter(l => !l.archived).length >= 2 && <button onClick={() => setShowMoveOrdersModal(true)} className="px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition whitespace-nowrap" title="Déplacer des commandes entre listes">🔀 Déplacer</button>}
                                 {(isAdmin || isLecteur || isOperateur || isSara || isCommentaires) && lists.some(l => l.archived) && (
@@ -1482,6 +1642,23 @@
                         />
                     )}
 
+                    {/* Modal Ajouter commandes à une liste existante */}
+                    {showAddOrderModal && (
+                        <AddOrderModal
+                            onAdd={handleAddOrdersToList}
+                            onClose={() => setShowAddOrderModal(false)}
+                        />
+                    )}
+
+                    {/* Modal Supprimer un article */}
+                    {showDeleteOrderModal && orderToDelete && (
+                        <DeleteOrderModal
+                            order={orderToDelete}
+                            onDelete={handleDeleteOrder}
+                            onClose={() => { setShowDeleteOrderModal(false); setOrderToDelete(null); }}
+                        />
+                    )}
+
                     {/* Modal Déplacer commandes */}
                     {showMoveOrdersModal && (
                         <MoveOrdersModal
@@ -1548,6 +1725,7 @@
                                         userName={userName}
                                         getCasierNum={getCasierNum}
                                         openOrderRecap={openGlobalOrderRecap}
+                                        onDeleteRequest={(order) => { setOrderToDelete(order); setShowDeleteOrderModal(true); }}
                                     />
                                 )}
                                 {activeTab === 'multiorders' && (
@@ -1825,6 +2003,503 @@
             );
         }
 
+        // Modal Ajouter des commandes à une liste existante
+        function AddOrderModal({ onAdd, onClose }) {
+            const [tab, setTab] = useState('form'); // 'form' | 'csv'
+            // Étape 1 = saisie, Étape 2 = choix liste coupe
+            const [step, setStep] = useState(1);
+            const [pendingOrders, setPendingOrders] = useState(null);
+            // Listes de coupe disponibles (chargées depuis Firebase)
+            const [coupeListes, setCoupeListes] = useState([]);
+            const [selectedCoupeId, setSelectedCoupeId] = useState('');
+
+            React.useEffect(() => {
+                window.firebaseGet(window.firebaseRef(window.db, 'listescoupe')).then(snap => {
+                    const val = snap.val() || {};
+                    const arr = Object.entries(val)
+                        .filter(([, v]) => v && v.name)
+                        .map(([id, v]) => ({ id, name: v.name }))
+                        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    setCoupeListes(arr);
+                    if (arr.length > 0) setSelectedCoupeId(arr[0].id);
+                }).catch(() => {});
+            }, []);
+
+            // Après la saisie → passe à l'étape 2
+            const goToStep2 = (orders) => {
+                setPendingOrders(orders);
+                setStep(2);
+            };
+
+            // --- Onglet Formulaire ---
+            const emptyForm = { reference: '', name: '', ref_produit: '', ref_declinaison: '', client: '', telephone: '', email: '', adresse_livraison: '', transporteur: '', url_image: '', quantity: 1 };
+            const [form, setForm] = useState(emptyForm);
+
+            const handleFormChange = (e) => {
+                const { name, value } = e.target;
+                setForm(prev => ({ ...prev, [name]: value }));
+            };
+
+            const handleFormSubmit = () => {
+                if (!form.reference.trim()) { alert('La référence commande est obligatoire.'); return; }
+                if (!form.name.trim()) { alert('Le nom du produit est obligatoire.'); return; }
+                const qty = parseInt(form.quantity) || 1;
+                const ts = Date.now();
+                const newOrders = [];
+                for (let q = 0; q < qty; q++) {
+                    newOrders.push({
+                        id: `manual-${ts}-${q}`,
+                        reference: form.reference.trim(),
+                        name: form.name.trim(),
+                        url_image: form.url_image.trim(),
+                        ref_produit: form.ref_produit.trim(),
+                        ref_declinaison: form.ref_declinaison.trim(),
+                        commentaires: '',
+                        quantity: 1,
+                        status: 'En attente',
+                        client: form.client.trim(),
+                        adresse_livraison: form.adresse_livraison.trim(),
+                        telephone: form.telephone.trim(),
+                        email: form.email.trim(),
+                        transporteur: form.transporteur.trim(),
+                    });
+                }
+                goToStep2(newOrders);
+            };
+
+            // --- Onglet CSV (texte collé) ---
+            const [csvText, setCsvText] = useState('');
+            const [csvPreview, setCsvPreview] = useState([]);
+
+            // --- Onglet Fichier CSV ---
+            const [filePreview, setFilePreview] = useState([]);
+            const [fileName, setFileName] = useState('');
+
+            const handleFileCSV = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setFileName(file.name);
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const text = ev.target.result;
+                    const lines = text.split('\n').filter(l => l.trim());
+                    const parsed = [];
+                    // Détecter si la 1ère ligne est un en-tête (commence par "reference" ou une valeur non numérique)
+                    let startIdx = 0;
+                    const firstCell = lines[0]?.split(';')[0]?.replace(/"/g,'').trim().toLowerCase();
+                    if (firstCell && isNaN(firstCell)) startIdx = 1; // ignorer la ligne d'en-tête
+                    for (let i = startIdx; i < lines.length; i++) {
+                        const values = lines[i].split(';');
+                        if (values.length >= 2) {
+                            parsed.push({
+                                reference: values[0]?.replace(/"/g,'').trim() || '',
+                                name:      values[1]?.replace(/"/g,'').trim() || '',
+                                url_image: values[2]?.replace(/"/g,'').trim() || '',
+                                total:     values[3]?.replace(/"/g,'').trim() || '1',
+                                ref_produit:    values[4]?.replace(/"/g,'').trim() || '',
+                                ref_declinaison:values[5]?.replace(/"/g,'').trim() || '',
+                                client:         values[6]?.replace(/"/g,'').trim() || '',
+                                adresse_livraison: values[7]?.replace(/"/g,'').trim() || '',
+                                telephone:      values[8]?.replace(/"/g,'').trim() || '',
+                                email:          values[9]?.replace(/"/g,'').trim() || '',
+                                transporteur:   values[10]?.replace(/"/g,'').trim() || '',
+                            });
+                        }
+                    }
+                    setFilePreview(parsed);
+                };
+                reader.readAsText(file, 'UTF-8');
+            };
+
+            const handleFileSubmit = () => {
+                if (filePreview.length === 0) { alert('Aucune commande détectée dans le fichier.'); return; }
+                const ts = Date.now();
+                const newOrders = [];
+                filePreview.forEach((row, index) => {
+                    const qty = parseInt(row.total) || 1;
+                    for (let q = 0; q < qty; q++) {
+                        newOrders.push({
+                            id: `manual-file-${ts}-${index}-${q}`,
+                            reference: row.reference,
+                            name: row.name,
+                            url_image: row.url_image,
+                            ref_produit: row.ref_produit,
+                            ref_declinaison: row.ref_declinaison,
+                            commentaires: '',
+                            quantity: 1,
+                            status: 'En attente',
+                            client: row.client,
+                            adresse_livraison: row.adresse_livraison,
+                            telephone: row.telephone,
+                            email: row.email,
+                            transporteur: row.transporteur,
+                        });
+                    }
+                });
+                goToStep2(newOrders);
+            };
+
+            const parseCSVLines = (text) => {
+                const lines = text.split('\n').filter(l => l.trim());
+                const parsed = [];
+                lines.forEach((line, idx) => {
+                    const values = line.split(';');
+                    if (values.length >= 2) {
+                        parsed.push({
+                            reference: values[0]?.replace(/"/g, '').trim() || '',
+                            name: values[1]?.replace(/"/g, '').trim() || '',
+                            url_image: values[2]?.replace(/"/g, '').trim() || '',
+                            total: values[3]?.replace(/"/g, '').trim() || '1',
+                            ref_produit: values[4]?.replace(/"/g, '').trim() || '',
+                            ref_declinaison: values[5]?.replace(/"/g, '').trim() || '',
+                            client: values[6]?.replace(/"/g, '').trim() || '',
+                            adresse_livraison: values[7]?.replace(/"/g, '').trim() || '',
+                            telephone: values[8]?.replace(/"/g, '').trim() || '',
+                            email: values[9]?.replace(/"/g, '').trim() || '',
+                            transporteur: values[10]?.replace(/"/g, '').trim() || '',
+                        });
+                    }
+                });
+                return parsed;
+            };
+
+            const handleCsvChange = (e) => {
+                const text = e.target.value;
+                setCsvText(text);
+                setCsvPreview(parseCSVLines(text));
+            };
+
+            const handleCsvSubmit = () => {
+                if (csvPreview.length === 0) { alert('Aucune ligne valide détectée.'); return; }
+                const ts = Date.now();
+                const newOrders = [];
+                csvPreview.forEach((row, index) => {
+                    const qty = parseInt(row.total) || 1;
+                    for (let q = 0; q < qty; q++) {
+                        newOrders.push({
+                            id: `manual-csv-${ts}-${index}-${q}`,
+                            reference: row.reference,
+                            name: row.name,
+                            url_image: row.url_image,
+                            ref_produit: row.ref_produit,
+                            ref_declinaison: row.ref_declinaison,
+                            commentaires: '',
+                            quantity: 1,
+                            status: 'En attente',
+                            client: row.client,
+                            adresse_livraison: row.adresse_livraison,
+                            telephone: row.telephone,
+                            email: row.email,
+                            transporteur: row.transporteur,
+                        });
+                    }
+                });
+                goToStep2(newOrders);
+            };
+
+            const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none";
+            const labelCls = "block text-xs font-semibold text-gray-600 mb-1";
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold">✏️ Ajouter des commandes</h3>
+                                <p className="text-indigo-200 text-xs mt-0.5">Ajout à la liste active sans nouveau CSV</p>
+                            </div>
+                            <button onClick={onClose} className="text-white hover:text-indigo-200 text-2xl font-bold leading-none">✕</button>
+                        </div>
+
+                        {/* Onglets — étape 1 seulement */}
+                        {step === 1 && <div className="flex border-b border-gray-200 px-6 pt-4">
+                            <button
+                                onClick={() => setTab('form')}
+                                className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition ${tab === 'form' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                            >
+                                📝 Saisie manuelle
+                            </button>
+                            <button
+                                onClick={() => setTab('csv')}
+                                className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition ${tab === 'csv' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                            >
+                                📋 Coller CSV
+                            </button>
+                            <button
+                                onClick={() => setTab('file')}
+                                className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition ${tab === 'file' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                            >
+                                📁 Fichier CSV
+                            </button>
+                        </div>}
+
+                        {/* Contenu — étape 1 seulement */}
+                        {step === 1 && <div className="flex-1 overflow-y-auto p-6">
+                            {tab === 'form' && (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className={labelCls}>Référence commande *</label>
+                                            <input name="reference" value={form.reference} onChange={handleFormChange} placeholder="Ex: 100123" className={inputCls} />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Quantité</label>
+                                            <input name="quantity" type="number" min="1" value={form.quantity} onChange={handleFormChange} className={inputCls} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}>Nom du produit *</label>
+                                        <input name="name" value={form.name} onChange={handleFormChange} placeholder="Ex: Robe Yasmine Noir T36" className={inputCls} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className={labelCls}>Réf. produit</label>
+                                            <input name="ref_produit" value={form.ref_produit} onChange={handleFormChange} placeholder="Ex: RYN-36" className={inputCls} />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Réf. déclinaison</label>
+                                            <input name="ref_declinaison" value={form.ref_declinaison} onChange={handleFormChange} placeholder="Ex: RYN-36-N" className={inputCls} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}>Client</label>
+                                        <input name="client" value={form.client} onChange={handleFormChange} placeholder="Ex: Marie Dupont" className={inputCls} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className={labelCls}>Téléphone</label>
+                                            <input name="telephone" value={form.telephone} onChange={handleFormChange} placeholder="06 XX XX XX XX" className={inputCls} />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Transporteur</label>
+                                            <input name="transporteur" value={form.transporteur} onChange={handleFormChange} placeholder="Ex: Colissimo" className={inputCls} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}>Email</label>
+                                        <input name="email" type="email" value={form.email} onChange={handleFormChange} placeholder="client@email.com" className={inputCls} />
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}>URL image produit</label>
+                                        <input name="url_image" value={form.url_image} onChange={handleFormChange} placeholder="https://..." className={inputCls} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {tab === 'csv' && (
+                                <div className="space-y-3">
+                                    <p className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 leading-relaxed">
+                                        Colle directement les lignes CSV (sans en-tête) au format PrestaShop :<br/>
+                                        <code className="text-indigo-600 font-mono">référence;produit;url_img;quantité;ref_produit;ref_déclinaison;client;adresse;tél;email;transporteur</code>
+                                    </p>
+                                    <textarea
+                                        value={csvText}
+                                        onChange={handleCsvChange}
+                                        rows={6}
+                                        placeholder={"100124;Robe Yasmine Noir T38;;1;RYN-38;RYN-38-N;Sophie Martin;Paris 75001;0612345678;sophie@mail.com;Colissimo\n100125;Top Blanc T40;;2;TOP-40;;Emma Blanc;Lyon 69001;0698765432;emma@mail.com;Mondial Relay"}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-400 focus:outline-none resize-y"
+                                    />
+                                    {csvPreview.length > 0 && (
+                                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2 text-sm text-indigo-700 font-semibold">
+                                            ✅ {csvPreview.length} ligne(s) détectée(s) — {csvPreview.reduce((acc, r) => acc + (parseInt(r.total) || 1), 0)} article(s)
+                                        </div>
+                                    )}
+                                    {csvText.trim() && csvPreview.length === 0 && (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-600">
+                                            ⚠️ Aucune ligne valide détectée (séparateur point-virgule attendu)
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {tab === 'file' && (
+                                <div className="space-y-3">
+                                    <p className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 leading-relaxed">
+                                        Sélectionne un fichier CSV (export PrestaShop, point-virgule).<br/>
+                                        La ligne d'en-tête est ignorée automatiquement si elle est présente.
+                                    </p>
+                                    <input
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={handleFileCSV}
+                                        className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold hover:file:bg-indigo-100 cursor-pointer"
+                                    />
+                                    {filePreview.length > 0 && (
+                                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2 text-sm text-indigo-700 font-semibold">
+                                            ✅ {fileName} — {filePreview.length} ligne(s) — {filePreview.reduce((acc, r) => acc + (parseInt(r.total) || 1), 0)} article(s)
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>}
+
+                        {/* Étape 2 — Choix liste de coupe */}
+                        {step === 2 && (
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                                    <p className="text-sm font-semibold text-indigo-800 mb-1">
+                                        ✅ {pendingOrders?.length} article(s) prêt(s) à être ajouté(s)
+                                    </p>
+                                    <p className="text-xs text-indigo-600">
+                                        Voulez-vous aussi mettre à jour une liste de coupe ?
+                                    </p>
+                                </div>
+
+                                {coupeListes.length > 0 ? (
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            ✂️ Liste de coupe à mettre à jour
+                                        </label>
+                                        <select
+                                            value={selectedCoupeId}
+                                            onChange={e => setSelectedCoupeId(e.target.value)}
+                                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none bg-white"
+                                        >
+                                            {coupeListes.map(l => (
+                                                <option key={l.id} value={l.id}>{l.name}</option>
+                                            ))}
+                                        </select>
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            Le dernier mot du nom de l'article est interprété comme la taille (ex: "Robe Yasmine Noir <strong>T36</strong>").<br/>
+                                            Si la ligne produit n'existe pas dans la coupe, une nouvelle entrée sera créée.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500 italic">Aucune liste de coupe trouvée.</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Footer */}
+                        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+                            {step === 1 && <>
+                                <button
+                                    onClick={tab === 'form' ? handleFormSubmit : tab === 'csv' ? handleCsvSubmit : handleFileSubmit}
+                                    className="flex-1 bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition"
+                                >
+                                    Suivant →
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg font-semibold hover:bg-gray-200 transition"
+                                >
+                                    Annuler
+                                </button>
+                            </>}
+                            {step === 2 && <>
+                                {coupeListes.length > 0 && (
+                                    <button
+                                        onClick={() => onAdd(pendingOrders, selectedCoupeId)}
+                                        className="flex-1 bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition text-sm"
+                                    >
+                                        ✅ Ajouter + maj Coupe
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => onAdd(pendingOrders, null)}
+                                    className={`flex-1 ${coupeListes.length > 0 ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-indigo-600 text-white hover:bg-indigo-700'} px-4 py-2.5 rounded-lg font-semibold transition text-sm`}
+                                >
+                                    {coupeListes.length > 0 ? 'Ajouter sans synchro' : '✅ Ajouter à la liste'}
+                                </button>
+                                <button
+                                    onClick={() => setStep(1)}
+                                    className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-semibold hover:bg-gray-200 transition text-sm"
+                                >
+                                    ← Retour
+                                </button>
+                            </>}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Modal Suppression d'un article
+        function DeleteOrderModal({ order, onDelete, onClose }) {
+            const [coupeListes, setCoupeListes] = useState([]);
+            const [selectedCoupeId, setSelectedCoupeId] = useState('');
+
+            React.useEffect(() => {
+                window.firebaseGet(window.firebaseRef(window.db, 'listescoupe')).then(snap => {
+                    const val = snap.val() || {};
+                    const arr = Object.entries(val)
+                        .filter(([, v]) => v && v.name)
+                        .map(([id, v]) => ({ id, name: v.name }))
+                        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    setCoupeListes(arr);
+                    if (arr.length > 0) setSelectedCoupeId(arr[0].id);
+                }).catch(() => {});
+            }, []);
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-red-500 to-rose-600 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold">🗑️ Supprimer un article</h3>
+                                <p className="text-red-100 text-xs mt-0.5">Cette action est irréversible</p>
+                            </div>
+                            <button onClick={onClose} className="text-white hover:text-red-200 text-2xl font-bold leading-none">✕</button>
+                        </div>
+
+                        {/* Contenu */}
+                        <div className="p-6 space-y-4">
+                            {/* Info article */}
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                <p className="text-sm font-semibold text-red-800">{order.name}</p>
+                                <p className="text-xs text-red-500 mt-1">Commande #{order.reference}{order.client ? ' · ' + order.client : ''}</p>
+                            </div>
+
+                            {/* Sélection liste coupe */}
+                            {coupeListes.length > 0 && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        ✂️ Mettre aussi à jour la liste de coupe ?
+                                    </label>
+                                    <select
+                                        value={selectedCoupeId}
+                                        onChange={e => setSelectedCoupeId(e.target.value)}
+                                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-400 focus:outline-none bg-white"
+                                    >
+                                        {coupeListes.map(l => (
+                                            <option key={l.id} value={l.id}>{l.name}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-gray-400 mt-1">La quantité sera décrémentée de -1 dans la liste de coupe.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
+                            {coupeListes.length > 0 && (
+                                <button
+                                    onClick={() => onDelete(order, selectedCoupeId)}
+                                    className="flex-1 bg-red-600 text-white px-3 py-2.5 rounded-lg font-semibold hover:bg-red-700 transition text-sm"
+                                >
+                                    🗑️ Supprimer + maj Coupe
+                                </button>
+                            )}
+                            <button
+                                onClick={() => onDelete(order, null)}
+                                className={`flex-1 text-sm font-semibold px-3 py-2.5 rounded-lg transition ${coupeListes.length > 0 ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                            >
+                                {coupeListes.length > 0 ? 'Supprimer sans synchro' : '🗑️ Supprimer'}
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-semibold hover:bg-gray-200 transition text-sm"
+                            >
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         // Empty State
         function EmptyState({ onImport }) {
             return (
@@ -1889,8 +2564,8 @@
                 setSearchShipping(prev => ({ ...prev, [ref]: { loading: true } }));
                 try {
                     const [relayRes, packlinkRes] = await Promise.all([
-                        fetch(`https://cataleyaparis.com/get_relay_token.php?id_order=${ref}`).then(r => r.json()).catch(() => null),
-                        fetch(`https://cataleyaparis.com/get_packlink_label.php?id_order=${ref}`).then(r => r.json()).catch(() => null)
+                        fetch(`https://cataleyaparis.com/get_relay_token.php?key=cataleya2026relay_a8f3k2&id_order=${ref}`).then(r => r.json()).catch(() => null),
+                        fetch(`https://cataleyaparis.com/get_packlink_label.php?key=cataleya2026relay_a8f3k2&id_order=${ref}`).then(r => r.json()).catch(() => null)
                     ]);
                     setSearchShipping(prev => ({ ...prev, [ref]: {
                         loading: false,
@@ -2791,7 +3466,7 @@
         }
 
         // ProductionTab
-        function ProductionTab({ orders, updateStatus, updateComment, isAdmin, isOperateur, isSara, isCommentaires, canEditStatus, canEditComment, userName, getCasierNum, openOrderRecap }) {
+        function ProductionTab({ orders, updateStatus, updateComment, isAdmin, isOperateur, isSara, isCommentaires, canEditStatus, canEditComment, userName, getCasierNum, openOrderRecap, onDeleteRequest }) {
             const [searchTerm, setSearchTerm] = React.useState('');
             const [filterStatus, setFilterStatus] = React.useState('all');
             const filteredOrders = orders.filter(order => {
@@ -3022,6 +3697,12 @@
                                         className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
                                     />
                                 ) : null}
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => onDeleteRequest && onDeleteRequest(order)}
+                                        className="mt-2 text-xs text-gray-300 hover:text-red-500 transition flex items-center gap-1"
+                                    >🗑️ Supprimer cet article</button>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -3053,6 +3734,7 @@
                                     {!isCommentaires && <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('status')}>
                                         Statut {sortColumn === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
                                     </th>}
+                                    {isAdmin && <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase w-12"></th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -3104,6 +3786,13 @@
                                                 className={`px-3 py-1 border rounded text-sm ${!canEditStatus ? 'bg-gray-100 cursor-not-allowed text-gray-400' : ''}`}>
                                                 {statutsDisponibles.map(s => (<option key={s} value={s}>{s}</option>))}
                                             </select>
+                                        </td>}
+                                        {isAdmin && <td className="px-2 py-3 text-center">
+                                            <button
+                                                onClick={() => onDeleteRequest && onDeleteRequest(order)}
+                                                className="text-gray-300 hover:text-red-500 transition text-lg leading-none"
+                                                title="Supprimer cet article"
+                                            >🗑️</button>
                                         </td>}
                                     </tr>
                                 ))}
@@ -4752,6 +5441,11 @@
                 });
             };
 
+            const deleteRowFromCoupe = async (rowKey, rowName) => {
+                if (!confirm(`Supprimer la ligne "${rowName}" de la liste de coupe ?`)) return;
+                await window.firebaseRemove(window.firebaseRef(db, 'listescoupe/' + activeListe + '/lignes/' + rowKey));
+            };
+
             const toggleCell = async (rowKey, cellIdx, current) => {
                 const path = 'listescoupe/' + activeListe + '/lignes/' + rowKey + '/cells_done/' + cellIdx;
                 if (current) {
@@ -4922,6 +5616,8 @@
                                 setCellCommentInput={setCellCommentInput}
                                 userName={userName}
                                 themeAccent={themeAccent}
+                                isAdmin={isAdmin}
+                                onDeleteRow={deleteRowFromCoupe}
                             />
                         </>
                     )}
@@ -5149,7 +5845,7 @@
         }
 
         // ── SectionTables component ──
-        function SectionTables({ displaySections, rowsBySection, search, toggleCell, setZoomPhoto, openCommentPopup, getColor, activeListe, canEditListe, setCellPopup, setCellCommentInput, userName, themeAccent }) {
+        function SectionTables({ displaySections, rowsBySection, search, toggleCell, setZoomPhoto, openCommentPopup, getColor, activeListe, canEditListe, setCellPopup, setCellCommentInput, userName, themeAccent, isAdmin, onDeleteRow }) {
             const accent = themeAccent || '#16a34a';
             const accentDark = accent; // used for border
             // Build global color map across all sections
@@ -5192,6 +5888,7 @@
                                                 ))}
                                                 <th style={{position:"sticky",top:0,background:accent,border:`1px solid ${accent}cc`,padding:"8px",textAlign:"center",whiteSpace:"nowrap",minWidth:"150px",zIndex:10}}>Commentaire</th>
                                                 <th style={{position:"sticky",top:0,background:accent,border:`1px solid ${accent}cc`,padding:"8px",textAlign:"center",whiteSpace:"nowrap",zIndex:10}}>Qui ?</th>
+                                                {isAdmin && <th style={{position:"sticky",top:0,background:accent,border:`1px solid ${accent}cc`,padding:"4px",textAlign:"center",zIndex:10,width:"32px"}}></th>}
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -5265,6 +5962,17 @@
                                                                 )}
                                                             </div>
                                                         </td>
+                                                        {isAdmin && (
+                                                            <td style={{border:'1px solid #e0e0e0',padding:'4px',textAlign:'center',verticalAlign:'middle'}}>
+                                                                <button
+                                                                    onClick={() => onDeleteRow && onDeleteRow(row.key, row.cells[0] || '')}
+                                                                    title="Supprimer cette ligne"
+                                                                    style={{background:'none',border:'none',cursor:'pointer',fontSize:'15px',opacity:0.35,transition:'opacity 0.15s'}}
+                                                                    onMouseEnter={e => e.currentTarget.style.opacity='1'}
+                                                                    onMouseLeave={e => e.currentTarget.style.opacity='0.35'}
+                                                                >🗑️</button>
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 );
                                             })}
