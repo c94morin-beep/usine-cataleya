@@ -13,7 +13,7 @@
     <title>Gestion Production Multi-Listes - Sousou Fashion</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js" data-skip-source-map-comment></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -42,10 +42,10 @@
             }
         };
     </script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getDatabase, ref, get, set, update, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDVpN0cbCqDYI2klKrWqZJAcYDX2ayx8F0",
             authDomain: "usine-cataleya.firebaseapp.com",
@@ -55,51 +55,60 @@
             messagingSenderId: "218489156781",
             appId: "1:218489156781:web:92f657e50e63222a130224"
         };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
         window.db = db;
-        window.firebaseRef = ref;
-        window.firebaseGet = get;
-        window.firebaseOnValue = onValue;
-        window.firebaseSet = set;
-        window.firebaseUpdate = update;
-        window.firebaseRemove = remove;
-        window.firebaseSignIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
-        window.firebaseSignOut = () => signOut(auth);
-        window.firebaseOnAuthStateChanged = (cb) => onAuthStateChanged(auth, cb);
+        // ── Helpers compat (même API que ton code appelle déjà) ──
+        window.firebaseRef = (database, path) => database.ref(path);
+        window.firebaseGet = async (refObj) => {
+            const snap = await refObj.get();
+            return snap;
+        };
+        window.firebaseOnValue = (refObj, cb) => {
+            refObj.on('value', cb);
+            return () => refObj.off('value', cb);
+        };
+        window.firebaseSet = (refObj, value) => refObj.set(value);
+        window.firebaseUpdate = (refObj, value) => refObj.update(value);
+        window.firebaseRemove = (refObj) => refObj.remove();
+        window.firebaseSignIn = (email, password) => auth.signInWithEmailAndPassword(email, password);
+        window.firebaseSignOut = () => auth.signOut();
+        window.firebaseOnAuthStateChanged = (cb) => auth.onAuthStateChanged(cb);
         window.firebaseGetUserRole = async (uid) => {
-            const snapshot = await get(ref(db, 'users/' + uid + '/role'));
+            const snapshot = await db.ref('users/' + uid + '/role').get();
             return snapshot.exists() ? snapshot.val() : null;
         };
         window.firebaseSaveLists = async (lists) => {
-            await set(ref(db, 'lists'), lists);
+            await db.ref('lists').set(lists);
         };
         window.firebasePatchOrder = async (listIndex, orderIndex, fields) => {
-            await update(ref(db, `lists/${listIndex}/orders/${orderIndex}`), fields);
+            await db.ref(`lists/${listIndex}/orders/${orderIndex}`).update(fields);
         };
         window.firebaseOnLists = (cb) => {
-            return onValue(ref(db, 'lists'), (snapshot) => {
-                cb(snapshot.exists() ? snapshot.val() : []);
-            });
+            const r = db.ref('lists');
+            const handler = (snapshot) => cb(snapshot.exists() ? snapshot.val() : []);
+            r.on('value', handler);
+            return () => r.off('value', handler);
         };
         window.firebaseGetCasiers = async () => {
-            const snapshot = await get(ref(db, 'casiers'));
+            const snapshot = await db.ref('casiers').get();
             return snapshot.val() || {};
         };
         window.firebaseOnCasiers = (cb) => {
-            return onValue(ref(db, 'casiers'), (snapshot) => {
-                cb(snapshot.val() || {});
-            });
+            const r = db.ref('casiers');
+            const handler = (snapshot) => cb(snapshot.val() || {});
+            r.on('value', handler);
+            return () => r.off('value', handler);
         };
         window.firebaseSaveCasiers = async (data) => {
-            await set(ref(db, 'casiers'), data);
+            await db.ref('casiers').set(data);
         };
         window.firebaseMergeCasiers = async (newData) => {
-            await update(ref(db, 'casiers'), newData);
+            await db.ref('casiers').update(newData);
         };
         window.firebaseUpdateCasier = async (key, data) => {
-            await update(ref(db, 'casiers/' + key), data);
+            await db.ref('casiers/' + key).update(data);
         };
         window.dispatchEvent(new Event('firebase-ready'));
     </script>
@@ -107,7 +116,7 @@
 <body class="bg-gray-50">
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="react">
         const { useState, useEffect } = React;
 
         // Statuts
@@ -153,11 +162,6 @@
             const [showArchives, setShowArchives] = useState(false);
             const [editingArchiveListId, setEditingArchiveListId] = useState(null);
             const [editingArchiveListName, setEditingArchiveListName] = useState('');
-            React.useEffect(() => {
-                if (isSara) setActiveTab('dashboard');
-                else if (isCommentaires) setActiveTab('production');
-                else if (isOperateur) setActiveTab('dashboard');
-            }, [userRole]);
             const [globalSelectedOrder, setGlobalSelectedOrder] = useState(null);
             const [zoomedImage, setZoomedImage] = useState(null);
             const [boxPopup, setBoxPopup] = useState(null); // {articleName, casierNum, reference}
@@ -237,6 +241,14 @@
             // Auth
             const [user, setUser] = useState(null);
             const [userRole, setUserRole] = useState(null);
+
+            // Onglet par défaut selon le rôle (placé ici car dépend de userRole)
+            React.useEffect(() => {
+                if (userRole === 'livreur') setActiveTab('dashboard');
+                else if (userRole === 'commentaires') setActiveTab('production');
+                else if (userRole === 'operateur') setActiveTab('dashboard');
+            }, [userRole]);
+
             const [notifications, setNotifications] = useState([]);
             const [showNotifPanel, setShowNotifPanel] = useState(false);
             const [lastSeenNotif, setLastSeenNotif] = useState(() => parseInt(localStorage.getItem('lastSeenNotif') || '0'));
