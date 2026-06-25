@@ -6197,6 +6197,9 @@
             const [editId, setEditId] = React.useState(null);
             const [search, setSearch] = React.useState('');
             const [filterPays, setFilterPays] = React.useState('tous');
+            const [filterType, setFilterType] = React.useState('tous');
+            const [dateDebut, setDateDebut] = React.useState('');
+            const [dateFin, setDateFin] = React.useState('');
             const [sortBy, setSortBy] = React.useState('createdAt');
             const [sortDir, setSortDir] = React.useState('desc');
 
@@ -6204,7 +6207,9 @@
                 if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
                 else { setSortBy(col); setSortDir('asc'); }
             };
-            const emptyForm = { numeroCommande: '', date: '', nomCliente: '', nombreCommandes: '', pays: '', article: '', motif: '', solution: '' };
+            const parseMontant = (v) => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.').replace(/[^0-9.]/g, '')); return isNaN(n) ? 0 : n; };
+            const fmtEuro = (n) => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+            const emptyForm = { numeroCommande: '', date: '', nomCliente: '', nombreCommandes: '', pays: '', article: '', motif: '', solution: '', typeSolution: '', bonAchatNumero: '', montant: '' };
             const [form, setForm] = React.useState(emptyForm);
             const PAYS_OPTIONS = ['France', 'Belgique', 'Suisse', 'Canada', 'Maroc', 'Algérie', 'Tunisie', 'Autre'];
 
@@ -6222,7 +6227,7 @@
             const resetForm = () => { setForm(emptyForm); setEditId(null); setShowForm(false); };
 
             const openEdit = (rec) => {
-                setForm({ numeroCommande: rec.numeroCommande || '', date: rec.date || '', nomCliente: rec.nomCliente || '', nombreCommandes: rec.nombreCommandes || '', pays: rec.pays || '', article: rec.article || '', motif: rec.motif || '', solution: rec.solution || '' });
+                setForm({ numeroCommande: rec.numeroCommande || '', date: rec.date || '', nomCliente: rec.nomCliente || '', nombreCommandes: rec.nombreCommandes || '', pays: rec.pays || '', article: rec.article || '', motif: rec.motif || '', solution: rec.solution || '', typeSolution: rec.typeSolution || '', bonAchatNumero: rec.bonAchatNumero || '', montant: rec.montant || '' });
                 setEditId(rec.id); setShowForm(true);
             };
 
@@ -6248,9 +6253,12 @@
             const allPays = [...new Set(recList.map(r => r.pays).filter(Boolean))];
             const filtered = recList.filter(r => {
                 const matchPays = filterPays === 'tous' || r.pays === filterPays;
+                const matchType = filterType === 'tous' || r.typeSolution === filterType;
+                const matchDebut = !dateDebut || (r.date && r.date >= dateDebut);
+                const matchFin = !dateFin || (r.date && r.date <= dateFin);
                 const q = search.toLowerCase();
-                const matchSearch = !q || [r.numeroCommande, r.nomCliente, r.article, r.motif, r.solution, r.pays].join(' ').toLowerCase().includes(q);
-                return matchPays && matchSearch;
+                const matchSearch = !q || [r.numeroCommande, r.nomCliente, r.article, r.motif, r.solution, r.pays, r.bonAchatNumero].join(' ').toLowerCase().includes(q);
+                return matchPays && matchType && matchDebut && matchFin && matchSearch;
             }).sort((a, b) => {
                 let va, vb;
                 if (sortBy === 'numeroCommande') {
@@ -6267,6 +6275,11 @@
                 if (va > vb) return sortDir === 'asc' ? 1 : -1;
                 return 0;
             });
+
+            const totalRemboursement = filtered.filter(r => r.typeSolution === 'remboursement').reduce((s, r) => s + parseMontant(r.montant), 0);
+            const totalBonAchat = filtered.filter(r => r.typeSolution === 'bon_achat').reduce((s, r) => s + parseMontant(r.montant), 0);
+            const nbRemboursement = filtered.filter(r => r.typeSolution === 'remboursement').length;
+            const nbBonAchat = filtered.filter(r => r.typeSolution === 'bon_achat').length;
 
             return (
                 <div className="p-3">
@@ -6285,7 +6298,7 @@
                     </div>
 
                     {/* Filtres */}
-                    <div className="flex gap-2 mb-4 flex-wrap">
+                    <div className="flex gap-2 mb-3 flex-wrap items-center">
                         <input value={search} onChange={e => setSearch(e.target.value)}
                             placeholder="🔍 Rechercher..."
                             className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm flex-1 min-w-[160px] outline-none focus:border-red-400" />
@@ -6294,7 +6307,39 @@
                             <option value="tous">🌍 Tous les pays</option>
                             {allPays.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
+                        <select value={filterType} onChange={e => setFilterType(e.target.value)}
+                            className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-red-400">
+                            <option value="tous">💸 Tous types</option>
+                            <option value="remboursement">💶 Remboursement</option>
+                            <option value="bon_achat">🎟️ Bon d'achat</option>
+                        </select>
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <span>📅 Du</span>
+                            <input type="date" value={dateDebut} onChange={e => setDateDebut(e.target.value)}
+                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-red-400" />
+                            <span>au</span>
+                            <input type="date" value={dateFin} onChange={e => setDateFin(e.target.value)}
+                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-red-400" />
+                            {(dateDebut || dateFin) && (
+                                <button onClick={() => { setDateDebut(''); setDateFin(''); }}
+                                    className="text-gray-400 hover:text-red-500 px-1" title="Réinitialiser la période">✕</button>
+                            )}
+                        </div>
                         <span className="text-xs text-gray-400 self-center">{filtered.length} réclamation{filtered.length > 1 ? 's' : ''}</span>
+                    </div>
+
+                    {/* Totaux période */}
+                    <div className="flex gap-3 mb-4 flex-wrap">
+                        <div className="flex-1 min-w-[180px] bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-xl px-4 py-3">
+                            <div className="text-xs font-bold text-red-500 uppercase">💶 Total remboursé{(dateDebut || dateFin) ? ' (période)' : ''}</div>
+                            <div className="text-2xl font-extrabold text-red-700">{fmtEuro(totalRemboursement)}</div>
+                            <div className="text-xs text-gray-400">{nbRemboursement} remboursement{nbRemboursement > 1 ? 's' : ''}</div>
+                        </div>
+                        <div className="flex-1 min-w-[180px] bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl px-4 py-3">
+                            <div className="text-xs font-bold text-amber-600 uppercase">🎟️ Total bons d'achat{(dateDebut || dateFin) ? ' (période)' : ''}</div>
+                            <div className="text-2xl font-extrabold text-amber-700">{fmtEuro(totalBonAchat)}</div>
+                            <div className="text-xs text-gray-400">{nbBonAchat} bon{nbBonAchat > 1 ? 's' : ''} d'achat</div>
+                        </div>
                     </div>
 
                     {/* Formulaire modal */}
@@ -6340,6 +6385,40 @@
                                             placeholder="Quelle solution a été proposée ou appliquée ?" rows={3}
                                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400 resize-none" />
                                     </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">💸 Type de dédommagement</label>
+                                        <div className="flex gap-2 flex-wrap">
+                                            {[
+                                                { val: '', label: 'Aucun' },
+                                                { val: 'remboursement', label: '💶 Remboursement' },
+                                                { val: 'bon_achat', label: "🎟️ Bon d'achat" },
+                                            ].map(opt => (
+                                                <button key={opt.val} type="button"
+                                                    onClick={() => setForm(p => ({ ...p, typeSolution: opt.val }))}
+                                                    className={`px-3 py-1.5 text-sm font-semibold rounded-lg border transition ${form.typeSolution === opt.val ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200 hover:border-red-300'}`}>
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {form.typeSolution === 'bon_achat' && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">🎟️ N° du bon d'achat</label>
+                                            <input type="text" value={form.bonAchatNumero} onChange={e => setForm(p => ({ ...p, bonAchatNumero: e.target.value }))}
+                                                placeholder="Ex: BON-2026-014"
+                                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
+                                        </div>
+                                    )}
+                                    {(form.typeSolution === 'bon_achat' || form.typeSolution === 'remboursement') && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                                                {form.typeSolution === 'bon_achat' ? "💰 Montant du bon (€)" : '💰 Montant remboursé (€)'}
+                                            </label>
+                                            <input type="number" step="0.01" min="0" value={form.montant} onChange={e => setForm(p => ({ ...p, montant: e.target.value }))}
+                                                placeholder="Ex: 49.90"
+                                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400" />
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="p-4 border-t flex gap-2 justify-end">
                                     <button onClick={resetForm} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Annuler</button>
@@ -6374,6 +6453,7 @@
                                         <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">👗 Article</th>
                                         <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">⚠️ Motif</th>
                                         <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">✅ Solution</th>
+                                        <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">💸 Dédommagement</th>
                                         <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">✍️ Par</th>
                                         {canWrite && <th className="px-3 py-3 text-center font-semibold">Actions</th>}
                                     </tr>
@@ -6401,6 +6481,20 @@
                                             <td className="px-3 py-2.5 max-w-[180px]">
                                                 {rec.solution ? <div className="text-xs text-green-700 leading-relaxed line-clamp-2" title={rec.solution}>{rec.solution}</div>
                                                     : <span className="text-xs text-orange-500 italic">En attente</span>}
+                                            </td>
+                                            <td className="px-3 py-2.5 whitespace-nowrap">
+                                                {rec.typeSolution === 'remboursement' ? (
+                                                    <div>
+                                                        <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-semibold">💶 Remboursement</span>
+                                                        {rec.montant ? <div className="text-sm font-bold text-red-700 mt-0.5">{fmtEuro(parseMontant(rec.montant))}</div> : null}
+                                                    </div>
+                                                ) : rec.typeSolution === 'bon_achat' ? (
+                                                    <div>
+                                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">🎟️ Bon d'achat</span>
+                                                        {rec.montant ? <div className="text-sm font-bold text-amber-700 mt-0.5">{fmtEuro(parseMontant(rec.montant))}</div> : null}
+                                                        {rec.bonAchatNumero ? <div className="text-xs text-gray-400">{rec.bonAchatNumero}</div> : null}
+                                                    </div>
+                                                ) : <span className="text-xs text-gray-300">—</span>}
                                             </td>
                                             <td className="px-3 py-2.5 whitespace-nowrap">
                                                 <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{rec.writtenBy || '—'}</span>
