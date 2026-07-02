@@ -1013,7 +1013,7 @@
             const isSara = userRole === 'livreur';
             const canEditStatus = isAdmin || isOperateur || isSara;
             const canViewAll = isAdmin || isLecteur;
-            const canEditComment = isAdmin || isCommentaires || isSara;
+            const canEditComment = isAdmin || isCommentaires; // Écriture des commentaires : Admin + Fatima uniquement
             // Nom affiché de l'utilisateur pour les commentaires
             const userName = isAdmin ? 'Admin' : isOperateur ? 'Achraf' : isCommentaires ? 'Fatima' : isSara ? 'Sara' : 'Lecteur';
 
@@ -3931,7 +3931,7 @@
                                                 <div className="mt-3">
                                                     {order.commentaires ? (
                                                         <p className="text-sm italic text-purple-700 bg-purple-50 border border-purple-200 rounded px-3 py-2">💬 {order.commentaires}{order.commentAuthor && <span className="ml-2 text-xs font-semibold not-italic text-purple-400">— {order.commentAuthor}</span>}</p>
-                                                    ) : (
+                                                    ) : canEditComment ? (
                                                         <input
                                                             type="text"
                                                             value=""
@@ -3939,7 +3939,7 @@
                                                             placeholder="💬 Ajouter une note..."
                                                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 text-sm"
                                                         />
-                                                    )}
+                                                    ) : null}
                                                 </div>
                                             </div>
                                             
@@ -5043,7 +5043,7 @@
 
         // ===================== LISTE DE COUPE TAB =====================
         function ListeCoupeTab({ isAdmin, isSara, isCommentaires, isOperateur, userName, activeTheme, listThemes, activeListId, parentLists }) {
-            const canEditListe = isAdmin || isSara || isCommentaires;
+            const canEditListe = isAdmin || isCommentaires; // Liste de Coupes : édition (cases + commentaires) réservée à Admin + Fatima
             const db = window.db;
             const [listes, setListes] = React.useState([]);
             const [activeListe, setActiveListe] = React.useState(null);
