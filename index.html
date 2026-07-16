@@ -3215,7 +3215,13 @@
                                                     byT[t].push(r);
                                                 });
                                                 const lines = Object.entries(byT).sort((a,b) => a[0].localeCompare(b[0])).map(([t, refs]) =>
-                                                    t.toUpperCase() + '\n' + refs.sort((a,b) => b-a).map(r => needsCustoms(r) ? `${r} 🧾 FACTURE` : `${r}`).join('\n')
+                                                    t.toUpperCase() + '\n' + refs.sort((a,b) => b-a).map(r => {
+                                                        if (!needsCustoms(r)) return `${r}`;
+                                                        const arts = orders.filter(o => o.reference === r);
+                                                        const count = arts.length;
+                                                        const weight = arts.reduce((sum, a) => sum + (/ensemble/i.test(a.name || '') ? 1.5 : 1), 0);
+                                                        return `${r}/${count} pieces/${weight}kgs FACTURE`;
+                                                    }).join('\n')
                                                 ).join('\n\n');
                                                 if (!lines) return;
                                                 navigator.clipboard.writeText(lines);
