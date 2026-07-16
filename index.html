@@ -3196,6 +3196,17 @@
                                         </label>
                                         <button
                                             onClick={() => {
+                                                // Pays UE — pas de facture douane
+                                                const PAYS_UE = ['france','allemagne','belgique','espagne','italie','pays-bas','netherlands','portugal','autriche','suède','sweden','danemark','denmark','finlande','finland','irlande','ireland','grèce','greece','pologne','poland','tchéquie','czech','hongrie','hungary','roumanie','romania','bulgarie','bulgaria','croatie','croatia','slovaquie','slovakia','slovénie','slovenia','lituanie','lithuania','lettonie','latvia','estonie','estonia','luxembourg','malte','malta','chypre','cyprus','maroc','morocco'];
+                                                const needsCustoms = (ref) => {
+                                                    const item = orders.find(o => o.reference === ref);
+                                                    if (!item || !item.adresse_livraison) return false;
+                                                    const addrLines = item.adresse_livraison.trim().split('\n').map(l => l.trim()).filter(Boolean);
+                                                    const paysLine = addrLines.length >= 2 ? addrLines[addrLines.length - 2] : addrLines[addrLines.length - 1];
+                                                    if (!paysLine) return false;
+                                                    const pays = paysLine.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                                                    return !PAYS_UE.some(p => pays.includes(p.normalize('NFD').replace(/[̀-ͯ]/g, '')));
+                                                };
                                                 const byT = {};
                                                 terminesRefs.filter(r => !bordereaux[r]).forEach(r => {
                                                     const item = orders.find(o => o.reference === r);
@@ -3204,7 +3215,7 @@
                                                     byT[t].push(r);
                                                 });
                                                 const lines = Object.entries(byT).sort((a,b) => a[0].localeCompare(b[0])).map(([t, refs]) =>
-                                                    t.toUpperCase() + '\n' + refs.sort((a,b) => b-a).join('\n')
+                                                    t.toUpperCase() + '\n' + refs.sort((a,b) => b-a).map(r => needsCustoms(r) ? `${r} 🧾 FACTURE` : `${r}`).join('\n')
                                                 ).join('\n\n');
                                                 if (!lines) return;
                                                 navigator.clipboard.writeText(lines);
